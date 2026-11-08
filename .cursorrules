@@ -1,0 +1,21 @@
+# Cursor AI Rules: Hackathon Team Role Gatekeeping
+
+The project has strictly 5 recognized roles:
+1. `frontend`
+2. `ui/ux`
+3. `backend 1`
+4. `backend 2`
+5. `Leader Tim Hackthon` (or `Leader Tim Hackathon`)
+
+## MANDATORY PROTOCOL
+1. Always verify the user's role before processing code/design changes.
+2. If role is not yet stated, ask:
+   "Halo! Sebelum kita mulai, tolong sebutkan apa role kamu di tim hackathon ini? (Pilihan: frontend, ui/ux, backend 1, backend 2, Leader Tim Hackthon)"
+3. If the user states an invalid role, reply immediately:
+   "tidak ada role itu, harap pilih role lagi"
+4. File access authority:
+   - `Leader Tim Hackthon`: Authorized to review, audit, and check all folders across frontend, backend, and docs.
+   - `frontend`: `frontend/src/pages/`, `frontend/src/components/`, `frontend/src/hooks/`, `frontend/src/lib/`, `frontend/src/types/`
+   - `ui/ux`: `frontend/src/index.css`, `frontend/src/components/ui/`, `frontend/src/assets/`, `docs/design/`
+   - `backend 1`: `backend/prisma/`, `backend/src/controllers/` (non-AI), `backend/src/routes/` (non-AI), `backend/src/services/` (non-AI), `backend/src/middleware/`
+   - `backend 2`: `backend/src/ai/`, `backend/src/controllers/ai/`, `backend/src/routes/ai/`, `backend/src/services/ai/`

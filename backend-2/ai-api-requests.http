@@ -1,0 +1,139 @@
+### ===================================================================
+### KOLEKSI HTTP REQUEST — BACKEND 2 (AI ENGINE KELOMPOK ADIL)
+### Base URL: http://localhost:5000/api/ai
+### Kontrak: { "data": { ... } } atau { "error": { "code", "message" } }
+### ===================================================================
+
+@baseUrl = http://localhost:5000/api/ai
+@groupId1 = group-1
+@groupId2 = group-2
+@roomId2 = room-2
+
+### 0. Health Check
+GET {{baseUrl}}/health
+
+### -------------------------------------------------------------------
+### FITUR A: CHAT FASILITATOR BERSAMA KELOMPOK
+### -------------------------------------------------------------------
+### 1.1 Kirim Pesan Bebas ke AI Asisten
+POST {{baseUrl}}/groups/{{groupId1}}/chat
+Content-Type: application/json
+x-user-id: m-dafano
+x-role: STUDENT
+
+{
+  "message": "Halo AI, apa langkah awal terbaik untuk memulai proyek ini bareng teman-teman?",
+  "senderName": "Dafano",
+  "action": "chat"
+}
+
+### 1.2 Ambil Riwayat Chat Kelompok (Polling / Refresh Frontend)
+GET {{baseUrl}}/groups/{{groupId1}}/messages
+
+### -------------------------------------------------------------------
+### FITUR B: CARI IDE TOPIK & SUDUT PANDANG UNIK
+### -------------------------------------------------------------------
+### 2.1 Minta 3 Ide Sudut Pandang Unik
+POST {{baseUrl}}/groups/{{groupId1}}/chat
+Content-Type: application/json
+x-user-id: m-dafano
+x-role: STUDENT
+
+{
+  "message": "Kasih ide topik presentasi yang menarik tentang Kerajaan Singasari dong! 🏛️",
+  "senderName": "Dafano",
+  "action": "ideas"
+}
+
+### -------------------------------------------------------------------
+### FITUR C: USULAN PEMBAGIAN PERAN ADIL & TERAPKAN KE KANBAN
+### -------------------------------------------------------------------
+### 3.1 Usulkan Pembagian Peran (Otomatis Normalisasi Total 100%)
+POST {{baseUrl}}/groups/{{groupId1}}/split-roles
+Content-Type: application/json
+x-user-id: m-nadya
+x-role: STUDENT
+
+{
+  "topic": "Strategi Diplomasi Ekspedisi Pamalayu Kertanegara",
+  "deadline": "2026-11-20T23:59:00+07:00",
+  "notes": "Fokus pada naskah primer dan peta jalur laut"
+}
+
+### 3.2 Terapkan Usulan ke Kanban Otomatis (Ganti :suggestionId sesuai respon di atas)
+POST {{baseUrl}}/suggestions/sug-example/apply
+Content-Type: application/json
+
+### 3.3 Tolak / Dismiss Usulan
+POST {{baseUrl}}/suggestions/sug-example/dismiss
+Content-Type: application/json
+
+### -------------------------------------------------------------------
+### FITUR D & E: REKOMENDASI PENANGGUNG JAWAB & ESTIMASI BOBOT
+### -------------------------------------------------------------------
+### 4.1 Tambah Tugas Baru — Dapatkan Rekomendasi Beban Terendah
+POST {{baseUrl}}/groups/{{groupId1}}/recommend-assignee
+Content-Type: application/json
+x-user-id: m-dafano
+x-role: STUDENT
+
+{
+  "title": "Desain Slide Presentasi Canva",
+  "description": "Menyusun 10 slide interaktif dan ringkasan materi wicara"
+}
+
+### -------------------------------------------------------------------
+### FITUR F: VALIDASI BUKTI & CEK KELENGKAPAN BAB
+### -------------------------------------------------------------------
+### 5.1 Validasi Bukti Tugas Siswa (Badge ✦ AI Valid)
+POST {{baseUrl}}/tasks/task-1/validate
+Content-Type: application/json
+x-user-id: m-dafano
+x-role: STUDENT
+
+{
+  "evidenceUrl": "https://docs.google.com/document/d/1example-dafano"
+}
+
+### 5.2 Cek Kelengkapan Seluruh Bab Kelompok terhadap Target Presentasi
+POST {{baseUrl}}/groups/{{groupId1}}/check-completeness
+Content-Type: application/json
+x-user-id: m-dafano
+x-role: STUDENT
+
+### -------------------------------------------------------------------
+### FITUR G: SKALA KONTRIBUSI RIIL & STATUS KESEIMBANGAN
+### -------------------------------------------------------------------
+### 6.1 Ambil Rasio Kontribusi Anggota (Deterministik)
+GET {{baseUrl}}/groups/{{groupId2}}/contributions
+
+### -------------------------------------------------------------------
+### FITUR H & I: AREA GURU (DETEKSI GHOSTING & CATATAN DISKUSI)
+### -------------------------------------------------------------------
+### 7.1 Deteksi Ghosting Room (Akses Murid — Ditolak 403)
+GET {{baseUrl}}/rooms/{{roomId2}}/alerts
+x-role: STUDENT
+
+### 7.2 Deteksi Ghosting Room (Akses Guru — Berhasil mendeteksi Rafi Ahmad)
+GET {{baseUrl}}/rooms/{{roomId2}}/alerts
+x-user-id: guru-1
+x-role: TEACHER
+
+### 7.3 Ringkasan Catatan Otomatis AI untuk Guru (Cache 10 Menit)
+GET {{baseUrl}}/groups/{{groupId2}}/teacher-summary
+x-user-id: guru-1
+x-role: TEACHER
+
+### 7.4 Transkrip Lengkap Diskusi AI Kelompok
+GET {{baseUrl}}/groups/{{groupId2}}/transcript
+x-user-id: guru-1
+x-role: TEACHER
+
+### -------------------------------------------------------------------
+### FITUR J: NUDGE PENGINGAT RAMAH MURID PASIF
+### -------------------------------------------------------------------
+### 8.1 Kirim Pesan Pengingat Ramah ke Chat Terbuka Kelompok
+POST {{baseUrl}}/groups/{{groupId2}}/nudge
+Content-Type: application/json
+x-user-id: guru-1
+x-role: TEACHER
