@@ -37,11 +37,29 @@ const TeacherSummaryOutputSchema = z.object({
 export class GhostingService {
   private static summaryCache: Map<string, { data: TeacherSummaryResponse; expiry: number }> = new Map();
 
+  // Pelacakan pengiriman pengingat ramah per tugas (taskId -> timestamp pengiriman) guna mencegah pengingat ganda
+  private static sentTaskNudges: Map<string, number> = new Map();
+
+  /**
+   * Reset pelacak pengingat ramah (berguna untuk testing)
+   */
+  public static resetNudgeTracker(): void {
+    GhostingService.sentTaskNudges.clear();
+  }
+
   /**
    * Peringatan kendala tugas untuk dashboard guru (Aturan Baru Berbasis Tenggat)
-   * - Tugas tanpa deadline TIDAK PERNAH memicu alert.
-   * - Tugas mendekati deadline (< N jam) memicu pengingat ramah ke grup (tanpa menyebut nama siapa pun).
-   * - Alert ke guru HANYA muncul jika deadline SUDAH LEWAT dan tugas BELUM SELESAI, dengan bahasa netral ("perlu perhatian").
+   * 
+   * KAPAN DAN DI MANA PENGINGAT DIKIRIM:
+   * - Pengingat ramah otomatis dikirim ke ruang obrolan terbuka kelompok (tabel ai_messages)
+   *   ketika tugas Kanban kelompok belum selesai dan sisa waktu menuju tenggat < warnHours (default 48 jam).
+   * - PENCEGAHAN EFEK SAMPING BERULANG:
+   *   Setiap tugas memiliki batas pengiriman maksimal satu pengingat per interval (default 24 jam via GHOSTING_NUDGE_INTERVAL_HOURS).
+   *   Jika dipanggil berulang kali (misalnya refresh halaman guru), sistem tidak akan mengirimkan pengingat ganda.
+   * - ALERT GURU:
+   *   HANYA muncul jika deadline SUDAH LEWAT dan tugas BELUM SELESAI, dengan bahasa netral ("perlu perhatian").
+   * - TUGAS TANPA DEADLINE:
+   *   TIDAK PERNAH memicu alert ke guru.
    */
   public static async scanRoomAlerts(roomId: string): Promise<GhostingAlertItem[]> {
     const room = await repo.getRoom(roomId);
@@ -57,6 +75,7 @@ export class GhostingService {
     const alerts: GhostingAlertItem[] = [];
     const nowTime = Date.now();
     const warnHours = ContributionConfig.ghosting.warnHoursThreshold;
+    const nudgeIntervalMs = ContributionConfig.ghosting.nudgeIntervalHours * 3600 * 1000;
 
     for (const group of groups) {
       const memberMap = new Map<string, string>();
@@ -111,6 +130,13 @@ export class GhostingService {
         }
         // Kasus 2: Deadline kurang dari N jam (default 48 jam) dan belum selesai -> Kirim pengingat ramah ke grup (tanpa menyebut nama siapa pun)
         else if (diffHours < warnHours) {
+          // Pencegahan efek samping berulang: cek apakah pengingat untuk tugas ini sudah pernah dikirim dalam jeda waktu nudgeIntervalHours
+          const lastSentTime = GhostingService.sentTaskNudges.get(t.id);
+          if (lastSentTime && nowTime - lastSentTime < nudgeIntervalMs) {
+            // Sudah dikirim baru-baru ini, lewati agar tidak menimbulkan spam pengingat duplikat
+            continue;
+          }
+
           const remainingHours = Math.max(1, Math.ceil(diffHours));
           await repo.saveAiMessage({
             groupId: group.id,
@@ -119,6 +145,9 @@ export class GhostingService {
             action: 'nudge',
             content: `Halo rekan-rekan ${group.name}! 👋 Pengingat ramah: tugas "${t.title}" memiliki batas tenggat dalam waktu kurang dari ${remainingHours} jam. Yuk saling bantu dan koordinasikan di papan Kanban agar selesai tepat waktu! ✨`,
           });
+
+          // Catat bahwa pengingat telah dikirim untuk tugas ini
+          GhostingService.sentTaskNudges.set(t.id, nowTime);
         }
       }
     }

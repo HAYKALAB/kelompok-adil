@@ -25,6 +25,7 @@ AI_MODEL=gemini-2.5-flash
 AI_MOCK=true # Ubah false jika ingin menggunakan API Gemini secara live
 AI_TIMEOUT_MS=10000
 GHOSTING_WARN_HOURS=48
+GHOSTING_NUDGE_INTERVAL_HOURS=24
 ```
 
 ### 3. Kompilasi & Jalankan Server:
@@ -59,26 +60,27 @@ Seluruh endpoint di bawah `/api/ai` mematuhi format respons standar tim hackatho
 ```json
 {
   "error": {
-    "code": "VALIDATION_ERROR | FORBIDDEN_TEACHER_ONLY | NOT_FOUND | INTERNAL_ERROR",
+    "code": "VALIDATION_ERROR | FORBIDDEN_TEACHER_ONLY | FORBIDDEN_STUDENTS_ONLY | FORBIDDEN_GROUP_MEMBER_ONLY | NOT_FOUND | INTERNAL_ERROR",
     "message": "Pesan deskripsi error yang ramah pengguna"
   }
 }
 ```
 
 ### 3. Header Otentikasi (Stub):
-- `x-user-id`: ID pengguna (contoh: `m-dafano`, `guru-1`).
+- `x-user-id`: ID pengguna (contoh: `m-dafano`, `guru-1`). Catatan: Identitas masih memakai stub sampai tiket otentikasi guru/siswa dari Backend 1 siap.
 - `x-role`: Role pengguna, mendukung `STUDENT` atau `TEACHER` (kompatibel dengan enum Prisma Backend 1; alias lama `murid` dan `guru` dinormalisasi otomatis).
 
 ---
 
 ## 📑 Daftar Endpoint API (`/api/ai`)
 
-### 1. Chat & Fasilitator Kelompok
+### 1. Chat & Fasilitator Kelompok (Eksklusif Anggota Kelompok)
+> **Aturan Privasi**: Guru tidak memiliki akses ke percakapan AI; hanya anggota kelompok yang bisa membacanya. Akses oleh guru akan ditolak `403 FORBIDDEN_STUDENTS_ONLY` dan siswa dari kelompok lain akan ditolak `403 FORBIDDEN_GROUP_MEMBER_ONLY`.
 - **`POST /api/ai/groups/:groupId/chat`**
-  Mengirim pesan obrolan ke AI Asisten Rukun.
+  Mengirim pesan obrolan ke AI Asisten Rukun (hanya untuk siswa anggota kelompok).
   - Parameter `action`: `"chat"` (obrolan umum) atau `"ideas"` (minta 3 ide topik unik berbobot).
 - **`GET /api/ai/groups/:groupId/messages?since=`**
-  Mengambil riwayat obrolan kelompok secara transparan untuk semua anggota.
+  Mengambil riwayat obrolan kelompok (hanya dapat dibaca oleh siswa yang merupakan anggota kelompok tersebut).
 
 ### 2. Pembagian Peran Adil (Gotong Royong)
 - **`POST /api/ai/groups/:groupId/split-roles`**
@@ -104,11 +106,14 @@ Seluruh endpoint di bawah `/api/ai` mematuhi format respons standar tim hackatho
 
 ### 6. Area Khusus Guru (Wajib Header `x-role: TEACHER`)
 - **`GET /api/ai/rooms/:roomId/alerts`**
-  Deteksi otomatis peringatan tugas berbasis tenggat waktu (tugas tanpa deadline tidak pernah memicu alert; tugas dengan deadline mendekati `< 48` jam memicu pengingat ramah ke obrolan kelompok tanpa menyebut nama; alert ke guru hanya muncul jika deadline telah lewat dan tugas belum selesai dengan bahasa netral *"perlu perhatian"*).
+  Deteksi otomatis peringatan tugas berbasis tenggat waktu:
+  - **Kapan & di mana pengingat dikirim**: Pengingat ramah dikirim otomatis ke ruang chat kelompok (`ai_messages`) saat tugas Kanban belum selesai dan sisa waktu menuju tenggat `< 48` jam (`GHOSTING_WARN_HOURS`).
+  - **Pencegahan pesan ganda**: Sistem mencatat waktu pengiriman dan membatasi maksimal 1 pengingat per tugas per interval (default 24 jam via `GHOSTING_NUDGE_INTERVAL_HOURS`). Pemanggilan berulang (misal refresh dashboard guru) tidak menimbulkan spam pesan duplikat.
+  - **Alert ke Guru**: Hanya muncul jika deadline telah lewat dan tugas belum selesai dengan bahasa netral *"perlu perhatian"*. Tugas tanpa deadline tidak pernah memicu alert.
 - **`GET /api/ai/groups/:groupId/teacher-summary`**
   Ringkasan progres tugas Kanban kelompok (jumlah total tugas, selesai, tertunda, dan tenggat terdekat) murni dari data agregat tugas tanpa mengakses atau membaca isi obrolan siswa demi privasi.
 - **`POST /api/ai/rooms/:roomId/analyze-fairness`**
-  Analisis keadilan dan iklim gotong royong berdasarkan formulir peer-review siswa dengan garansi 100% anonimitas pelapor.
+  Analisis keadilan dan iklim gotong royong berdasarkan formulir peer-review siswa di mana identitas pelapor tidak dikirim ke AI dan tidak terlihat siswa lain.
 
 ### 7. Pengingat Ramah (Nudge)
 - **`POST /api/ai/groups/:groupId/nudge`**

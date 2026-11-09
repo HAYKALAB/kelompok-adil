@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { sendError } from '../lib/response.js';
+import { repo } from '../deps/repository.stub.js';
 
 export type UserRole = 'STUDENT' | 'TEACHER';
 
@@ -63,5 +64,50 @@ export function requireTeacher(req: Request, res: Response, next: NextFunction):
     );
     return;
   }
+  next();
+}
+
+/**
+ * Guard otorisasi privasi percakapan chat kelompok:
+ * 1. Guru ditolak HTTP 403 (FORBIDDEN_STUDENTS_ONLY): Guru tidak memiliki akses ke percakapan AI; hanya anggota kelompok yang bisa membacanya.
+ * 2. Hanya siswa yang terdaftar sebagai anggota kelompok tersebut yang diizinkan (req.user.id in group.members).
+ *    Siswa luar kelompok ditolak HTTP 403 (FORBIDDEN_GROUP_MEMBER_ONLY).
+ */
+export async function requireGroupStudentMember(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const user = req.user;
+  if (!user || user.role === 'TEACHER') {
+    sendError(
+      res,
+      403,
+      'FORBIDDEN_STUDENTS_ONLY',
+      'Akses ditolak: Guru tidak memiliki akses ke percakapan AI; hanya anggota kelompok yang bisa membacanya.'
+    );
+    return;
+  }
+
+  const rawGroupId = req.params.groupId;
+  const groupId = Array.isArray(rawGroupId) ? rawGroupId[0] : rawGroupId || '';
+  if (!groupId) {
+    sendError(res, 400, 'VALIDATION_ERROR', 'ID Kelompok diperlukan.');
+    return;
+  }
+
+  const group = await repo.getGroup(groupId);
+  if (!group) {
+    sendError(res, 404, 'NOT_FOUND', `Kelompok dengan ID ${groupId} tidak ditemukan.`);
+    return;
+  }
+
+  const isMember = group.members.some((m) => m.id === user.id);
+  if (!isMember) {
+    sendError(
+      res,
+      403,
+      'FORBIDDEN_GROUP_MEMBER_ONLY',
+      'Akses ditolak: Hanya anggota kelompok yang bersangkutan yang dapat mengakses percakapan obrolan ini.'
+    );
+    return;
+  }
+
   next();
 }

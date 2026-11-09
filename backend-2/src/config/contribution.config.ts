@@ -19,6 +19,8 @@ export const ContributionConfig = {
   ghosting: {
     // Ambang jam sebelum tenggat untuk memicu pengingat ramah ke grup (default 48 jam)
     warnHoursThreshold: Number(process.env.GHOSTING_WARN_HOURS) || 48,
+    // Interval jam minimal antar-pengingat untuk tugas yang sama guna mencegah pesan duplikat (default 24 jam)
+    nudgeIntervalHours: Number(process.env.GHOSTING_NUDGE_INTERVAL_HOURS) || 24,
   },
 
   // Status keseimbangan tim

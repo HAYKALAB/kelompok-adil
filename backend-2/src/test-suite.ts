@@ -595,6 +595,82 @@ async function runTests() {
         overdueAlert.message.toLowerCase().includes('perlu perhatian'),
       'Aturan Baru Ghosting: Tugas dengan deadline lewat dan belum selesai memicu alert ke guru dengan bahasa netral ("perlu perhatian")'
     );
+
+    // 34. Privasi Chat Kelompok: Guru & Siswa Luar Ditolak 403, Anggota Berhasil
+    const resGuruMessages = await fetch(`${BASE_URL}/groups/group-1/messages`, {
+      headers: { 'x-role': 'TEACHER' },
+    });
+    const errGuruMessages: any = await resGuruMessages.json();
+
+    const resOtherStudentMessages = await fetch(`${BASE_URL}/groups/group-1/messages`, {
+      headers: { 'x-user-id': 'm-intan', 'x-role': 'STUDENT' }, // m-intan adalah anggota group-2
+    });
+    const errOtherStudent: any = await resOtherStudentMessages.json();
+
+    const resMemberMessages = await fetch(`${BASE_URL}/groups/group-1/messages`, {
+      headers: { 'x-user-id': 'm-dafano', 'x-role': 'STUDENT' }, // m-dafano adalah anggota group-1
+    });
+    const dataMemberMessages: any = await resMemberMessages.json();
+
+    const resGuruChatPost = await fetch(`${BASE_URL}/groups/group-1/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-role': 'TEACHER' },
+      body: JSON.stringify({ message: 'Tes chat guru' }),
+    });
+
+    const resOtherStudentChatPost = await fetch(`${BASE_URL}/groups/group-1/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': 'm-intan', 'x-role': 'STUDENT' },
+      body: JSON.stringify({ message: 'Tes chat siswa luar' }),
+    });
+
+    assert(
+      resGuruMessages.status === 403 &&
+        errGuruMessages.error?.code === 'FORBIDDEN_STUDENTS_ONLY' &&
+        resOtherStudentMessages.status === 403 &&
+        errOtherStudent.error?.code === 'FORBIDDEN_GROUP_MEMBER_ONLY' &&
+        resMemberMessages.status === 200 &&
+        Array.isArray(dataMemberMessages.data?.messages) &&
+        resGuruChatPost.status === 403 &&
+        resOtherStudentChatPost.status === 403,
+      'Privasi Chat Kelompok: Guru & siswa kelompok lain ditolak 403 (GET & POST), anggota kelompok berhasil 200'
+    );
+
+    // 35. Pengingat Deadline ke Grup Tanpa Efek Samping Berulang (De-duplikasi scanRoomAlerts)
+    const nearDeadline = new Date(Date.now() + 20 * 3600 * 1000).toISOString();
+    await repo.createTasks(testGroupId, [
+      {
+        title: 'Tugas Dekat Deadline Uji Nudge',
+        description: 'Tenggat 20 jam ke depan',
+        assigneeId: 'm-test1',
+        status: 'todo',
+        weight: 15,
+        deadline: nearDeadline,
+      },
+    ]);
+
+    // Panggilan pertama: Pengingat ramah pertama kali dikirimkan ke obrolan grup
+    await fetch(`${BASE_URL}/rooms/${testRoomId}/alerts`, {
+      headers: { 'x-role': 'TEACHER' },
+    });
+    const msgsAfterFirstScan = await repo.getAiMessages(testGroupId);
+    const nudgeCount1 = msgsAfterFirstScan.filter(
+      (m) => m.action === 'nudge' && m.content.includes('Tugas Dekat Deadline Uji Nudge')
+    ).length;
+
+    // Panggilan kedua (simulasi refresh halaman guru): Tidak boleh ada pesan duplikat
+    await fetch(`${BASE_URL}/rooms/${testRoomId}/alerts`, {
+      headers: { 'x-role': 'TEACHER' },
+    });
+    const msgsAfterSecondScan = await repo.getAiMessages(testGroupId);
+    const nudgeCount2 = msgsAfterSecondScan.filter(
+      (m) => m.action === 'nudge' && m.content.includes('Tugas Dekat Deadline Uji Nudge')
+    ).length;
+
+    assert(
+      nudgeCount1 === 1 && nudgeCount2 === 1,
+      'Pengingat Deadline: Memanggil alerts dua kali tidak membuat pengingat ganda di grup (de-duplikasi sukses)'
+    );
   } catch (e: any) {
     console.error('Terjadi error saat pengujian:', e);
     allPassed = false;
@@ -602,7 +678,7 @@ async function runTests() {
     server.close();
     console.log('\n=========================================');
     if (allPassed) {
-      console.log('🎉 SEMUA 33 PENGUJIAN FITUR, KONTRAK & KEAMANAN BERHASIL (100% PASS)!');
+      console.log('🎉 SEMUA 35 PENGUJIAN FITUR, KONTRAK & KEAMANAN BERHASIL (100% PASS)!');
     } else {
       console.log('⚠️ TERDAPAT PENGUJIAN YANG GAGAL.');
     }

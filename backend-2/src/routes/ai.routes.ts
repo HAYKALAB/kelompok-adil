@@ -1,14 +1,14 @@
 import { Router } from 'express';
 import { AiController } from '../controllers/ai.controller.js';
-import { requireTeacher } from '../middleware/auth.middleware.js';
+import { requireTeacher, requireGroupStudentMember } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
 // --- 1. CHAT & FASILITATOR BERSAMA KELOMPOK (Fitur A & B) ---
-// Obrolan AI fasilitator, ide topik, dan tanya jawab kelompok
-router.post('/groups/:groupId/chat', AiController.chat);
-// Riwayat chat kelompok (transparan untuk semua anggota)
-router.get('/groups/:groupId/messages', AiController.getMessages);
+// Obrolan AI fasilitator, ide topik, dan tanya jawab kelompok (Khusus siswa anggota kelompok)
+router.post('/groups/:groupId/chat', requireGroupStudentMember, AiController.chat);
+// Riwayat chat kelompok (Hanya untuk siswa anggota kelompok; guru & siswa luar ditolak 403)
+router.get('/groups/:groupId/messages', requireGroupStudentMember, AiController.getMessages);
 
 // --- 2. PEMBAGIAN PERAN ADIL (Fitur C) ---
 // Usulan pembagian peran adil (total 100% dan wajib format bukti)
