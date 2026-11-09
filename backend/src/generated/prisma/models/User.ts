@@ -150,7 +150,7 @@ export type UserGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalArg
 export type UserGroupByOutputType = {
   id: string
   name: string
-  email: string
+  email: string | null
   role: $Enums.Role
   createdAt: Date
   _count: UserCountAggregateOutputType | null
@@ -179,25 +179,23 @@ export type UserWhereInput = {
   NOT?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
   id?: Prisma.StringFilter<"User"> | string
   name?: Prisma.StringFilter<"User"> | string
-  email?: Prisma.StringFilter<"User"> | string
+  email?: Prisma.StringNullableFilter<"User"> | string | null
   role?: Prisma.EnumRoleFilter<"User"> | $Enums.Role
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   taughtRooms?: Prisma.RoomListRelationFilter
   roomParticipants?: Prisma.RoomParticipantListRelationFilter
   teacherCodeTickets?: Prisma.TeacherCodeTicketListRelationFilter
-  studentCodeTickets?: Prisma.StudentCodeTicketListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
-  email?: Prisma.SortOrder
+  email?: Prisma.SortOrderInput | Prisma.SortOrder
   role?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   taughtRooms?: Prisma.RoomOrderByRelationAggregateInput
   roomParticipants?: Prisma.RoomParticipantOrderByRelationAggregateInput
   teacherCodeTickets?: Prisma.TeacherCodeTicketOrderByRelationAggregateInput
-  studentCodeTickets?: Prisma.StudentCodeTicketOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -212,13 +210,12 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   taughtRooms?: Prisma.RoomListRelationFilter
   roomParticipants?: Prisma.RoomParticipantListRelationFilter
   teacherCodeTickets?: Prisma.TeacherCodeTicketListRelationFilter
-  studentCodeTickets?: Prisma.StudentCodeTicketListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
-  email?: Prisma.SortOrder
+  email?: Prisma.SortOrderInput | Prisma.SortOrder
   role?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
@@ -232,7 +229,7 @@ export type UserScalarWhereWithAggregatesInput = {
   NOT?: Prisma.UserScalarWhereWithAggregatesInput | Prisma.UserScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"User"> | string
   name?: Prisma.StringWithAggregatesFilter<"User"> | string
-  email?: Prisma.StringWithAggregatesFilter<"User"> | string
+  email?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   role?: Prisma.EnumRoleWithAggregatesFilter<"User"> | $Enums.Role
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
 }
@@ -240,55 +237,51 @@ export type UserScalarWhereWithAggregatesInput = {
 export type UserCreateInput = {
   id?: string
   name: string
-  email: string
+  email?: string | null
   role?: $Enums.Role
   createdAt?: Date | string
   taughtRooms?: Prisma.RoomCreateNestedManyWithoutTeacherInput
   roomParticipants?: Prisma.RoomParticipantCreateNestedManyWithoutUserInput
   teacherCodeTickets?: Prisma.TeacherCodeTicketCreateNestedManyWithoutTeacherInput
-  studentCodeTickets?: Prisma.StudentCodeTicketCreateNestedManyWithoutStudentInput
 }
 
 export type UserUncheckedCreateInput = {
   id?: string
   name: string
-  email: string
+  email?: string | null
   role?: $Enums.Role
   createdAt?: Date | string
   taughtRooms?: Prisma.RoomUncheckedCreateNestedManyWithoutTeacherInput
   roomParticipants?: Prisma.RoomParticipantUncheckedCreateNestedManyWithoutUserInput
   teacherCodeTickets?: Prisma.TeacherCodeTicketUncheckedCreateNestedManyWithoutTeacherInput
-  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type UserUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taughtRooms?: Prisma.RoomUpdateManyWithoutTeacherNestedInput
   roomParticipants?: Prisma.RoomParticipantUpdateManyWithoutUserNestedInput
   teacherCodeTickets?: Prisma.TeacherCodeTicketUpdateManyWithoutTeacherNestedInput
-  studentCodeTickets?: Prisma.StudentCodeTicketUpdateManyWithoutStudentNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taughtRooms?: Prisma.RoomUncheckedUpdateManyWithoutTeacherNestedInput
   roomParticipants?: Prisma.RoomParticipantUncheckedUpdateManyWithoutUserNestedInput
   teacherCodeTickets?: Prisma.TeacherCodeTicketUncheckedUpdateManyWithoutTeacherNestedInput
-  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type UserCreateManyInput = {
   id?: string
   name: string
-  email: string
+  email?: string | null
   role?: $Enums.Role
   createdAt?: Date | string
 }
@@ -296,7 +289,7 @@ export type UserCreateManyInput = {
 export type UserUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -304,7 +297,7 @@ export type UserUpdateManyMutationInput = {
 export type UserUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -345,6 +338,10 @@ export type UserNullableScalarRelationFilter = {
 
 export type StringFieldUpdateOperationsInput = {
   set?: string
+}
+
+export type NullableStringFieldUpdateOperationsInput = {
+  set?: string | null
 }
 
 export type EnumRoleFieldUpdateOperationsInput = {
@@ -399,40 +396,24 @@ export type UserUpdateOneRequiredWithoutTeacherCodeTicketsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutTeacherCodeTicketsInput, Prisma.UserUpdateWithoutTeacherCodeTicketsInput>, Prisma.UserUncheckedUpdateWithoutTeacherCodeTicketsInput>
 }
 
-export type UserCreateNestedOneWithoutStudentCodeTicketsInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutStudentCodeTicketsInput, Prisma.UserUncheckedCreateWithoutStudentCodeTicketsInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutStudentCodeTicketsInput
-  connect?: Prisma.UserWhereUniqueInput
-}
-
-export type UserUpdateOneRequiredWithoutStudentCodeTicketsNestedInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutStudentCodeTicketsInput, Prisma.UserUncheckedCreateWithoutStudentCodeTicketsInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutStudentCodeTicketsInput
-  upsert?: Prisma.UserUpsertWithoutStudentCodeTicketsInput
-  connect?: Prisma.UserWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutStudentCodeTicketsInput, Prisma.UserUpdateWithoutStudentCodeTicketsInput>, Prisma.UserUncheckedUpdateWithoutStudentCodeTicketsInput>
-}
-
 export type UserCreateWithoutTaughtRoomsInput = {
   id?: string
   name: string
-  email: string
+  email?: string | null
   role?: $Enums.Role
   createdAt?: Date | string
   roomParticipants?: Prisma.RoomParticipantCreateNestedManyWithoutUserInput
   teacherCodeTickets?: Prisma.TeacherCodeTicketCreateNestedManyWithoutTeacherInput
-  studentCodeTickets?: Prisma.StudentCodeTicketCreateNestedManyWithoutStudentInput
 }
 
 export type UserUncheckedCreateWithoutTaughtRoomsInput = {
   id?: string
   name: string
-  email: string
+  email?: string | null
   role?: $Enums.Role
   createdAt?: Date | string
   roomParticipants?: Prisma.RoomParticipantUncheckedCreateNestedManyWithoutUserInput
   teacherCodeTickets?: Prisma.TeacherCodeTicketUncheckedCreateNestedManyWithoutTeacherInput
-  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type UserCreateOrConnectWithoutTaughtRoomsInput = {
@@ -454,45 +435,41 @@ export type UserUpdateToOneWithWhereWithoutTaughtRoomsInput = {
 export type UserUpdateWithoutTaughtRoomsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   roomParticipants?: Prisma.RoomParticipantUpdateManyWithoutUserNestedInput
   teacherCodeTickets?: Prisma.TeacherCodeTicketUpdateManyWithoutTeacherNestedInput
-  studentCodeTickets?: Prisma.StudentCodeTicketUpdateManyWithoutStudentNestedInput
 }
 
 export type UserUncheckedUpdateWithoutTaughtRoomsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   roomParticipants?: Prisma.RoomParticipantUncheckedUpdateManyWithoutUserNestedInput
   teacherCodeTickets?: Prisma.TeacherCodeTicketUncheckedUpdateManyWithoutTeacherNestedInput
-  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type UserCreateWithoutRoomParticipantsInput = {
   id?: string
   name: string
-  email: string
+  email?: string | null
   role?: $Enums.Role
   createdAt?: Date | string
   taughtRooms?: Prisma.RoomCreateNestedManyWithoutTeacherInput
   teacherCodeTickets?: Prisma.TeacherCodeTicketCreateNestedManyWithoutTeacherInput
-  studentCodeTickets?: Prisma.StudentCodeTicketCreateNestedManyWithoutStudentInput
 }
 
 export type UserUncheckedCreateWithoutRoomParticipantsInput = {
   id?: string
   name: string
-  email: string
+  email?: string | null
   role?: $Enums.Role
   createdAt?: Date | string
   taughtRooms?: Prisma.RoomUncheckedCreateNestedManyWithoutTeacherInput
   teacherCodeTickets?: Prisma.TeacherCodeTicketUncheckedCreateNestedManyWithoutTeacherInput
-  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type UserCreateOrConnectWithoutRoomParticipantsInput = {
@@ -514,45 +491,41 @@ export type UserUpdateToOneWithWhereWithoutRoomParticipantsInput = {
 export type UserUpdateWithoutRoomParticipantsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taughtRooms?: Prisma.RoomUpdateManyWithoutTeacherNestedInput
   teacherCodeTickets?: Prisma.TeacherCodeTicketUpdateManyWithoutTeacherNestedInput
-  studentCodeTickets?: Prisma.StudentCodeTicketUpdateManyWithoutStudentNestedInput
 }
 
 export type UserUncheckedUpdateWithoutRoomParticipantsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taughtRooms?: Prisma.RoomUncheckedUpdateManyWithoutTeacherNestedInput
   teacherCodeTickets?: Prisma.TeacherCodeTicketUncheckedUpdateManyWithoutTeacherNestedInput
-  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedUpdateManyWithoutStudentNestedInput
 }
 
 export type UserCreateWithoutTeacherCodeTicketsInput = {
   id?: string
   name: string
-  email: string
+  email?: string | null
   role?: $Enums.Role
   createdAt?: Date | string
   taughtRooms?: Prisma.RoomCreateNestedManyWithoutTeacherInput
   roomParticipants?: Prisma.RoomParticipantCreateNestedManyWithoutUserInput
-  studentCodeTickets?: Prisma.StudentCodeTicketCreateNestedManyWithoutStudentInput
 }
 
 export type UserUncheckedCreateWithoutTeacherCodeTicketsInput = {
   id?: string
   name: string
-  email: string
+  email?: string | null
   role?: $Enums.Role
   createdAt?: Date | string
   taughtRooms?: Prisma.RoomUncheckedCreateNestedManyWithoutTeacherInput
   roomParticipants?: Prisma.RoomParticipantUncheckedCreateNestedManyWithoutUserInput
-  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedCreateNestedManyWithoutStudentInput
 }
 
 export type UserCreateOrConnectWithoutTeacherCodeTicketsInput = {
@@ -574,83 +547,21 @@ export type UserUpdateToOneWithWhereWithoutTeacherCodeTicketsInput = {
 export type UserUpdateWithoutTeacherCodeTicketsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taughtRooms?: Prisma.RoomUpdateManyWithoutTeacherNestedInput
   roomParticipants?: Prisma.RoomParticipantUpdateManyWithoutUserNestedInput
-  studentCodeTickets?: Prisma.StudentCodeTicketUpdateManyWithoutStudentNestedInput
 }
 
 export type UserUncheckedUpdateWithoutTeacherCodeTicketsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   taughtRooms?: Prisma.RoomUncheckedUpdateManyWithoutTeacherNestedInput
   roomParticipants?: Prisma.RoomParticipantUncheckedUpdateManyWithoutUserNestedInput
-  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedUpdateManyWithoutStudentNestedInput
-}
-
-export type UserCreateWithoutStudentCodeTicketsInput = {
-  id?: string
-  name: string
-  email: string
-  role?: $Enums.Role
-  createdAt?: Date | string
-  taughtRooms?: Prisma.RoomCreateNestedManyWithoutTeacherInput
-  roomParticipants?: Prisma.RoomParticipantCreateNestedManyWithoutUserInput
-  teacherCodeTickets?: Prisma.TeacherCodeTicketCreateNestedManyWithoutTeacherInput
-}
-
-export type UserUncheckedCreateWithoutStudentCodeTicketsInput = {
-  id?: string
-  name: string
-  email: string
-  role?: $Enums.Role
-  createdAt?: Date | string
-  taughtRooms?: Prisma.RoomUncheckedCreateNestedManyWithoutTeacherInput
-  roomParticipants?: Prisma.RoomParticipantUncheckedCreateNestedManyWithoutUserInput
-  teacherCodeTickets?: Prisma.TeacherCodeTicketUncheckedCreateNestedManyWithoutTeacherInput
-}
-
-export type UserCreateOrConnectWithoutStudentCodeTicketsInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutStudentCodeTicketsInput, Prisma.UserUncheckedCreateWithoutStudentCodeTicketsInput>
-}
-
-export type UserUpsertWithoutStudentCodeTicketsInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutStudentCodeTicketsInput, Prisma.UserUncheckedUpdateWithoutStudentCodeTicketsInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutStudentCodeTicketsInput, Prisma.UserUncheckedCreateWithoutStudentCodeTicketsInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutStudentCodeTicketsInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutStudentCodeTicketsInput, Prisma.UserUncheckedUpdateWithoutStudentCodeTicketsInput>
-}
-
-export type UserUpdateWithoutStudentCodeTicketsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  taughtRooms?: Prisma.RoomUpdateManyWithoutTeacherNestedInput
-  roomParticipants?: Prisma.RoomParticipantUpdateManyWithoutUserNestedInput
-  teacherCodeTickets?: Prisma.TeacherCodeTicketUpdateManyWithoutTeacherNestedInput
-}
-
-export type UserUncheckedUpdateWithoutStudentCodeTicketsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  taughtRooms?: Prisma.RoomUncheckedUpdateManyWithoutTeacherNestedInput
-  roomParticipants?: Prisma.RoomParticipantUncheckedUpdateManyWithoutUserNestedInput
-  teacherCodeTickets?: Prisma.TeacherCodeTicketUncheckedUpdateManyWithoutTeacherNestedInput
 }
 
 
@@ -662,14 +573,12 @@ export type UserCountOutputType = {
   taughtRooms: number
   roomParticipants: number
   teacherCodeTickets: number
-  studentCodeTickets: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   taughtRooms?: boolean | UserCountOutputTypeCountTaughtRoomsArgs
   roomParticipants?: boolean | UserCountOutputTypeCountRoomParticipantsArgs
   teacherCodeTickets?: boolean | UserCountOutputTypeCountTeacherCodeTicketsArgs
-  studentCodeTickets?: boolean | UserCountOutputTypeCountStudentCodeTicketsArgs
 }
 
 /**
@@ -703,13 +612,6 @@ export type UserCountOutputTypeCountTeacherCodeTicketsArgs<ExtArgs extends runti
   where?: Prisma.TeacherCodeTicketWhereInput
 }
 
-/**
- * UserCountOutputType without action
- */
-export type UserCountOutputTypeCountStudentCodeTicketsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.StudentCodeTicketWhereInput
-}
-
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -720,7 +622,6 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   taughtRooms?: boolean | Prisma.User$taughtRoomsArgs<ExtArgs>
   roomParticipants?: boolean | Prisma.User$roomParticipantsArgs<ExtArgs>
   teacherCodeTickets?: boolean | Prisma.User$teacherCodeTicketsArgs<ExtArgs>
-  studentCodeTickets?: boolean | Prisma.User$studentCodeTicketsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -753,7 +654,6 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   taughtRooms?: boolean | Prisma.User$taughtRoomsArgs<ExtArgs>
   roomParticipants?: boolean | Prisma.User$roomParticipantsArgs<ExtArgs>
   teacherCodeTickets?: boolean | Prisma.User$teacherCodeTicketsArgs<ExtArgs>
-  studentCodeTickets?: boolean | Prisma.User$studentCodeTicketsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -765,12 +665,11 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     taughtRooms: Prisma.$RoomPayload<ExtArgs>[]
     roomParticipants: Prisma.$RoomParticipantPayload<ExtArgs>[]
     teacherCodeTickets: Prisma.$TeacherCodeTicketPayload<ExtArgs>[]
-    studentCodeTickets: Prisma.$StudentCodeTicketPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     name: string
-    email: string
+    email: string | null
     role: $Enums.Role
     createdAt: Date
   }, ExtArgs["result"]["user"]>
@@ -1170,7 +1069,6 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   taughtRooms<T extends Prisma.User$taughtRoomsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$taughtRoomsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RoomPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   roomParticipants<T extends Prisma.User$roomParticipantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$roomParticipantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RoomParticipantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   teacherCodeTickets<T extends Prisma.User$teacherCodeTicketsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$teacherCodeTicketsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TeacherCodeTicketPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  studentCodeTickets<T extends Prisma.User$studentCodeTicketsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$studentCodeTicketsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StudentCodeTicketPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1667,30 +1565,6 @@ export type User$teacherCodeTicketsArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   distinct?: Prisma.TeacherCodeTicketScalarFieldEnum | Prisma.TeacherCodeTicketScalarFieldEnum[]
-}
-
-/**
- * User.studentCodeTickets
- */
-export type User$studentCodeTicketsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the StudentCodeTicket
-   */
-  select?: Prisma.StudentCodeTicketSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the StudentCodeTicket
-   */
-  omit?: Prisma.StudentCodeTicketOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.StudentCodeTicketInclude<ExtArgs> | null
-  where?: Prisma.StudentCodeTicketWhereInput
-  orderBy?: Prisma.StudentCodeTicketOrderByWithRelationInput | Prisma.StudentCodeTicketOrderByWithRelationInput[]
-  cursor?: Prisma.StudentCodeTicketWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.StudentCodeTicketScalarFieldEnum | Prisma.StudentCodeTicketScalarFieldEnum[]
 }
 
 /**

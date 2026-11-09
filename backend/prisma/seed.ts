@@ -131,8 +131,8 @@ async function main() {
     const code = `SISWA-MAJAPAHIT-${String(i + 1).padStart(2, '0')}`;
     await prisma.studentCodeTicket.upsert({
       where: { code },
-      update: { roomId: room.id, studentId: students[i].id, expiresAt: FUTURE },
-      create: { code, roomId: room.id, studentId: students[i].id, expiresAt: FUTURE },
+      update: { roomId: room.id, participantId: participants[i].id, expiresAt: FUTURE },
+      create: { code, roomId: room.id, participantId: participants[i].id, expiresAt: FUTURE },
     });
   }
 

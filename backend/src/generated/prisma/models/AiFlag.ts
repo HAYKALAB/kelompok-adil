@@ -158,7 +158,7 @@ export type AiFlagGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalA
 export type AiFlagGroupByOutputType = {
   id: string
   groupId: string
-  memberId: string
+  memberId: string | null
   kind: $Enums.AiFlagKind
   detail: runtime.JsonValue
   resolvedAt: Date | null
@@ -189,19 +189,19 @@ export type AiFlagWhereInput = {
   NOT?: Prisma.AiFlagWhereInput | Prisma.AiFlagWhereInput[]
   id?: Prisma.StringFilter<"AiFlag"> | string
   groupId?: Prisma.StringFilter<"AiFlag"> | string
-  memberId?: Prisma.StringFilter<"AiFlag"> | string
+  memberId?: Prisma.StringNullableFilter<"AiFlag"> | string | null
   kind?: Prisma.EnumAiFlagKindFilter<"AiFlag"> | $Enums.AiFlagKind
   detail?: Prisma.JsonFilter<"AiFlag">
   resolvedAt?: Prisma.DateTimeNullableFilter<"AiFlag"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"AiFlag"> | Date | string
   group?: Prisma.XOR<Prisma.GroupScalarRelationFilter, Prisma.GroupWhereInput>
-  member?: Prisma.XOR<Prisma.RoomParticipantScalarRelationFilter, Prisma.RoomParticipantWhereInput>
+  member?: Prisma.XOR<Prisma.RoomParticipantNullableScalarRelationFilter, Prisma.RoomParticipantWhereInput> | null
 }
 
 export type AiFlagOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   groupId?: Prisma.SortOrder
-  memberId?: Prisma.SortOrder
+  memberId?: Prisma.SortOrderInput | Prisma.SortOrder
   kind?: Prisma.SortOrder
   detail?: Prisma.SortOrder
   resolvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -216,19 +216,19 @@ export type AiFlagWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.AiFlagWhereInput[]
   NOT?: Prisma.AiFlagWhereInput | Prisma.AiFlagWhereInput[]
   groupId?: Prisma.StringFilter<"AiFlag"> | string
-  memberId?: Prisma.StringFilter<"AiFlag"> | string
+  memberId?: Prisma.StringNullableFilter<"AiFlag"> | string | null
   kind?: Prisma.EnumAiFlagKindFilter<"AiFlag"> | $Enums.AiFlagKind
   detail?: Prisma.JsonFilter<"AiFlag">
   resolvedAt?: Prisma.DateTimeNullableFilter<"AiFlag"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"AiFlag"> | Date | string
   group?: Prisma.XOR<Prisma.GroupScalarRelationFilter, Prisma.GroupWhereInput>
-  member?: Prisma.XOR<Prisma.RoomParticipantScalarRelationFilter, Prisma.RoomParticipantWhereInput>
+  member?: Prisma.XOR<Prisma.RoomParticipantNullableScalarRelationFilter, Prisma.RoomParticipantWhereInput> | null
 }, "id">
 
 export type AiFlagOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   groupId?: Prisma.SortOrder
-  memberId?: Prisma.SortOrder
+  memberId?: Prisma.SortOrderInput | Prisma.SortOrder
   kind?: Prisma.SortOrder
   detail?: Prisma.SortOrder
   resolvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -244,7 +244,7 @@ export type AiFlagScalarWhereWithAggregatesInput = {
   NOT?: Prisma.AiFlagScalarWhereWithAggregatesInput | Prisma.AiFlagScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"AiFlag"> | string
   groupId?: Prisma.StringWithAggregatesFilter<"AiFlag"> | string
-  memberId?: Prisma.StringWithAggregatesFilter<"AiFlag"> | string
+  memberId?: Prisma.StringNullableWithAggregatesFilter<"AiFlag"> | string | null
   kind?: Prisma.EnumAiFlagKindWithAggregatesFilter<"AiFlag"> | $Enums.AiFlagKind
   detail?: Prisma.JsonWithAggregatesFilter<"AiFlag">
   resolvedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"AiFlag"> | Date | string | null
@@ -258,13 +258,13 @@ export type AiFlagCreateInput = {
   resolvedAt?: Date | string | null
   createdAt?: Date | string
   group: Prisma.GroupCreateNestedOneWithoutFlagsInput
-  member: Prisma.RoomParticipantCreateNestedOneWithoutAiFlagsInput
+  member?: Prisma.RoomParticipantCreateNestedOneWithoutAiFlagsInput
 }
 
 export type AiFlagUncheckedCreateInput = {
   id?: string
   groupId: string
-  memberId: string
+  memberId?: string | null
   kind: $Enums.AiFlagKind
   detail: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resolvedAt?: Date | string | null
@@ -278,13 +278,13 @@ export type AiFlagUpdateInput = {
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   group?: Prisma.GroupUpdateOneRequiredWithoutFlagsNestedInput
-  member?: Prisma.RoomParticipantUpdateOneRequiredWithoutAiFlagsNestedInput
+  member?: Prisma.RoomParticipantUpdateOneWithoutAiFlagsNestedInput
 }
 
 export type AiFlagUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   groupId?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumAiFlagKindFieldUpdateOperationsInput | $Enums.AiFlagKind
   detail?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -294,7 +294,7 @@ export type AiFlagUncheckedUpdateInput = {
 export type AiFlagCreateManyInput = {
   id?: string
   groupId: string
-  memberId: string
+  memberId?: string | null
   kind: $Enums.AiFlagKind
   detail: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resolvedAt?: Date | string | null
@@ -312,7 +312,7 @@ export type AiFlagUpdateManyMutationInput = {
 export type AiFlagUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   groupId?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumAiFlagKindFieldUpdateOperationsInput | $Enums.AiFlagKind
   detail?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -495,7 +495,7 @@ export type AiFlagScalarWhereInput = {
   NOT?: Prisma.AiFlagScalarWhereInput | Prisma.AiFlagScalarWhereInput[]
   id?: Prisma.StringFilter<"AiFlag"> | string
   groupId?: Prisma.StringFilter<"AiFlag"> | string
-  memberId?: Prisma.StringFilter<"AiFlag"> | string
+  memberId?: Prisma.StringNullableFilter<"AiFlag"> | string | null
   kind?: Prisma.EnumAiFlagKindFilter<"AiFlag"> | $Enums.AiFlagKind
   detail?: Prisma.JsonFilter<"AiFlag">
   resolvedAt?: Prisma.DateTimeNullableFilter<"AiFlag"> | Date | string | null
@@ -508,12 +508,12 @@ export type AiFlagCreateWithoutGroupInput = {
   detail: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resolvedAt?: Date | string | null
   createdAt?: Date | string
-  member: Prisma.RoomParticipantCreateNestedOneWithoutAiFlagsInput
+  member?: Prisma.RoomParticipantCreateNestedOneWithoutAiFlagsInput
 }
 
 export type AiFlagUncheckedCreateWithoutGroupInput = {
   id?: string
-  memberId: string
+  memberId?: string | null
   kind: $Enums.AiFlagKind
   detail: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resolvedAt?: Date | string | null
@@ -584,7 +584,7 @@ export type AiFlagUncheckedUpdateManyWithoutMemberInput = {
 
 export type AiFlagCreateManyGroupInput = {
   id?: string
-  memberId: string
+  memberId?: string | null
   kind: $Enums.AiFlagKind
   detail: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resolvedAt?: Date | string | null
@@ -597,12 +597,12 @@ export type AiFlagUpdateWithoutGroupInput = {
   detail?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  member?: Prisma.RoomParticipantUpdateOneRequiredWithoutAiFlagsNestedInput
+  member?: Prisma.RoomParticipantUpdateOneWithoutAiFlagsNestedInput
 }
 
 export type AiFlagUncheckedUpdateWithoutGroupInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumAiFlagKindFieldUpdateOperationsInput | $Enums.AiFlagKind
   detail?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -611,7 +611,7 @@ export type AiFlagUncheckedUpdateWithoutGroupInput = {
 
 export type AiFlagUncheckedUpdateManyWithoutGroupInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  memberId?: Prisma.StringFieldUpdateOperationsInput | string
+  memberId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumAiFlagKindFieldUpdateOperationsInput | $Enums.AiFlagKind
   detail?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   resolvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -629,7 +629,7 @@ export type AiFlagSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   resolvedAt?: boolean
   createdAt?: boolean
   group?: boolean | Prisma.GroupDefaultArgs<ExtArgs>
-  member?: boolean | Prisma.RoomParticipantDefaultArgs<ExtArgs>
+  member?: boolean | Prisma.AiFlag$memberArgs<ExtArgs>
 }, ExtArgs["result"]["aiFlag"]>
 
 export type AiFlagSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -641,7 +641,7 @@ export type AiFlagSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   resolvedAt?: boolean
   createdAt?: boolean
   group?: boolean | Prisma.GroupDefaultArgs<ExtArgs>
-  member?: boolean | Prisma.RoomParticipantDefaultArgs<ExtArgs>
+  member?: boolean | Prisma.AiFlag$memberArgs<ExtArgs>
 }, ExtArgs["result"]["aiFlag"]>
 
 export type AiFlagSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -653,7 +653,7 @@ export type AiFlagSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   resolvedAt?: boolean
   createdAt?: boolean
   group?: boolean | Prisma.GroupDefaultArgs<ExtArgs>
-  member?: boolean | Prisma.RoomParticipantDefaultArgs<ExtArgs>
+  member?: boolean | Prisma.AiFlag$memberArgs<ExtArgs>
 }, ExtArgs["result"]["aiFlag"]>
 
 export type AiFlagSelectScalar = {
@@ -669,27 +669,27 @@ export type AiFlagSelectScalar = {
 export type AiFlagOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "groupId" | "memberId" | "kind" | "detail" | "resolvedAt" | "createdAt", ExtArgs["result"]["aiFlag"]>
 export type AiFlagInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   group?: boolean | Prisma.GroupDefaultArgs<ExtArgs>
-  member?: boolean | Prisma.RoomParticipantDefaultArgs<ExtArgs>
+  member?: boolean | Prisma.AiFlag$memberArgs<ExtArgs>
 }
 export type AiFlagIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   group?: boolean | Prisma.GroupDefaultArgs<ExtArgs>
-  member?: boolean | Prisma.RoomParticipantDefaultArgs<ExtArgs>
+  member?: boolean | Prisma.AiFlag$memberArgs<ExtArgs>
 }
 export type AiFlagIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   group?: boolean | Prisma.GroupDefaultArgs<ExtArgs>
-  member?: boolean | Prisma.RoomParticipantDefaultArgs<ExtArgs>
+  member?: boolean | Prisma.AiFlag$memberArgs<ExtArgs>
 }
 
 export type $AiFlagPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "AiFlag"
   objects: {
     group: Prisma.$GroupPayload<ExtArgs>
-    member: Prisma.$RoomParticipantPayload<ExtArgs>
+    member: Prisma.$RoomParticipantPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     groupId: string
-    memberId: string
+    memberId: string | null
     kind: $Enums.AiFlagKind
     detail: runtime.JsonValue
     resolvedAt: Date | null
@@ -1089,7 +1089,7 @@ readonly fields: AiFlagFieldRefs;
 export interface Prisma__AiFlagClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   group<T extends Prisma.GroupDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.GroupDefaultArgs<ExtArgs>>): Prisma.Prisma__GroupClient<runtime.Types.Result.GetResult<Prisma.$GroupPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  member<T extends Prisma.RoomParticipantDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RoomParticipantDefaultArgs<ExtArgs>>): Prisma.Prisma__RoomParticipantClient<runtime.Types.Result.GetResult<Prisma.$RoomParticipantPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  member<T extends Prisma.AiFlag$memberArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AiFlag$memberArgs<ExtArgs>>): Prisma.Prisma__RoomParticipantClient<runtime.Types.Result.GetResult<Prisma.$RoomParticipantPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1524,6 +1524,25 @@ export type AiFlagDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Intern
    * Limit how many AiFlags to delete.
    */
   limit?: number
+}
+
+/**
+ * AiFlag.member
+ */
+export type AiFlag$memberArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the RoomParticipant
+   */
+  select?: Prisma.RoomParticipantSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the RoomParticipant
+   */
+  omit?: Prisma.RoomParticipantOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RoomParticipantInclude<ExtArgs> | null
+  where?: Prisma.RoomParticipantWhereInput
 }
 
 /**

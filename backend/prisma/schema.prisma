@@ -59,18 +59,18 @@ enum AiSuggestionStatus {
 enum AiFlagKind {
   GHOSTING
   LOW_CONTRIBUTION
+  TASK_OVERDUE
 }
 
 model User {
   id                 String              @id @default(uuid())
   name               String
-  email              String              @unique
+  email              String?             @unique
   role               Role                @default(STUDENT)
   createdAt          DateTime            @default(now())
   taughtRooms        Room[]              @relation("RoomTeacher")
   roomParticipants   RoomParticipant[]
   teacherCodeTickets TeacherCodeTicket[]
-  studentCodeTickets StudentCodeTicket[]
 
   @@map("users")
 }
@@ -99,21 +99,22 @@ model Room {
 }
 
 model RoomParticipant {
-  id              String       @id @default(uuid())
-  roomId          String
-  userId          String?
-  name            String
-  role            Role         @default(STUDENT)
-  joinedAt        DateTime     @default(now())
-  room            Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user            User?        @relation(fields: [userId], references: [id])
-  groupId         String?
-  group           Group?       @relation(fields: [groupId], references: [id])
-  assignedTasks   Task[]       @relation("TaskAssignee")
-  activities      Activity[]
-  reportsMade     PeerReport[] @relation("ReportReporter")
-  reportsReceived PeerReport[] @relation("ReportReported")
-  aiFlags         AiFlag[]
+  id                 String              @id @default(uuid())
+  roomId             String
+  userId             String?
+  name               String
+  role               Role                @default(STUDENT)
+  joinedAt           DateTime            @default(now())
+  room               Room                @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user               User?               @relation(fields: [userId], references: [id])
+  groupId            String?
+  group              Group?              @relation(fields: [groupId], references: [id])
+  assignedTasks      Task[]              @relation("TaskAssignee")
+  activities         Activity[]
+  reportsMade        PeerReport[]        @relation("ReportReporter")
+  reportsReceived    PeerReport[]        @relation("ReportReported")
+  aiFlags            AiFlag[]
+  studentCodeTickets StudentCodeTicket[]
 
   @@unique([roomId, name])
   @@index([roomId])
@@ -202,6 +203,8 @@ model GroupMessage {
   senderName String
   content    String
   isAi       Boolean  @default(false)
+  action     String?
+  payload    Json?
   createdAt  DateTime @default(now())
   group      Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
@@ -223,15 +226,15 @@ model AiSuggestion {
 }
 
 model AiFlag {
-  id         String          @id @default(uuid())
+  id         String           @id @default(uuid())
   groupId    String
-  memberId   String
+  memberId   String?
   kind       AiFlagKind
   detail     Json
   resolvedAt DateTime?
-  createdAt  DateTime        @default(now())
-  group      Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  member     RoomParticipant @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt  DateTime         @default(now())
+  group      Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  member     RoomParticipant? @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([groupId, createdAt])
   @@index([memberId])
@@ -255,17 +258,17 @@ model TeacherCodeTicket {
 }
 
 model StudentCodeTicket {
-  id        String    @id @default(uuid())
-  code      String    @unique
-  roomId    String
-  studentId String
-  expiresAt DateTime?
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-  room      Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  student   User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id            String          @id @default(uuid())
+  code          String          @unique
+  roomId        String
+  participantId String
+  expiresAt     DateTime?
+  usedAt        DateTime?
+  createdAt     DateTime        @default(now())
+  room          Room            @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  participant   RoomParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 
   @@index([roomId])
-  @@index([studentId])
+  @@index([participantId])
   @@map("student_code_tickets")
 }

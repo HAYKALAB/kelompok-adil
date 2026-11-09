@@ -84,7 +84,8 @@ export type AiSuggestionStatus = (typeof AiSuggestionStatus)[keyof typeof AiSugg
 
 export const AiFlagKind = {
   GHOSTING: 'GHOSTING',
-  LOW_CONTRIBUTION: 'LOW_CONTRIBUTION'
+  LOW_CONTRIBUTION: 'LOW_CONTRIBUTION',
+  TASK_OVERDUE: 'TASK_OVERDUE'
 } as const
 
 export type AiFlagKind = (typeof AiFlagKind)[keyof typeof AiFlagKind]

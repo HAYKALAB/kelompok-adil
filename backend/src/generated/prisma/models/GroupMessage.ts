@@ -30,6 +30,7 @@ export type GroupMessageMinAggregateOutputType = {
   senderName: string | null
   content: string | null
   isAi: boolean | null
+  action: string | null
   createdAt: Date | null
 }
 
@@ -39,6 +40,7 @@ export type GroupMessageMaxAggregateOutputType = {
   senderName: string | null
   content: string | null
   isAi: boolean | null
+  action: string | null
   createdAt: Date | null
 }
 
@@ -48,6 +50,8 @@ export type GroupMessageCountAggregateOutputType = {
   senderName: number
   content: number
   isAi: number
+  action: number
+  payload: number
   createdAt: number
   _all: number
 }
@@ -59,6 +63,7 @@ export type GroupMessageMinAggregateInputType = {
   senderName?: true
   content?: true
   isAi?: true
+  action?: true
   createdAt?: true
 }
 
@@ -68,6 +73,7 @@ export type GroupMessageMaxAggregateInputType = {
   senderName?: true
   content?: true
   isAi?: true
+  action?: true
   createdAt?: true
 }
 
@@ -77,6 +83,8 @@ export type GroupMessageCountAggregateInputType = {
   senderName?: true
   content?: true
   isAi?: true
+  action?: true
+  payload?: true
   createdAt?: true
   _all?: true
 }
@@ -159,6 +167,8 @@ export type GroupMessageGroupByOutputType = {
   senderName: string
   content: string
   isAi: boolean
+  action: string | null
+  payload: runtime.JsonValue | null
   createdAt: Date
   _count: GroupMessageCountAggregateOutputType | null
   _min: GroupMessageMinAggregateOutputType | null
@@ -189,6 +199,8 @@ export type GroupMessageWhereInput = {
   senderName?: Prisma.StringFilter<"GroupMessage"> | string
   content?: Prisma.StringFilter<"GroupMessage"> | string
   isAi?: Prisma.BoolFilter<"GroupMessage"> | boolean
+  action?: Prisma.StringNullableFilter<"GroupMessage"> | string | null
+  payload?: Prisma.JsonNullableFilter<"GroupMessage">
   createdAt?: Prisma.DateTimeFilter<"GroupMessage"> | Date | string
   group?: Prisma.XOR<Prisma.GroupScalarRelationFilter, Prisma.GroupWhereInput>
 }
@@ -199,6 +211,8 @@ export type GroupMessageOrderByWithRelationInput = {
   senderName?: Prisma.SortOrder
   content?: Prisma.SortOrder
   isAi?: Prisma.SortOrder
+  action?: Prisma.SortOrderInput | Prisma.SortOrder
+  payload?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   group?: Prisma.GroupOrderByWithRelationInput
 }
@@ -212,6 +226,8 @@ export type GroupMessageWhereUniqueInput = Prisma.AtLeast<{
   senderName?: Prisma.StringFilter<"GroupMessage"> | string
   content?: Prisma.StringFilter<"GroupMessage"> | string
   isAi?: Prisma.BoolFilter<"GroupMessage"> | boolean
+  action?: Prisma.StringNullableFilter<"GroupMessage"> | string | null
+  payload?: Prisma.JsonNullableFilter<"GroupMessage">
   createdAt?: Prisma.DateTimeFilter<"GroupMessage"> | Date | string
   group?: Prisma.XOR<Prisma.GroupScalarRelationFilter, Prisma.GroupWhereInput>
 }, "id">
@@ -222,6 +238,8 @@ export type GroupMessageOrderByWithAggregationInput = {
   senderName?: Prisma.SortOrder
   content?: Prisma.SortOrder
   isAi?: Prisma.SortOrder
+  action?: Prisma.SortOrderInput | Prisma.SortOrder
+  payload?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.GroupMessageCountOrderByAggregateInput
   _max?: Prisma.GroupMessageMaxOrderByAggregateInput
@@ -237,6 +255,8 @@ export type GroupMessageScalarWhereWithAggregatesInput = {
   senderName?: Prisma.StringWithAggregatesFilter<"GroupMessage"> | string
   content?: Prisma.StringWithAggregatesFilter<"GroupMessage"> | string
   isAi?: Prisma.BoolWithAggregatesFilter<"GroupMessage"> | boolean
+  action?: Prisma.StringNullableWithAggregatesFilter<"GroupMessage"> | string | null
+  payload?: Prisma.JsonNullableWithAggregatesFilter<"GroupMessage">
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"GroupMessage"> | Date | string
 }
 
@@ -245,6 +265,8 @@ export type GroupMessageCreateInput = {
   senderName: string
   content: string
   isAi?: boolean
+  action?: string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   group: Prisma.GroupCreateNestedOneWithoutMessagesInput
 }
@@ -255,6 +277,8 @@ export type GroupMessageUncheckedCreateInput = {
   senderName: string
   content: string
   isAi?: boolean
+  action?: string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
 }
 
@@ -263,6 +287,8 @@ export type GroupMessageUpdateInput = {
   senderName?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
   isAi?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  action?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   group?: Prisma.GroupUpdateOneRequiredWithoutMessagesNestedInput
 }
@@ -273,6 +299,8 @@ export type GroupMessageUncheckedUpdateInput = {
   senderName?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
   isAi?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  action?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -282,6 +310,8 @@ export type GroupMessageCreateManyInput = {
   senderName: string
   content: string
   isAi?: boolean
+  action?: string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
 }
 
@@ -290,6 +320,8 @@ export type GroupMessageUpdateManyMutationInput = {
   senderName?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
   isAi?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  action?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -299,6 +331,8 @@ export type GroupMessageUncheckedUpdateManyInput = {
   senderName?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
   isAi?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  action?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -318,6 +352,8 @@ export type GroupMessageCountOrderByAggregateInput = {
   senderName?: Prisma.SortOrder
   content?: Prisma.SortOrder
   isAi?: Prisma.SortOrder
+  action?: Prisma.SortOrder
+  payload?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -327,6 +363,7 @@ export type GroupMessageMaxOrderByAggregateInput = {
   senderName?: Prisma.SortOrder
   content?: Prisma.SortOrder
   isAi?: Prisma.SortOrder
+  action?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -336,6 +373,7 @@ export type GroupMessageMinOrderByAggregateInput = {
   senderName?: Prisma.SortOrder
   content?: Prisma.SortOrder
   isAi?: Prisma.SortOrder
+  action?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -386,6 +424,8 @@ export type GroupMessageCreateWithoutGroupInput = {
   senderName: string
   content: string
   isAi?: boolean
+  action?: string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
 }
 
@@ -394,6 +434,8 @@ export type GroupMessageUncheckedCreateWithoutGroupInput = {
   senderName: string
   content: string
   isAi?: boolean
+  action?: string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
 }
 
@@ -432,6 +474,8 @@ export type GroupMessageScalarWhereInput = {
   senderName?: Prisma.StringFilter<"GroupMessage"> | string
   content?: Prisma.StringFilter<"GroupMessage"> | string
   isAi?: Prisma.BoolFilter<"GroupMessage"> | boolean
+  action?: Prisma.StringNullableFilter<"GroupMessage"> | string | null
+  payload?: Prisma.JsonNullableFilter<"GroupMessage">
   createdAt?: Prisma.DateTimeFilter<"GroupMessage"> | Date | string
 }
 
@@ -440,6 +484,8 @@ export type GroupMessageCreateManyGroupInput = {
   senderName: string
   content: string
   isAi?: boolean
+  action?: string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
 }
 
@@ -448,6 +494,8 @@ export type GroupMessageUpdateWithoutGroupInput = {
   senderName?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
   isAi?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  action?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -456,6 +504,8 @@ export type GroupMessageUncheckedUpdateWithoutGroupInput = {
   senderName?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
   isAi?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  action?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -464,6 +514,8 @@ export type GroupMessageUncheckedUpdateManyWithoutGroupInput = {
   senderName?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
   isAi?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  action?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -475,6 +527,8 @@ export type GroupMessageSelect<ExtArgs extends runtime.Types.Extensions.Internal
   senderName?: boolean
   content?: boolean
   isAi?: boolean
+  action?: boolean
+  payload?: boolean
   createdAt?: boolean
   group?: boolean | Prisma.GroupDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["groupMessage"]>
@@ -485,6 +539,8 @@ export type GroupMessageSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   senderName?: boolean
   content?: boolean
   isAi?: boolean
+  action?: boolean
+  payload?: boolean
   createdAt?: boolean
   group?: boolean | Prisma.GroupDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["groupMessage"]>
@@ -495,6 +551,8 @@ export type GroupMessageSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   senderName?: boolean
   content?: boolean
   isAi?: boolean
+  action?: boolean
+  payload?: boolean
   createdAt?: boolean
   group?: boolean | Prisma.GroupDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["groupMessage"]>
@@ -505,10 +563,12 @@ export type GroupMessageSelectScalar = {
   senderName?: boolean
   content?: boolean
   isAi?: boolean
+  action?: boolean
+  payload?: boolean
   createdAt?: boolean
 }
 
-export type GroupMessageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "groupId" | "senderName" | "content" | "isAi" | "createdAt", ExtArgs["result"]["groupMessage"]>
+export type GroupMessageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "groupId" | "senderName" | "content" | "isAi" | "action" | "payload" | "createdAt", ExtArgs["result"]["groupMessage"]>
 export type GroupMessageInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   group?: boolean | Prisma.GroupDefaultArgs<ExtArgs>
 }
@@ -530,6 +590,8 @@ export type $GroupMessagePayload<ExtArgs extends runtime.Types.Extensions.Intern
     senderName: string
     content: string
     isAi: boolean
+    action: string | null
+    payload: runtime.JsonValue | null
     createdAt: Date
   }, ExtArgs["result"]["groupMessage"]>
   composites: {}
@@ -960,6 +1022,8 @@ export interface GroupMessageFieldRefs {
   readonly senderName: Prisma.FieldRef<"GroupMessage", 'String'>
   readonly content: Prisma.FieldRef<"GroupMessage", 'String'>
   readonly isAi: Prisma.FieldRef<"GroupMessage", 'Boolean'>
+  readonly action: Prisma.FieldRef<"GroupMessage", 'String'>
+  readonly payload: Prisma.FieldRef<"GroupMessage", 'Json'>
   readonly createdAt: Prisma.FieldRef<"GroupMessage", 'DateTime'>
 }
     

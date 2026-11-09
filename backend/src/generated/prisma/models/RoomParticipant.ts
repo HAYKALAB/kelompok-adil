@@ -206,6 +206,7 @@ export type RoomParticipantWhereInput = {
   reportsMade?: Prisma.PeerReportListRelationFilter
   reportsReceived?: Prisma.PeerReportListRelationFilter
   aiFlags?: Prisma.AiFlagListRelationFilter
+  studentCodeTickets?: Prisma.StudentCodeTicketListRelationFilter
 }
 
 export type RoomParticipantOrderByWithRelationInput = {
@@ -224,6 +225,7 @@ export type RoomParticipantOrderByWithRelationInput = {
   reportsMade?: Prisma.PeerReportOrderByRelationAggregateInput
   reportsReceived?: Prisma.PeerReportOrderByRelationAggregateInput
   aiFlags?: Prisma.AiFlagOrderByRelationAggregateInput
+  studentCodeTickets?: Prisma.StudentCodeTicketOrderByRelationAggregateInput
 }
 
 export type RoomParticipantWhereUniqueInput = Prisma.AtLeast<{
@@ -246,6 +248,7 @@ export type RoomParticipantWhereUniqueInput = Prisma.AtLeast<{
   reportsMade?: Prisma.PeerReportListRelationFilter
   reportsReceived?: Prisma.PeerReportListRelationFilter
   aiFlags?: Prisma.AiFlagListRelationFilter
+  studentCodeTickets?: Prisma.StudentCodeTicketListRelationFilter
 }, "id" | "roomId_name">
 
 export type RoomParticipantOrderByWithAggregationInput = {
@@ -287,6 +290,7 @@ export type RoomParticipantCreateInput = {
   reportsMade?: Prisma.PeerReportCreateNestedManyWithoutReporterInput
   reportsReceived?: Prisma.PeerReportCreateNestedManyWithoutReportedInput
   aiFlags?: Prisma.AiFlagCreateNestedManyWithoutMemberInput
+  studentCodeTickets?: Prisma.StudentCodeTicketCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantUncheckedCreateInput = {
@@ -302,6 +306,7 @@ export type RoomParticipantUncheckedCreateInput = {
   reportsMade?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReporterInput
   reportsReceived?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReportedInput
   aiFlags?: Prisma.AiFlagUncheckedCreateNestedManyWithoutMemberInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantUpdateInput = {
@@ -317,6 +322,7 @@ export type RoomParticipantUpdateInput = {
   reportsMade?: Prisma.PeerReportUpdateManyWithoutReporterNestedInput
   reportsReceived?: Prisma.PeerReportUpdateManyWithoutReportedNestedInput
   aiFlags?: Prisma.AiFlagUpdateManyWithoutMemberNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantUncheckedUpdateInput = {
@@ -332,6 +338,7 @@ export type RoomParticipantUncheckedUpdateInput = {
   reportsMade?: Prisma.PeerReportUncheckedUpdateManyWithoutReporterNestedInput
   reportsReceived?: Prisma.PeerReportUncheckedUpdateManyWithoutReportedNestedInput
   aiFlags?: Prisma.AiFlagUncheckedUpdateManyWithoutMemberNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantCreateManyInput = {
@@ -606,12 +613,28 @@ export type RoomParticipantCreateNestedOneWithoutAiFlagsInput = {
   connect?: Prisma.RoomParticipantWhereUniqueInput
 }
 
-export type RoomParticipantUpdateOneRequiredWithoutAiFlagsNestedInput = {
+export type RoomParticipantUpdateOneWithoutAiFlagsNestedInput = {
   create?: Prisma.XOR<Prisma.RoomParticipantCreateWithoutAiFlagsInput, Prisma.RoomParticipantUncheckedCreateWithoutAiFlagsInput>
   connectOrCreate?: Prisma.RoomParticipantCreateOrConnectWithoutAiFlagsInput
   upsert?: Prisma.RoomParticipantUpsertWithoutAiFlagsInput
+  disconnect?: Prisma.RoomParticipantWhereInput | boolean
+  delete?: Prisma.RoomParticipantWhereInput | boolean
   connect?: Prisma.RoomParticipantWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.RoomParticipantUpdateToOneWithWhereWithoutAiFlagsInput, Prisma.RoomParticipantUpdateWithoutAiFlagsInput>, Prisma.RoomParticipantUncheckedUpdateWithoutAiFlagsInput>
+}
+
+export type RoomParticipantCreateNestedOneWithoutStudentCodeTicketsInput = {
+  create?: Prisma.XOR<Prisma.RoomParticipantCreateWithoutStudentCodeTicketsInput, Prisma.RoomParticipantUncheckedCreateWithoutStudentCodeTicketsInput>
+  connectOrCreate?: Prisma.RoomParticipantCreateOrConnectWithoutStudentCodeTicketsInput
+  connect?: Prisma.RoomParticipantWhereUniqueInput
+}
+
+export type RoomParticipantUpdateOneRequiredWithoutStudentCodeTicketsNestedInput = {
+  create?: Prisma.XOR<Prisma.RoomParticipantCreateWithoutStudentCodeTicketsInput, Prisma.RoomParticipantUncheckedCreateWithoutStudentCodeTicketsInput>
+  connectOrCreate?: Prisma.RoomParticipantCreateOrConnectWithoutStudentCodeTicketsInput
+  upsert?: Prisma.RoomParticipantUpsertWithoutStudentCodeTicketsInput
+  connect?: Prisma.RoomParticipantWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.RoomParticipantUpdateToOneWithWhereWithoutStudentCodeTicketsInput, Prisma.RoomParticipantUpdateWithoutStudentCodeTicketsInput>, Prisma.RoomParticipantUncheckedUpdateWithoutStudentCodeTicketsInput>
 }
 
 export type RoomParticipantCreateWithoutUserInput = {
@@ -626,6 +649,7 @@ export type RoomParticipantCreateWithoutUserInput = {
   reportsMade?: Prisma.PeerReportCreateNestedManyWithoutReporterInput
   reportsReceived?: Prisma.PeerReportCreateNestedManyWithoutReportedInput
   aiFlags?: Prisma.AiFlagCreateNestedManyWithoutMemberInput
+  studentCodeTickets?: Prisma.StudentCodeTicketCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantUncheckedCreateWithoutUserInput = {
@@ -640,6 +664,7 @@ export type RoomParticipantUncheckedCreateWithoutUserInput = {
   reportsMade?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReporterInput
   reportsReceived?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReportedInput
   aiFlags?: Prisma.AiFlagUncheckedCreateNestedManyWithoutMemberInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantCreateOrConnectWithoutUserInput = {
@@ -693,6 +718,7 @@ export type RoomParticipantCreateWithoutRoomInput = {
   reportsMade?: Prisma.PeerReportCreateNestedManyWithoutReporterInput
   reportsReceived?: Prisma.PeerReportCreateNestedManyWithoutReportedInput
   aiFlags?: Prisma.AiFlagCreateNestedManyWithoutMemberInput
+  studentCodeTickets?: Prisma.StudentCodeTicketCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantUncheckedCreateWithoutRoomInput = {
@@ -707,6 +733,7 @@ export type RoomParticipantUncheckedCreateWithoutRoomInput = {
   reportsMade?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReporterInput
   reportsReceived?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReportedInput
   aiFlags?: Prisma.AiFlagUncheckedCreateNestedManyWithoutMemberInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantCreateOrConnectWithoutRoomInput = {
@@ -747,6 +774,7 @@ export type RoomParticipantCreateWithoutGroupInput = {
   reportsMade?: Prisma.PeerReportCreateNestedManyWithoutReporterInput
   reportsReceived?: Prisma.PeerReportCreateNestedManyWithoutReportedInput
   aiFlags?: Prisma.AiFlagCreateNestedManyWithoutMemberInput
+  studentCodeTickets?: Prisma.StudentCodeTicketCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantUncheckedCreateWithoutGroupInput = {
@@ -761,6 +789,7 @@ export type RoomParticipantUncheckedCreateWithoutGroupInput = {
   reportsMade?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReporterInput
   reportsReceived?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReportedInput
   aiFlags?: Prisma.AiFlagUncheckedCreateNestedManyWithoutMemberInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantCreateOrConnectWithoutGroupInput = {
@@ -801,6 +830,7 @@ export type RoomParticipantCreateWithoutAssignedTasksInput = {
   reportsMade?: Prisma.PeerReportCreateNestedManyWithoutReporterInput
   reportsReceived?: Prisma.PeerReportCreateNestedManyWithoutReportedInput
   aiFlags?: Prisma.AiFlagCreateNestedManyWithoutMemberInput
+  studentCodeTickets?: Prisma.StudentCodeTicketCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantUncheckedCreateWithoutAssignedTasksInput = {
@@ -815,6 +845,7 @@ export type RoomParticipantUncheckedCreateWithoutAssignedTasksInput = {
   reportsMade?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReporterInput
   reportsReceived?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReportedInput
   aiFlags?: Prisma.AiFlagUncheckedCreateNestedManyWithoutMemberInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantCreateOrConnectWithoutAssignedTasksInput = {
@@ -845,6 +876,7 @@ export type RoomParticipantUpdateWithoutAssignedTasksInput = {
   reportsMade?: Prisma.PeerReportUpdateManyWithoutReporterNestedInput
   reportsReceived?: Prisma.PeerReportUpdateManyWithoutReportedNestedInput
   aiFlags?: Prisma.AiFlagUpdateManyWithoutMemberNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantUncheckedUpdateWithoutAssignedTasksInput = {
@@ -859,6 +891,7 @@ export type RoomParticipantUncheckedUpdateWithoutAssignedTasksInput = {
   reportsMade?: Prisma.PeerReportUncheckedUpdateManyWithoutReporterNestedInput
   reportsReceived?: Prisma.PeerReportUncheckedUpdateManyWithoutReportedNestedInput
   aiFlags?: Prisma.AiFlagUncheckedUpdateManyWithoutMemberNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantCreateWithoutActivitiesInput = {
@@ -873,6 +906,7 @@ export type RoomParticipantCreateWithoutActivitiesInput = {
   reportsMade?: Prisma.PeerReportCreateNestedManyWithoutReporterInput
   reportsReceived?: Prisma.PeerReportCreateNestedManyWithoutReportedInput
   aiFlags?: Prisma.AiFlagCreateNestedManyWithoutMemberInput
+  studentCodeTickets?: Prisma.StudentCodeTicketCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantUncheckedCreateWithoutActivitiesInput = {
@@ -887,6 +921,7 @@ export type RoomParticipantUncheckedCreateWithoutActivitiesInput = {
   reportsMade?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReporterInput
   reportsReceived?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReportedInput
   aiFlags?: Prisma.AiFlagUncheckedCreateNestedManyWithoutMemberInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantCreateOrConnectWithoutActivitiesInput = {
@@ -917,6 +952,7 @@ export type RoomParticipantUpdateWithoutActivitiesInput = {
   reportsMade?: Prisma.PeerReportUpdateManyWithoutReporterNestedInput
   reportsReceived?: Prisma.PeerReportUpdateManyWithoutReportedNestedInput
   aiFlags?: Prisma.AiFlagUpdateManyWithoutMemberNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantUncheckedUpdateWithoutActivitiesInput = {
@@ -931,6 +967,7 @@ export type RoomParticipantUncheckedUpdateWithoutActivitiesInput = {
   reportsMade?: Prisma.PeerReportUncheckedUpdateManyWithoutReporterNestedInput
   reportsReceived?: Prisma.PeerReportUncheckedUpdateManyWithoutReportedNestedInput
   aiFlags?: Prisma.AiFlagUncheckedUpdateManyWithoutMemberNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantCreateWithoutReportsMadeInput = {
@@ -945,6 +982,7 @@ export type RoomParticipantCreateWithoutReportsMadeInput = {
   activities?: Prisma.ActivityCreateNestedManyWithoutMemberInput
   reportsReceived?: Prisma.PeerReportCreateNestedManyWithoutReportedInput
   aiFlags?: Prisma.AiFlagCreateNestedManyWithoutMemberInput
+  studentCodeTickets?: Prisma.StudentCodeTicketCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantUncheckedCreateWithoutReportsMadeInput = {
@@ -959,6 +997,7 @@ export type RoomParticipantUncheckedCreateWithoutReportsMadeInput = {
   activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutMemberInput
   reportsReceived?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReportedInput
   aiFlags?: Prisma.AiFlagUncheckedCreateNestedManyWithoutMemberInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantCreateOrConnectWithoutReportsMadeInput = {
@@ -978,6 +1017,7 @@ export type RoomParticipantCreateWithoutReportsReceivedInput = {
   activities?: Prisma.ActivityCreateNestedManyWithoutMemberInput
   reportsMade?: Prisma.PeerReportCreateNestedManyWithoutReporterInput
   aiFlags?: Prisma.AiFlagCreateNestedManyWithoutMemberInput
+  studentCodeTickets?: Prisma.StudentCodeTicketCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantUncheckedCreateWithoutReportsReceivedInput = {
@@ -992,6 +1032,7 @@ export type RoomParticipantUncheckedCreateWithoutReportsReceivedInput = {
   activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutMemberInput
   reportsMade?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReporterInput
   aiFlags?: Prisma.AiFlagUncheckedCreateNestedManyWithoutMemberInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantCreateOrConnectWithoutReportsReceivedInput = {
@@ -1022,6 +1063,7 @@ export type RoomParticipantUpdateWithoutReportsMadeInput = {
   activities?: Prisma.ActivityUpdateManyWithoutMemberNestedInput
   reportsReceived?: Prisma.PeerReportUpdateManyWithoutReportedNestedInput
   aiFlags?: Prisma.AiFlagUpdateManyWithoutMemberNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantUncheckedUpdateWithoutReportsMadeInput = {
@@ -1036,6 +1078,7 @@ export type RoomParticipantUncheckedUpdateWithoutReportsMadeInput = {
   activities?: Prisma.ActivityUncheckedUpdateManyWithoutMemberNestedInput
   reportsReceived?: Prisma.PeerReportUncheckedUpdateManyWithoutReportedNestedInput
   aiFlags?: Prisma.AiFlagUncheckedUpdateManyWithoutMemberNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantUpsertWithoutReportsReceivedInput = {
@@ -1061,6 +1104,7 @@ export type RoomParticipantUpdateWithoutReportsReceivedInput = {
   activities?: Prisma.ActivityUpdateManyWithoutMemberNestedInput
   reportsMade?: Prisma.PeerReportUpdateManyWithoutReporterNestedInput
   aiFlags?: Prisma.AiFlagUpdateManyWithoutMemberNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantUncheckedUpdateWithoutReportsReceivedInput = {
@@ -1075,6 +1119,7 @@ export type RoomParticipantUncheckedUpdateWithoutReportsReceivedInput = {
   activities?: Prisma.ActivityUncheckedUpdateManyWithoutMemberNestedInput
   reportsMade?: Prisma.PeerReportUncheckedUpdateManyWithoutReporterNestedInput
   aiFlags?: Prisma.AiFlagUncheckedUpdateManyWithoutMemberNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantCreateWithoutAiFlagsInput = {
@@ -1089,6 +1134,7 @@ export type RoomParticipantCreateWithoutAiFlagsInput = {
   activities?: Prisma.ActivityCreateNestedManyWithoutMemberInput
   reportsMade?: Prisma.PeerReportCreateNestedManyWithoutReporterInput
   reportsReceived?: Prisma.PeerReportCreateNestedManyWithoutReportedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantUncheckedCreateWithoutAiFlagsInput = {
@@ -1103,6 +1149,7 @@ export type RoomParticipantUncheckedCreateWithoutAiFlagsInput = {
   activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutMemberInput
   reportsMade?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReporterInput
   reportsReceived?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReportedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedCreateNestedManyWithoutParticipantInput
 }
 
 export type RoomParticipantCreateOrConnectWithoutAiFlagsInput = {
@@ -1133,6 +1180,7 @@ export type RoomParticipantUpdateWithoutAiFlagsInput = {
   activities?: Prisma.ActivityUpdateManyWithoutMemberNestedInput
   reportsMade?: Prisma.PeerReportUpdateManyWithoutReporterNestedInput
   reportsReceived?: Prisma.PeerReportUpdateManyWithoutReportedNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantUncheckedUpdateWithoutAiFlagsInput = {
@@ -1147,6 +1195,83 @@ export type RoomParticipantUncheckedUpdateWithoutAiFlagsInput = {
   activities?: Prisma.ActivityUncheckedUpdateManyWithoutMemberNestedInput
   reportsMade?: Prisma.PeerReportUncheckedUpdateManyWithoutReporterNestedInput
   reportsReceived?: Prisma.PeerReportUncheckedUpdateManyWithoutReportedNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedUpdateManyWithoutParticipantNestedInput
+}
+
+export type RoomParticipantCreateWithoutStudentCodeTicketsInput = {
+  id?: string
+  name: string
+  role?: $Enums.Role
+  joinedAt?: Date | string
+  room: Prisma.RoomCreateNestedOneWithoutParticipantsInput
+  user?: Prisma.UserCreateNestedOneWithoutRoomParticipantsInput
+  group?: Prisma.GroupCreateNestedOneWithoutMembersInput
+  assignedTasks?: Prisma.TaskCreateNestedManyWithoutAssigneeInput
+  activities?: Prisma.ActivityCreateNestedManyWithoutMemberInput
+  reportsMade?: Prisma.PeerReportCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.PeerReportCreateNestedManyWithoutReportedInput
+  aiFlags?: Prisma.AiFlagCreateNestedManyWithoutMemberInput
+}
+
+export type RoomParticipantUncheckedCreateWithoutStudentCodeTicketsInput = {
+  id?: string
+  roomId: string
+  userId?: string | null
+  name: string
+  role?: $Enums.Role
+  joinedAt?: Date | string
+  groupId?: string | null
+  assignedTasks?: Prisma.TaskUncheckedCreateNestedManyWithoutAssigneeInput
+  activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutMemberInput
+  reportsMade?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReporterInput
+  reportsReceived?: Prisma.PeerReportUncheckedCreateNestedManyWithoutReportedInput
+  aiFlags?: Prisma.AiFlagUncheckedCreateNestedManyWithoutMemberInput
+}
+
+export type RoomParticipantCreateOrConnectWithoutStudentCodeTicketsInput = {
+  where: Prisma.RoomParticipantWhereUniqueInput
+  create: Prisma.XOR<Prisma.RoomParticipantCreateWithoutStudentCodeTicketsInput, Prisma.RoomParticipantUncheckedCreateWithoutStudentCodeTicketsInput>
+}
+
+export type RoomParticipantUpsertWithoutStudentCodeTicketsInput = {
+  update: Prisma.XOR<Prisma.RoomParticipantUpdateWithoutStudentCodeTicketsInput, Prisma.RoomParticipantUncheckedUpdateWithoutStudentCodeTicketsInput>
+  create: Prisma.XOR<Prisma.RoomParticipantCreateWithoutStudentCodeTicketsInput, Prisma.RoomParticipantUncheckedCreateWithoutStudentCodeTicketsInput>
+  where?: Prisma.RoomParticipantWhereInput
+}
+
+export type RoomParticipantUpdateToOneWithWhereWithoutStudentCodeTicketsInput = {
+  where?: Prisma.RoomParticipantWhereInput
+  data: Prisma.XOR<Prisma.RoomParticipantUpdateWithoutStudentCodeTicketsInput, Prisma.RoomParticipantUncheckedUpdateWithoutStudentCodeTicketsInput>
+}
+
+export type RoomParticipantUpdateWithoutStudentCodeTicketsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  room?: Prisma.RoomUpdateOneRequiredWithoutParticipantsNestedInput
+  user?: Prisma.UserUpdateOneWithoutRoomParticipantsNestedInput
+  group?: Prisma.GroupUpdateOneWithoutMembersNestedInput
+  assignedTasks?: Prisma.TaskUpdateManyWithoutAssigneeNestedInput
+  activities?: Prisma.ActivityUpdateManyWithoutMemberNestedInput
+  reportsMade?: Prisma.PeerReportUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.PeerReportUpdateManyWithoutReportedNestedInput
+  aiFlags?: Prisma.AiFlagUpdateManyWithoutMemberNestedInput
+}
+
+export type RoomParticipantUncheckedUpdateWithoutStudentCodeTicketsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  roomId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  joinedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  groupId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assignedTasks?: Prisma.TaskUncheckedUpdateManyWithoutAssigneeNestedInput
+  activities?: Prisma.ActivityUncheckedUpdateManyWithoutMemberNestedInput
+  reportsMade?: Prisma.PeerReportUncheckedUpdateManyWithoutReporterNestedInput
+  reportsReceived?: Prisma.PeerReportUncheckedUpdateManyWithoutReportedNestedInput
+  aiFlags?: Prisma.AiFlagUncheckedUpdateManyWithoutMemberNestedInput
 }
 
 export type RoomParticipantCreateManyUserInput = {
@@ -1170,6 +1295,7 @@ export type RoomParticipantUpdateWithoutUserInput = {
   reportsMade?: Prisma.PeerReportUpdateManyWithoutReporterNestedInput
   reportsReceived?: Prisma.PeerReportUpdateManyWithoutReportedNestedInput
   aiFlags?: Prisma.AiFlagUpdateManyWithoutMemberNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantUncheckedUpdateWithoutUserInput = {
@@ -1184,6 +1310,7 @@ export type RoomParticipantUncheckedUpdateWithoutUserInput = {
   reportsMade?: Prisma.PeerReportUncheckedUpdateManyWithoutReporterNestedInput
   reportsReceived?: Prisma.PeerReportUncheckedUpdateManyWithoutReportedNestedInput
   aiFlags?: Prisma.AiFlagUncheckedUpdateManyWithoutMemberNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantUncheckedUpdateManyWithoutUserInput = {
@@ -1216,6 +1343,7 @@ export type RoomParticipantUpdateWithoutRoomInput = {
   reportsMade?: Prisma.PeerReportUpdateManyWithoutReporterNestedInput
   reportsReceived?: Prisma.PeerReportUpdateManyWithoutReportedNestedInput
   aiFlags?: Prisma.AiFlagUpdateManyWithoutMemberNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantUncheckedUpdateWithoutRoomInput = {
@@ -1230,6 +1358,7 @@ export type RoomParticipantUncheckedUpdateWithoutRoomInput = {
   reportsMade?: Prisma.PeerReportUncheckedUpdateManyWithoutReporterNestedInput
   reportsReceived?: Prisma.PeerReportUncheckedUpdateManyWithoutReportedNestedInput
   aiFlags?: Prisma.AiFlagUncheckedUpdateManyWithoutMemberNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantUncheckedUpdateManyWithoutRoomInput = {
@@ -1262,6 +1391,7 @@ export type RoomParticipantUpdateWithoutGroupInput = {
   reportsMade?: Prisma.PeerReportUpdateManyWithoutReporterNestedInput
   reportsReceived?: Prisma.PeerReportUpdateManyWithoutReportedNestedInput
   aiFlags?: Prisma.AiFlagUpdateManyWithoutMemberNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantUncheckedUpdateWithoutGroupInput = {
@@ -1276,6 +1406,7 @@ export type RoomParticipantUncheckedUpdateWithoutGroupInput = {
   reportsMade?: Prisma.PeerReportUncheckedUpdateManyWithoutReporterNestedInput
   reportsReceived?: Prisma.PeerReportUncheckedUpdateManyWithoutReportedNestedInput
   aiFlags?: Prisma.AiFlagUncheckedUpdateManyWithoutMemberNestedInput
+  studentCodeTickets?: Prisma.StudentCodeTicketUncheckedUpdateManyWithoutParticipantNestedInput
 }
 
 export type RoomParticipantUncheckedUpdateManyWithoutGroupInput = {
@@ -1298,6 +1429,7 @@ export type RoomParticipantCountOutputType = {
   reportsMade: number
   reportsReceived: number
   aiFlags: number
+  studentCodeTickets: number
 }
 
 export type RoomParticipantCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1306,6 +1438,7 @@ export type RoomParticipantCountOutputTypeSelect<ExtArgs extends runtime.Types.E
   reportsMade?: boolean | RoomParticipantCountOutputTypeCountReportsMadeArgs
   reportsReceived?: boolean | RoomParticipantCountOutputTypeCountReportsReceivedArgs
   aiFlags?: boolean | RoomParticipantCountOutputTypeCountAiFlagsArgs
+  studentCodeTickets?: boolean | RoomParticipantCountOutputTypeCountStudentCodeTicketsArgs
 }
 
 /**
@@ -1353,6 +1486,13 @@ export type RoomParticipantCountOutputTypeCountAiFlagsArgs<ExtArgs extends runti
   where?: Prisma.AiFlagWhereInput
 }
 
+/**
+ * RoomParticipantCountOutputType without action
+ */
+export type RoomParticipantCountOutputTypeCountStudentCodeTicketsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.StudentCodeTicketWhereInput
+}
+
 
 export type RoomParticipantSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1370,6 +1510,7 @@ export type RoomParticipantSelect<ExtArgs extends runtime.Types.Extensions.Inter
   reportsMade?: boolean | Prisma.RoomParticipant$reportsMadeArgs<ExtArgs>
   reportsReceived?: boolean | Prisma.RoomParticipant$reportsReceivedArgs<ExtArgs>
   aiFlags?: boolean | Prisma.RoomParticipant$aiFlagsArgs<ExtArgs>
+  studentCodeTickets?: boolean | Prisma.RoomParticipant$studentCodeTicketsArgs<ExtArgs>
   _count?: boolean | Prisma.RoomParticipantCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["roomParticipant"]>
 
@@ -1419,6 +1560,7 @@ export type RoomParticipantInclude<ExtArgs extends runtime.Types.Extensions.Inte
   reportsMade?: boolean | Prisma.RoomParticipant$reportsMadeArgs<ExtArgs>
   reportsReceived?: boolean | Prisma.RoomParticipant$reportsReceivedArgs<ExtArgs>
   aiFlags?: boolean | Prisma.RoomParticipant$aiFlagsArgs<ExtArgs>
+  studentCodeTickets?: boolean | Prisma.RoomParticipant$studentCodeTicketsArgs<ExtArgs>
   _count?: boolean | Prisma.RoomParticipantCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type RoomParticipantIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1443,6 +1585,7 @@ export type $RoomParticipantPayload<ExtArgs extends runtime.Types.Extensions.Int
     reportsMade: Prisma.$PeerReportPayload<ExtArgs>[]
     reportsReceived: Prisma.$PeerReportPayload<ExtArgs>[]
     aiFlags: Prisma.$AiFlagPayload<ExtArgs>[]
+    studentCodeTickets: Prisma.$StudentCodeTicketPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1854,6 +1997,7 @@ export interface Prisma__RoomParticipantClient<T, Null = never, ExtArgs extends 
   reportsMade<T extends Prisma.RoomParticipant$reportsMadeArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RoomParticipant$reportsMadeArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PeerReportPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   reportsReceived<T extends Prisma.RoomParticipant$reportsReceivedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RoomParticipant$reportsReceivedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PeerReportPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   aiFlags<T extends Prisma.RoomParticipant$aiFlagsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RoomParticipant$aiFlagsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AiFlagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  studentCodeTickets<T extends Prisma.RoomParticipant$studentCodeTicketsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RoomParticipant$studentCodeTicketsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StudentCodeTicketPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2446,6 +2590,30 @@ export type RoomParticipant$aiFlagsArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   distinct?: Prisma.AiFlagScalarFieldEnum | Prisma.AiFlagScalarFieldEnum[]
+}
+
+/**
+ * RoomParticipant.studentCodeTickets
+ */
+export type RoomParticipant$studentCodeTicketsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the StudentCodeTicket
+   */
+  select?: Prisma.StudentCodeTicketSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the StudentCodeTicket
+   */
+  omit?: Prisma.StudentCodeTicketOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.StudentCodeTicketInclude<ExtArgs> | null
+  where?: Prisma.StudentCodeTicketWhereInput
+  orderBy?: Prisma.StudentCodeTicketOrderByWithRelationInput | Prisma.StudentCodeTicketOrderByWithRelationInput[]
+  cursor?: Prisma.StudentCodeTicketWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.StudentCodeTicketScalarFieldEnum | Prisma.StudentCodeTicketScalarFieldEnum[]
 }
 
 /**

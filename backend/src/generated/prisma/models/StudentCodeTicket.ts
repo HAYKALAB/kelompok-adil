@@ -28,7 +28,7 @@ export type StudentCodeTicketMinAggregateOutputType = {
   id: string | null
   code: string | null
   roomId: string | null
-  studentId: string | null
+  participantId: string | null
   expiresAt: Date | null
   usedAt: Date | null
   createdAt: Date | null
@@ -38,7 +38,7 @@ export type StudentCodeTicketMaxAggregateOutputType = {
   id: string | null
   code: string | null
   roomId: string | null
-  studentId: string | null
+  participantId: string | null
   expiresAt: Date | null
   usedAt: Date | null
   createdAt: Date | null
@@ -48,7 +48,7 @@ export type StudentCodeTicketCountAggregateOutputType = {
   id: number
   code: number
   roomId: number
-  studentId: number
+  participantId: number
   expiresAt: number
   usedAt: number
   createdAt: number
@@ -60,7 +60,7 @@ export type StudentCodeTicketMinAggregateInputType = {
   id?: true
   code?: true
   roomId?: true
-  studentId?: true
+  participantId?: true
   expiresAt?: true
   usedAt?: true
   createdAt?: true
@@ -70,7 +70,7 @@ export type StudentCodeTicketMaxAggregateInputType = {
   id?: true
   code?: true
   roomId?: true
-  studentId?: true
+  participantId?: true
   expiresAt?: true
   usedAt?: true
   createdAt?: true
@@ -80,7 +80,7 @@ export type StudentCodeTicketCountAggregateInputType = {
   id?: true
   code?: true
   roomId?: true
-  studentId?: true
+  participantId?: true
   expiresAt?: true
   usedAt?: true
   createdAt?: true
@@ -163,7 +163,7 @@ export type StudentCodeTicketGroupByOutputType = {
   id: string
   code: string
   roomId: string
-  studentId: string
+  participantId: string
   expiresAt: Date | null
   usedAt: Date | null
   createdAt: Date
@@ -194,24 +194,24 @@ export type StudentCodeTicketWhereInput = {
   id?: Prisma.StringFilter<"StudentCodeTicket"> | string
   code?: Prisma.StringFilter<"StudentCodeTicket"> | string
   roomId?: Prisma.StringFilter<"StudentCodeTicket"> | string
-  studentId?: Prisma.StringFilter<"StudentCodeTicket"> | string
+  participantId?: Prisma.StringFilter<"StudentCodeTicket"> | string
   expiresAt?: Prisma.DateTimeNullableFilter<"StudentCodeTicket"> | Date | string | null
   usedAt?: Prisma.DateTimeNullableFilter<"StudentCodeTicket"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"StudentCodeTicket"> | Date | string
   room?: Prisma.XOR<Prisma.RoomScalarRelationFilter, Prisma.RoomWhereInput>
-  student?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  participant?: Prisma.XOR<Prisma.RoomParticipantScalarRelationFilter, Prisma.RoomParticipantWhereInput>
 }
 
 export type StudentCodeTicketOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   code?: Prisma.SortOrder
   roomId?: Prisma.SortOrder
-  studentId?: Prisma.SortOrder
+  participantId?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   usedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   room?: Prisma.RoomOrderByWithRelationInput
-  student?: Prisma.UserOrderByWithRelationInput
+  participant?: Prisma.RoomParticipantOrderByWithRelationInput
 }
 
 export type StudentCodeTicketWhereUniqueInput = Prisma.AtLeast<{
@@ -221,19 +221,19 @@ export type StudentCodeTicketWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.StudentCodeTicketWhereInput[]
   NOT?: Prisma.StudentCodeTicketWhereInput | Prisma.StudentCodeTicketWhereInput[]
   roomId?: Prisma.StringFilter<"StudentCodeTicket"> | string
-  studentId?: Prisma.StringFilter<"StudentCodeTicket"> | string
+  participantId?: Prisma.StringFilter<"StudentCodeTicket"> | string
   expiresAt?: Prisma.DateTimeNullableFilter<"StudentCodeTicket"> | Date | string | null
   usedAt?: Prisma.DateTimeNullableFilter<"StudentCodeTicket"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"StudentCodeTicket"> | Date | string
   room?: Prisma.XOR<Prisma.RoomScalarRelationFilter, Prisma.RoomWhereInput>
-  student?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  participant?: Prisma.XOR<Prisma.RoomParticipantScalarRelationFilter, Prisma.RoomParticipantWhereInput>
 }, "id" | "code">
 
 export type StudentCodeTicketOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   code?: Prisma.SortOrder
   roomId?: Prisma.SortOrder
-  studentId?: Prisma.SortOrder
+  participantId?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   usedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -249,7 +249,7 @@ export type StudentCodeTicketScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"StudentCodeTicket"> | string
   code?: Prisma.StringWithAggregatesFilter<"StudentCodeTicket"> | string
   roomId?: Prisma.StringWithAggregatesFilter<"StudentCodeTicket"> | string
-  studentId?: Prisma.StringWithAggregatesFilter<"StudentCodeTicket"> | string
+  participantId?: Prisma.StringWithAggregatesFilter<"StudentCodeTicket"> | string
   expiresAt?: Prisma.DateTimeNullableWithAggregatesFilter<"StudentCodeTicket"> | Date | string | null
   usedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"StudentCodeTicket"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"StudentCodeTicket"> | Date | string
@@ -262,14 +262,14 @@ export type StudentCodeTicketCreateInput = {
   usedAt?: Date | string | null
   createdAt?: Date | string
   room: Prisma.RoomCreateNestedOneWithoutStudentTicketsInput
-  student: Prisma.UserCreateNestedOneWithoutStudentCodeTicketsInput
+  participant: Prisma.RoomParticipantCreateNestedOneWithoutStudentCodeTicketsInput
 }
 
 export type StudentCodeTicketUncheckedCreateInput = {
   id?: string
   code: string
   roomId: string
-  studentId: string
+  participantId: string
   expiresAt?: Date | string | null
   usedAt?: Date | string | null
   createdAt?: Date | string
@@ -282,14 +282,14 @@ export type StudentCodeTicketUpdateInput = {
   usedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   room?: Prisma.RoomUpdateOneRequiredWithoutStudentTicketsNestedInput
-  student?: Prisma.UserUpdateOneRequiredWithoutStudentCodeTicketsNestedInput
+  participant?: Prisma.RoomParticipantUpdateOneRequiredWithoutStudentCodeTicketsNestedInput
 }
 
 export type StudentCodeTicketUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   code?: Prisma.StringFieldUpdateOperationsInput | string
   roomId?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  participantId?: Prisma.StringFieldUpdateOperationsInput | string
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   usedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -299,7 +299,7 @@ export type StudentCodeTicketCreateManyInput = {
   id?: string
   code: string
   roomId: string
-  studentId: string
+  participantId: string
   expiresAt?: Date | string | null
   usedAt?: Date | string | null
   createdAt?: Date | string
@@ -317,7 +317,7 @@ export type StudentCodeTicketUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   code?: Prisma.StringFieldUpdateOperationsInput | string
   roomId?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  participantId?: Prisma.StringFieldUpdateOperationsInput | string
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   usedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -337,7 +337,7 @@ export type StudentCodeTicketCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   code?: Prisma.SortOrder
   roomId?: Prisma.SortOrder
-  studentId?: Prisma.SortOrder
+  participantId?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   usedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -347,7 +347,7 @@ export type StudentCodeTicketMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   code?: Prisma.SortOrder
   roomId?: Prisma.SortOrder
-  studentId?: Prisma.SortOrder
+  participantId?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   usedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -357,52 +357,10 @@ export type StudentCodeTicketMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   code?: Prisma.SortOrder
   roomId?: Prisma.SortOrder
-  studentId?: Prisma.SortOrder
+  participantId?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   usedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
-}
-
-export type StudentCodeTicketCreateNestedManyWithoutStudentInput = {
-  create?: Prisma.XOR<Prisma.StudentCodeTicketCreateWithoutStudentInput, Prisma.StudentCodeTicketUncheckedCreateWithoutStudentInput> | Prisma.StudentCodeTicketCreateWithoutStudentInput[] | Prisma.StudentCodeTicketUncheckedCreateWithoutStudentInput[]
-  connectOrCreate?: Prisma.StudentCodeTicketCreateOrConnectWithoutStudentInput | Prisma.StudentCodeTicketCreateOrConnectWithoutStudentInput[]
-  createMany?: Prisma.StudentCodeTicketCreateManyStudentInputEnvelope
-  connect?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
-}
-
-export type StudentCodeTicketUncheckedCreateNestedManyWithoutStudentInput = {
-  create?: Prisma.XOR<Prisma.StudentCodeTicketCreateWithoutStudentInput, Prisma.StudentCodeTicketUncheckedCreateWithoutStudentInput> | Prisma.StudentCodeTicketCreateWithoutStudentInput[] | Prisma.StudentCodeTicketUncheckedCreateWithoutStudentInput[]
-  connectOrCreate?: Prisma.StudentCodeTicketCreateOrConnectWithoutStudentInput | Prisma.StudentCodeTicketCreateOrConnectWithoutStudentInput[]
-  createMany?: Prisma.StudentCodeTicketCreateManyStudentInputEnvelope
-  connect?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
-}
-
-export type StudentCodeTicketUpdateManyWithoutStudentNestedInput = {
-  create?: Prisma.XOR<Prisma.StudentCodeTicketCreateWithoutStudentInput, Prisma.StudentCodeTicketUncheckedCreateWithoutStudentInput> | Prisma.StudentCodeTicketCreateWithoutStudentInput[] | Prisma.StudentCodeTicketUncheckedCreateWithoutStudentInput[]
-  connectOrCreate?: Prisma.StudentCodeTicketCreateOrConnectWithoutStudentInput | Prisma.StudentCodeTicketCreateOrConnectWithoutStudentInput[]
-  upsert?: Prisma.StudentCodeTicketUpsertWithWhereUniqueWithoutStudentInput | Prisma.StudentCodeTicketUpsertWithWhereUniqueWithoutStudentInput[]
-  createMany?: Prisma.StudentCodeTicketCreateManyStudentInputEnvelope
-  set?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
-  disconnect?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
-  delete?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
-  connect?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
-  update?: Prisma.StudentCodeTicketUpdateWithWhereUniqueWithoutStudentInput | Prisma.StudentCodeTicketUpdateWithWhereUniqueWithoutStudentInput[]
-  updateMany?: Prisma.StudentCodeTicketUpdateManyWithWhereWithoutStudentInput | Prisma.StudentCodeTicketUpdateManyWithWhereWithoutStudentInput[]
-  deleteMany?: Prisma.StudentCodeTicketScalarWhereInput | Prisma.StudentCodeTicketScalarWhereInput[]
-}
-
-export type StudentCodeTicketUncheckedUpdateManyWithoutStudentNestedInput = {
-  create?: Prisma.XOR<Prisma.StudentCodeTicketCreateWithoutStudentInput, Prisma.StudentCodeTicketUncheckedCreateWithoutStudentInput> | Prisma.StudentCodeTicketCreateWithoutStudentInput[] | Prisma.StudentCodeTicketUncheckedCreateWithoutStudentInput[]
-  connectOrCreate?: Prisma.StudentCodeTicketCreateOrConnectWithoutStudentInput | Prisma.StudentCodeTicketCreateOrConnectWithoutStudentInput[]
-  upsert?: Prisma.StudentCodeTicketUpsertWithWhereUniqueWithoutStudentInput | Prisma.StudentCodeTicketUpsertWithWhereUniqueWithoutStudentInput[]
-  createMany?: Prisma.StudentCodeTicketCreateManyStudentInputEnvelope
-  set?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
-  disconnect?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
-  delete?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
-  connect?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
-  update?: Prisma.StudentCodeTicketUpdateWithWhereUniqueWithoutStudentInput | Prisma.StudentCodeTicketUpdateWithWhereUniqueWithoutStudentInput[]
-  updateMany?: Prisma.StudentCodeTicketUpdateManyWithWhereWithoutStudentInput | Prisma.StudentCodeTicketUpdateManyWithWhereWithoutStudentInput[]
-  deleteMany?: Prisma.StudentCodeTicketScalarWhereInput | Prisma.StudentCodeTicketScalarWhereInput[]
 }
 
 export type StudentCodeTicketCreateNestedManyWithoutRoomInput = {
@@ -447,61 +405,46 @@ export type StudentCodeTicketUncheckedUpdateManyWithoutRoomNestedInput = {
   deleteMany?: Prisma.StudentCodeTicketScalarWhereInput | Prisma.StudentCodeTicketScalarWhereInput[]
 }
 
-export type StudentCodeTicketCreateWithoutStudentInput = {
-  id?: string
-  code: string
-  expiresAt?: Date | string | null
-  usedAt?: Date | string | null
-  createdAt?: Date | string
-  room: Prisma.RoomCreateNestedOneWithoutStudentTicketsInput
+export type StudentCodeTicketCreateNestedManyWithoutParticipantInput = {
+  create?: Prisma.XOR<Prisma.StudentCodeTicketCreateWithoutParticipantInput, Prisma.StudentCodeTicketUncheckedCreateWithoutParticipantInput> | Prisma.StudentCodeTicketCreateWithoutParticipantInput[] | Prisma.StudentCodeTicketUncheckedCreateWithoutParticipantInput[]
+  connectOrCreate?: Prisma.StudentCodeTicketCreateOrConnectWithoutParticipantInput | Prisma.StudentCodeTicketCreateOrConnectWithoutParticipantInput[]
+  createMany?: Prisma.StudentCodeTicketCreateManyParticipantInputEnvelope
+  connect?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
 }
 
-export type StudentCodeTicketUncheckedCreateWithoutStudentInput = {
-  id?: string
-  code: string
-  roomId: string
-  expiresAt?: Date | string | null
-  usedAt?: Date | string | null
-  createdAt?: Date | string
+export type StudentCodeTicketUncheckedCreateNestedManyWithoutParticipantInput = {
+  create?: Prisma.XOR<Prisma.StudentCodeTicketCreateWithoutParticipantInput, Prisma.StudentCodeTicketUncheckedCreateWithoutParticipantInput> | Prisma.StudentCodeTicketCreateWithoutParticipantInput[] | Prisma.StudentCodeTicketUncheckedCreateWithoutParticipantInput[]
+  connectOrCreate?: Prisma.StudentCodeTicketCreateOrConnectWithoutParticipantInput | Prisma.StudentCodeTicketCreateOrConnectWithoutParticipantInput[]
+  createMany?: Prisma.StudentCodeTicketCreateManyParticipantInputEnvelope
+  connect?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
 }
 
-export type StudentCodeTicketCreateOrConnectWithoutStudentInput = {
-  where: Prisma.StudentCodeTicketWhereUniqueInput
-  create: Prisma.XOR<Prisma.StudentCodeTicketCreateWithoutStudentInput, Prisma.StudentCodeTicketUncheckedCreateWithoutStudentInput>
+export type StudentCodeTicketUpdateManyWithoutParticipantNestedInput = {
+  create?: Prisma.XOR<Prisma.StudentCodeTicketCreateWithoutParticipantInput, Prisma.StudentCodeTicketUncheckedCreateWithoutParticipantInput> | Prisma.StudentCodeTicketCreateWithoutParticipantInput[] | Prisma.StudentCodeTicketUncheckedCreateWithoutParticipantInput[]
+  connectOrCreate?: Prisma.StudentCodeTicketCreateOrConnectWithoutParticipantInput | Prisma.StudentCodeTicketCreateOrConnectWithoutParticipantInput[]
+  upsert?: Prisma.StudentCodeTicketUpsertWithWhereUniqueWithoutParticipantInput | Prisma.StudentCodeTicketUpsertWithWhereUniqueWithoutParticipantInput[]
+  createMany?: Prisma.StudentCodeTicketCreateManyParticipantInputEnvelope
+  set?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
+  disconnect?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
+  delete?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
+  connect?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
+  update?: Prisma.StudentCodeTicketUpdateWithWhereUniqueWithoutParticipantInput | Prisma.StudentCodeTicketUpdateWithWhereUniqueWithoutParticipantInput[]
+  updateMany?: Prisma.StudentCodeTicketUpdateManyWithWhereWithoutParticipantInput | Prisma.StudentCodeTicketUpdateManyWithWhereWithoutParticipantInput[]
+  deleteMany?: Prisma.StudentCodeTicketScalarWhereInput | Prisma.StudentCodeTicketScalarWhereInput[]
 }
 
-export type StudentCodeTicketCreateManyStudentInputEnvelope = {
-  data: Prisma.StudentCodeTicketCreateManyStudentInput | Prisma.StudentCodeTicketCreateManyStudentInput[]
-  skipDuplicates?: boolean
-}
-
-export type StudentCodeTicketUpsertWithWhereUniqueWithoutStudentInput = {
-  where: Prisma.StudentCodeTicketWhereUniqueInput
-  update: Prisma.XOR<Prisma.StudentCodeTicketUpdateWithoutStudentInput, Prisma.StudentCodeTicketUncheckedUpdateWithoutStudentInput>
-  create: Prisma.XOR<Prisma.StudentCodeTicketCreateWithoutStudentInput, Prisma.StudentCodeTicketUncheckedCreateWithoutStudentInput>
-}
-
-export type StudentCodeTicketUpdateWithWhereUniqueWithoutStudentInput = {
-  where: Prisma.StudentCodeTicketWhereUniqueInput
-  data: Prisma.XOR<Prisma.StudentCodeTicketUpdateWithoutStudentInput, Prisma.StudentCodeTicketUncheckedUpdateWithoutStudentInput>
-}
-
-export type StudentCodeTicketUpdateManyWithWhereWithoutStudentInput = {
-  where: Prisma.StudentCodeTicketScalarWhereInput
-  data: Prisma.XOR<Prisma.StudentCodeTicketUpdateManyMutationInput, Prisma.StudentCodeTicketUncheckedUpdateManyWithoutStudentInput>
-}
-
-export type StudentCodeTicketScalarWhereInput = {
-  AND?: Prisma.StudentCodeTicketScalarWhereInput | Prisma.StudentCodeTicketScalarWhereInput[]
-  OR?: Prisma.StudentCodeTicketScalarWhereInput[]
-  NOT?: Prisma.StudentCodeTicketScalarWhereInput | Prisma.StudentCodeTicketScalarWhereInput[]
-  id?: Prisma.StringFilter<"StudentCodeTicket"> | string
-  code?: Prisma.StringFilter<"StudentCodeTicket"> | string
-  roomId?: Prisma.StringFilter<"StudentCodeTicket"> | string
-  studentId?: Prisma.StringFilter<"StudentCodeTicket"> | string
-  expiresAt?: Prisma.DateTimeNullableFilter<"StudentCodeTicket"> | Date | string | null
-  usedAt?: Prisma.DateTimeNullableFilter<"StudentCodeTicket"> | Date | string | null
-  createdAt?: Prisma.DateTimeFilter<"StudentCodeTicket"> | Date | string
+export type StudentCodeTicketUncheckedUpdateManyWithoutParticipantNestedInput = {
+  create?: Prisma.XOR<Prisma.StudentCodeTicketCreateWithoutParticipantInput, Prisma.StudentCodeTicketUncheckedCreateWithoutParticipantInput> | Prisma.StudentCodeTicketCreateWithoutParticipantInput[] | Prisma.StudentCodeTicketUncheckedCreateWithoutParticipantInput[]
+  connectOrCreate?: Prisma.StudentCodeTicketCreateOrConnectWithoutParticipantInput | Prisma.StudentCodeTicketCreateOrConnectWithoutParticipantInput[]
+  upsert?: Prisma.StudentCodeTicketUpsertWithWhereUniqueWithoutParticipantInput | Prisma.StudentCodeTicketUpsertWithWhereUniqueWithoutParticipantInput[]
+  createMany?: Prisma.StudentCodeTicketCreateManyParticipantInputEnvelope
+  set?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
+  disconnect?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
+  delete?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
+  connect?: Prisma.StudentCodeTicketWhereUniqueInput | Prisma.StudentCodeTicketWhereUniqueInput[]
+  update?: Prisma.StudentCodeTicketUpdateWithWhereUniqueWithoutParticipantInput | Prisma.StudentCodeTicketUpdateWithWhereUniqueWithoutParticipantInput[]
+  updateMany?: Prisma.StudentCodeTicketUpdateManyWithWhereWithoutParticipantInput | Prisma.StudentCodeTicketUpdateManyWithWhereWithoutParticipantInput[]
+  deleteMany?: Prisma.StudentCodeTicketScalarWhereInput | Prisma.StudentCodeTicketScalarWhereInput[]
 }
 
 export type StudentCodeTicketCreateWithoutRoomInput = {
@@ -510,13 +453,13 @@ export type StudentCodeTicketCreateWithoutRoomInput = {
   expiresAt?: Date | string | null
   usedAt?: Date | string | null
   createdAt?: Date | string
-  student: Prisma.UserCreateNestedOneWithoutStudentCodeTicketsInput
+  participant: Prisma.RoomParticipantCreateNestedOneWithoutStudentCodeTicketsInput
 }
 
 export type StudentCodeTicketUncheckedCreateWithoutRoomInput = {
   id?: string
   code: string
-  studentId: string
+  participantId: string
   expiresAt?: Date | string | null
   usedAt?: Date | string | null
   createdAt?: Date | string
@@ -548,7 +491,29 @@ export type StudentCodeTicketUpdateManyWithWhereWithoutRoomInput = {
   data: Prisma.XOR<Prisma.StudentCodeTicketUpdateManyMutationInput, Prisma.StudentCodeTicketUncheckedUpdateManyWithoutRoomInput>
 }
 
-export type StudentCodeTicketCreateManyStudentInput = {
+export type StudentCodeTicketScalarWhereInput = {
+  AND?: Prisma.StudentCodeTicketScalarWhereInput | Prisma.StudentCodeTicketScalarWhereInput[]
+  OR?: Prisma.StudentCodeTicketScalarWhereInput[]
+  NOT?: Prisma.StudentCodeTicketScalarWhereInput | Prisma.StudentCodeTicketScalarWhereInput[]
+  id?: Prisma.StringFilter<"StudentCodeTicket"> | string
+  code?: Prisma.StringFilter<"StudentCodeTicket"> | string
+  roomId?: Prisma.StringFilter<"StudentCodeTicket"> | string
+  participantId?: Prisma.StringFilter<"StudentCodeTicket"> | string
+  expiresAt?: Prisma.DateTimeNullableFilter<"StudentCodeTicket"> | Date | string | null
+  usedAt?: Prisma.DateTimeNullableFilter<"StudentCodeTicket"> | Date | string | null
+  createdAt?: Prisma.DateTimeFilter<"StudentCodeTicket"> | Date | string
+}
+
+export type StudentCodeTicketCreateWithoutParticipantInput = {
+  id?: string
+  code: string
+  expiresAt?: Date | string | null
+  usedAt?: Date | string | null
+  createdAt?: Date | string
+  room: Prisma.RoomCreateNestedOneWithoutStudentTicketsInput
+}
+
+export type StudentCodeTicketUncheckedCreateWithoutParticipantInput = {
   id?: string
   code: string
   roomId: string
@@ -557,37 +522,36 @@ export type StudentCodeTicketCreateManyStudentInput = {
   createdAt?: Date | string
 }
 
-export type StudentCodeTicketUpdateWithoutStudentInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  code?: Prisma.StringFieldUpdateOperationsInput | string
-  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  usedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  room?: Prisma.RoomUpdateOneRequiredWithoutStudentTicketsNestedInput
+export type StudentCodeTicketCreateOrConnectWithoutParticipantInput = {
+  where: Prisma.StudentCodeTicketWhereUniqueInput
+  create: Prisma.XOR<Prisma.StudentCodeTicketCreateWithoutParticipantInput, Prisma.StudentCodeTicketUncheckedCreateWithoutParticipantInput>
 }
 
-export type StudentCodeTicketUncheckedUpdateWithoutStudentInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  code?: Prisma.StringFieldUpdateOperationsInput | string
-  roomId?: Prisma.StringFieldUpdateOperationsInput | string
-  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  usedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+export type StudentCodeTicketCreateManyParticipantInputEnvelope = {
+  data: Prisma.StudentCodeTicketCreateManyParticipantInput | Prisma.StudentCodeTicketCreateManyParticipantInput[]
+  skipDuplicates?: boolean
 }
 
-export type StudentCodeTicketUncheckedUpdateManyWithoutStudentInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  code?: Prisma.StringFieldUpdateOperationsInput | string
-  roomId?: Prisma.StringFieldUpdateOperationsInput | string
-  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  usedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+export type StudentCodeTicketUpsertWithWhereUniqueWithoutParticipantInput = {
+  where: Prisma.StudentCodeTicketWhereUniqueInput
+  update: Prisma.XOR<Prisma.StudentCodeTicketUpdateWithoutParticipantInput, Prisma.StudentCodeTicketUncheckedUpdateWithoutParticipantInput>
+  create: Prisma.XOR<Prisma.StudentCodeTicketCreateWithoutParticipantInput, Prisma.StudentCodeTicketUncheckedCreateWithoutParticipantInput>
+}
+
+export type StudentCodeTicketUpdateWithWhereUniqueWithoutParticipantInput = {
+  where: Prisma.StudentCodeTicketWhereUniqueInput
+  data: Prisma.XOR<Prisma.StudentCodeTicketUpdateWithoutParticipantInput, Prisma.StudentCodeTicketUncheckedUpdateWithoutParticipantInput>
+}
+
+export type StudentCodeTicketUpdateManyWithWhereWithoutParticipantInput = {
+  where: Prisma.StudentCodeTicketScalarWhereInput
+  data: Prisma.XOR<Prisma.StudentCodeTicketUpdateManyMutationInput, Prisma.StudentCodeTicketUncheckedUpdateManyWithoutParticipantInput>
 }
 
 export type StudentCodeTicketCreateManyRoomInput = {
   id?: string
   code: string
-  studentId: string
+  participantId: string
   expiresAt?: Date | string | null
   usedAt?: Date | string | null
   createdAt?: Date | string
@@ -599,13 +563,13 @@ export type StudentCodeTicketUpdateWithoutRoomInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   usedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  student?: Prisma.UserUpdateOneRequiredWithoutStudentCodeTicketsNestedInput
+  participant?: Prisma.RoomParticipantUpdateOneRequiredWithoutStudentCodeTicketsNestedInput
 }
 
 export type StudentCodeTicketUncheckedUpdateWithoutRoomInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   code?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  participantId?: Prisma.StringFieldUpdateOperationsInput | string
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   usedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -614,7 +578,43 @@ export type StudentCodeTicketUncheckedUpdateWithoutRoomInput = {
 export type StudentCodeTicketUncheckedUpdateManyWithoutRoomInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   code?: Prisma.StringFieldUpdateOperationsInput | string
-  studentId?: Prisma.StringFieldUpdateOperationsInput | string
+  participantId?: Prisma.StringFieldUpdateOperationsInput | string
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  usedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type StudentCodeTicketCreateManyParticipantInput = {
+  id?: string
+  code: string
+  roomId: string
+  expiresAt?: Date | string | null
+  usedAt?: Date | string | null
+  createdAt?: Date | string
+}
+
+export type StudentCodeTicketUpdateWithoutParticipantInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  usedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  room?: Prisma.RoomUpdateOneRequiredWithoutStudentTicketsNestedInput
+}
+
+export type StudentCodeTicketUncheckedUpdateWithoutParticipantInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  roomId?: Prisma.StringFieldUpdateOperationsInput | string
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  usedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type StudentCodeTicketUncheckedUpdateManyWithoutParticipantInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  roomId?: Prisma.StringFieldUpdateOperationsInput | string
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   usedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -626,73 +626,73 @@ export type StudentCodeTicketSelect<ExtArgs extends runtime.Types.Extensions.Int
   id?: boolean
   code?: boolean
   roomId?: boolean
-  studentId?: boolean
+  participantId?: boolean
   expiresAt?: boolean
   usedAt?: boolean
   createdAt?: boolean
   room?: boolean | Prisma.RoomDefaultArgs<ExtArgs>
-  student?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  participant?: boolean | Prisma.RoomParticipantDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["studentCodeTicket"]>
 
 export type StudentCodeTicketSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   code?: boolean
   roomId?: boolean
-  studentId?: boolean
+  participantId?: boolean
   expiresAt?: boolean
   usedAt?: boolean
   createdAt?: boolean
   room?: boolean | Prisma.RoomDefaultArgs<ExtArgs>
-  student?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  participant?: boolean | Prisma.RoomParticipantDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["studentCodeTicket"]>
 
 export type StudentCodeTicketSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   code?: boolean
   roomId?: boolean
-  studentId?: boolean
+  participantId?: boolean
   expiresAt?: boolean
   usedAt?: boolean
   createdAt?: boolean
   room?: boolean | Prisma.RoomDefaultArgs<ExtArgs>
-  student?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  participant?: boolean | Prisma.RoomParticipantDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["studentCodeTicket"]>
 
 export type StudentCodeTicketSelectScalar = {
   id?: boolean
   code?: boolean
   roomId?: boolean
-  studentId?: boolean
+  participantId?: boolean
   expiresAt?: boolean
   usedAt?: boolean
   createdAt?: boolean
 }
 
-export type StudentCodeTicketOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "code" | "roomId" | "studentId" | "expiresAt" | "usedAt" | "createdAt", ExtArgs["result"]["studentCodeTicket"]>
+export type StudentCodeTicketOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "code" | "roomId" | "participantId" | "expiresAt" | "usedAt" | "createdAt", ExtArgs["result"]["studentCodeTicket"]>
 export type StudentCodeTicketInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   room?: boolean | Prisma.RoomDefaultArgs<ExtArgs>
-  student?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  participant?: boolean | Prisma.RoomParticipantDefaultArgs<ExtArgs>
 }
 export type StudentCodeTicketIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   room?: boolean | Prisma.RoomDefaultArgs<ExtArgs>
-  student?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  participant?: boolean | Prisma.RoomParticipantDefaultArgs<ExtArgs>
 }
 export type StudentCodeTicketIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   room?: boolean | Prisma.RoomDefaultArgs<ExtArgs>
-  student?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  participant?: boolean | Prisma.RoomParticipantDefaultArgs<ExtArgs>
 }
 
 export type $StudentCodeTicketPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "StudentCodeTicket"
   objects: {
     room: Prisma.$RoomPayload<ExtArgs>
-    student: Prisma.$UserPayload<ExtArgs>
+    participant: Prisma.$RoomParticipantPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     code: string
     roomId: string
-    studentId: string
+    participantId: string
     expiresAt: Date | null
     usedAt: Date | null
     createdAt: Date
@@ -1091,7 +1091,7 @@ readonly fields: StudentCodeTicketFieldRefs;
 export interface Prisma__StudentCodeTicketClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   room<T extends Prisma.RoomDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RoomDefaultArgs<ExtArgs>>): Prisma.Prisma__RoomClient<runtime.Types.Result.GetResult<Prisma.$RoomPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  student<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  participant<T extends Prisma.RoomParticipantDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RoomParticipantDefaultArgs<ExtArgs>>): Prisma.Prisma__RoomParticipantClient<runtime.Types.Result.GetResult<Prisma.$RoomParticipantPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1124,7 +1124,7 @@ export interface StudentCodeTicketFieldRefs {
   readonly id: Prisma.FieldRef<"StudentCodeTicket", 'String'>
   readonly code: Prisma.FieldRef<"StudentCodeTicket", 'String'>
   readonly roomId: Prisma.FieldRef<"StudentCodeTicket", 'String'>
-  readonly studentId: Prisma.FieldRef<"StudentCodeTicket", 'String'>
+  readonly participantId: Prisma.FieldRef<"StudentCodeTicket", 'String'>
   readonly expiresAt: Prisma.FieldRef<"StudentCodeTicket", 'DateTime'>
   readonly usedAt: Prisma.FieldRef<"StudentCodeTicket", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"StudentCodeTicket", 'DateTime'>
