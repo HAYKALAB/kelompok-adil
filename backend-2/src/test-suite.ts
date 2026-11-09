@@ -170,16 +170,16 @@ async function runTests() {
       'Tugas 2: Alias lama "murid" berhasil dinormalisasi ke STUDENT (ditolak 403)'
     );
 
-    // 12. Peringatan Ghosting Guru (Akses TEACHER & alias "guru")
+    // 12. Peringatan Tenggat Tugas untuk Guru (Akses TEACHER & alias "guru")
     const resGuruAlerts = await fetch(`${BASE_URL}/rooms/room-2/alerts`, {
       headers: { 'x-role': 'TEACHER' },
     }).then(json);
     const alerts = resGuruAlerts.data?.alerts || [];
     assert(
       alerts.length > 0 &&
-        alerts[0].memberName === 'Rafi Ahmad' &&
-        alerts[0].kind === 'ghosting',
-      `Tugas 2: Role TEACHER berhasil mengakses alerts dan mendeteksi murid pasif (${alerts[0]?.memberName})`
+        alerts[0].hoursOverdue > 0 &&
+        alerts[0].message.toLowerCase().includes('perlu perhatian'),
+      `Aturan Baru: Role TEACHER berhasil mengakses alerts dan mendeteksi tugas melewati tenggat dengan bahasa netral`
     );
 
     const resAliasGuru = await fetch(`${BASE_URL}/rooms/room-2/alerts`, {
@@ -190,20 +190,20 @@ async function runTests() {
       'Tugas 2: Alias lama "guru" berhasil dinormalisasi ke TEACHER'
     );
 
-    // 13. Ringkasan Guru (Fitur I & Perbaikan Langkah 3: Tanpa angka karangan)
+    // 13. Ringkasan Progres Tugas Guru (Tanpa Mengakses Obrolan Siswa)
     const resSummary = await fetch(`${BASE_URL}/groups/group-2/teacher-summary`, {
       headers: { 'x-role': 'TEACHER' },
     }).then(json);
-    const group2Msgs = await repo.getAiMessages('group-2');
     assert(
       Boolean(resSummary.data?.summary) &&
         resSummary.data?.source === 'fallback' &&
-        resSummary.data?.totalPrompts === group2Msgs.length &&
-        resSummary.data?.totalPrompts !== 42,
-      'Fitur I & Perbaikan Langkah 3: Ringkasan guru faktual (totalPrompts sesuai riil, bukan karangan 42)'
+        typeof resSummary.data?.totalTasks === 'number' &&
+        typeof resSummary.data?.completedTasks === 'number' &&
+        typeof resSummary.data?.pendingTasks === 'number',
+      'Fitur I: Ringkasan guru murni berbasis data tugas Kanban (totalTasks, completedTasks, pendingTasks)'
     );
 
-    // 14. Nudge murid pasif (Fitur J)
+    // 14. Nudge pengingat kelompok (Fitur J)
     const resNudge = await fetch(`${BASE_URL}/groups/group-2/nudge`, {
       method: 'POST',
     }).then(json);
@@ -291,16 +291,21 @@ async function runTests() {
       'Langkah 2: Data asli laporan di repository tetap utuh dan tidak dimodifikasi'
     );
 
-    // 20. Proteksi Akses Siswa Terhadap Endpoint Khusus Guru
+    // 20. Proteksi Privasi Percakapan Siswa: Route transcript dihapus permanen
     const resTranscriptStudent = await fetch(`${BASE_URL}/groups/group-2/transcript`, {
       headers: { 'x-role': 'STUDENT' },
+    });
+    const resTranscriptTeacher = await fetch(`${BASE_URL}/groups/group-2/transcript`, {
+      headers: { 'x-role': 'TEACHER' },
     });
     const resSummaryStudent = await fetch(`${BASE_URL}/groups/group-2/teacher-summary`, {
       headers: { 'x-role': 'STUDENT' },
     });
     assert(
-      resTranscriptStudent.status === 403 && resSummaryStudent.status === 403,
-      'Langkah 2: Role STUDENT ditolak 403 dari endpoint transcript & teacher-summary'
+      resTranscriptStudent.status === 404 &&
+        resTranscriptTeacher.status === 404 &&
+        resSummaryStudent.status === 403,
+      'Privasi Siswa: Route transcript telah dihapus permanen (404 untuk guru maupun siswa), dan siswa dilarang 403 akses teacher-summary'
     );
 
     // 21. Endpoint Pesan Siswa Tidak Membocorkan Peer Report
@@ -510,6 +515,86 @@ async function runTests() {
       noBudi && noJoni && noSiti && daniKept && neutralReplaced,
       'Perbaikan Langkah 4: Nama orang fiktif/tidak ada di data (Budi Santoso, Joni, Siti) diganti teks netral, nama sah (Dani) tetap dipertahankan'
     );
+
+    // 31. Aturan Baru Ghosting: Tugas tanpa deadline tidak pernah memicu alert ke guru
+    const testRoomId = 'room-ghosting-deadline-test';
+    const testGroupId = 'group-ghosting-deadline-test';
+    (repo as any).rooms.set(testRoomId, {
+      id: testRoomId,
+      name: 'Uji Aturan Ghosting Deadline',
+      subject: 'Teknologi',
+      class: 'XII',
+      deadline: '2026-12-01',
+      aiEnabled: true,
+      teacherId: 'guru-1',
+    });
+    (repo as any).groups.set(testGroupId, {
+      id: testGroupId,
+      roomId: testRoomId,
+      name: 'Kelompok Uji Deadline',
+      members: [{ id: 'm-test1', name: 'Siswa Uji' }],
+    });
+
+    await repo.createTasks(testGroupId, [
+      {
+        title: 'Tugas Tanpa Deadline',
+        description: 'Tugas fleksibel tanpa tenggat',
+        assigneeId: 'm-test1',
+        status: 'todo',
+        weight: 10,
+        deadline: undefined,
+      },
+    ]);
+    let resAlertsTest = await fetch(`${BASE_URL}/rooms/${testRoomId}/alerts`, {
+      headers: { 'x-role': 'TEACHER' },
+    }).then(json);
+    assert(
+      resAlertsTest.data?.alerts?.length === 0,
+      'Aturan Baru Ghosting: Tugas tanpa deadline TIDAK PERNAH memicu alert ke guru'
+    );
+
+    // 32. Aturan Baru Ghosting: Tugas dengan deadline masih lama (> 48 jam) tidak memicu alert ke guru
+    const futureDeadline = new Date(Date.now() + 100 * 3600 * 1000).toISOString();
+    await repo.createTasks(testGroupId, [
+      {
+        title: 'Tugas Deadline Jauh',
+        description: 'Tenggat masih 100 jam ke depan',
+        assigneeId: 'm-test1',
+        status: 'todo',
+        weight: 10,
+        deadline: futureDeadline,
+      },
+    ]);
+    resAlertsTest = await fetch(`${BASE_URL}/rooms/${testRoomId}/alerts`, {
+      headers: { 'x-role': 'TEACHER' },
+    }).then(json);
+    assert(
+      resAlertsTest.data?.alerts?.length === 0,
+      'Aturan Baru Ghosting: Tugas dengan deadline masih lama (> 48 jam) TIDAK memicu alert ke guru'
+    );
+
+    // 33. Aturan Baru Ghosting: Tugas dengan deadline lewat dan belum selesai memicu alert ke guru dengan bahasa netral
+    const overdueDeadline = new Date(Date.now() - 36 * 3600 * 1000).toISOString();
+    await repo.createTasks(testGroupId, [
+      {
+        title: 'Tugas Terlambat',
+        description: 'Tenggat lewat 36 jam lalu',
+        assigneeId: 'm-test1',
+        status: 'todo',
+        weight: 20,
+        deadline: overdueDeadline,
+      },
+    ]);
+    resAlertsTest = await fetch(`${BASE_URL}/rooms/${testRoomId}/alerts`, {
+      headers: { 'x-role': 'TEACHER' },
+    }).then(json);
+    const overdueAlert = resAlertsTest.data?.alerts?.find((a: any) => a.taskTitle === 'Tugas Terlambat');
+    assert(
+      overdueAlert !== undefined &&
+        overdueAlert.hoursOverdue >= 36 &&
+        overdueAlert.message.toLowerCase().includes('perlu perhatian'),
+      'Aturan Baru Ghosting: Tugas dengan deadline lewat dan belum selesai memicu alert ke guru dengan bahasa netral ("perlu perhatian")'
+    );
   } catch (e: any) {
     console.error('Terjadi error saat pengujian:', e);
     allPassed = false;
@@ -517,7 +602,7 @@ async function runTests() {
     server.close();
     console.log('\n=========================================');
     if (allPassed) {
-      console.log('🎉 SEMUA 30 PENGUJIAN FITUR, KONTRAK & KEAMANAN BERHASIL (100% PASS)!');
+      console.log('🎉 SEMUA 33 PENGUJIAN FITUR, KONTRAK & KEAMANAN BERHASIL (100% PASS)!');
     } else {
       console.log('⚠️ TERDAPAT PENGUJIAN YANG GAGAL.');
     }

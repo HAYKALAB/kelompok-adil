@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { repo } from '../deps/repository.stub.js';
 import { ContributionConfig } from '../config/contribution.config.js';
-import { ContributionService } from './contribution.service.js';
 import { LlmClient } from '../modules/ai/llm.client.js';
 import { SUMMARY_SYSTEM_PROMPT } from '../modules/ai/prompts/summary.prompt.js';
 import { NUDGE_SYSTEM_PROMPT } from '../modules/ai/prompts/nudge.prompt.js';
@@ -9,17 +8,22 @@ import { NUDGE_SYSTEM_PROMPT } from '../modules/ai/prompts/nudge.prompt.js';
 export interface GhostingAlertItem {
   groupId: string;
   groupName: string;
-  memberId: string;
-  memberName: string;
-  kind: 'ghosting' | 'low_contribution';
+  taskId: string;
+  taskTitle: string;
+  assigneeId?: string;
+  assigneeName?: string;
+  deadline: string;
+  hoursOverdue: number;
+  status: string;
   message: string;
-  hoursInactive: number;
-  contributionPercent: number;
 }
 
 export interface TeacherSummaryResponse {
   summary: string;
-  totalPrompts: number;
+  totalTasks: number;
+  completedTasks: number;
+  pendingTasks: number;
+  nearestDeadline: string | null;
   highlights: string[];
   generatedAt: string;
   source: 'ai' | 'fallback';
@@ -27,7 +31,6 @@ export interface TeacherSummaryResponse {
 
 const TeacherSummaryOutputSchema = z.object({
   summary: z.string().max(1000),
-  totalPrompts: z.coerce.number().optional(),
   highlights: z.array(z.string().max(300)).default([]),
 });
 
@@ -35,8 +38,10 @@ export class GhostingService {
   private static summaryCache: Map<string, { data: TeacherSummaryResponse; expiry: number }> = new Map();
 
   /**
-   * Deteksi ghosting di seluruh room untuk dashboard guru
-   * Syarat: kontribusi < 10% DAN inaktif > 72 jam
+   * Peringatan kendala tugas untuk dashboard guru (Aturan Baru Berbasis Tenggat)
+   * - Tugas tanpa deadline TIDAK PERNAH memicu alert.
+   * - Tugas mendekati deadline (< N jam) memicu pengingat ramah ke grup (tanpa menyebut nama siapa pun).
+   * - Alert ke guru HANYA muncul jika deadline SUDAH LEWAT dan tugas BELUM SELESAI, dengan bahasa netral ("perlu perhatian").
    */
   public static async scanRoomAlerts(roomId: string): Promise<GhostingAlertItem[]> {
     const room = await repo.getRoom(roomId);
@@ -51,39 +56,68 @@ export class GhostingService {
     const groups = await repo.getGroupsByRoom(roomId);
     const alerts: GhostingAlertItem[] = [];
     const nowTime = Date.now();
+    const warnHours = ContributionConfig.ghosting.warnHoursThreshold;
 
     for (const group of groups) {
-      const contribution = await ContributionService.calculateGroupContribution(group.id);
+      const memberMap = new Map<string, string>();
+      group.members.forEach((m) => memberMap.set(m.id, m.name));
 
-      for (const m of contribution.members) {
-        let hoursInactive = 999;
-        if (m.lastActiveAt) {
-          const lastActiveTime = new Date(m.lastActiveAt).getTime();
-          hoursInactive = Math.max(0, Math.floor((nowTime - lastActiveTime) / (3600 * 1000)));
+      const tasks = await repo.getTasks(group.id);
+
+      for (const t of tasks) {
+        // 1. Tugas tanpa deadline TIDAK PERNAH memicu alert ke guru
+        if (!t.deadline || t.deadline.trim() === '') {
+          continue;
         }
 
-        const isLowContribution = m.percentage < ContributionConfig.ghosting.minContributionPercent;
-        const isGhosting = isLowContribution && hoursInactive >= ContributionConfig.ghosting.inactiveHoursThreshold;
+        // 2. Tugas yang sudah selesai tidak memicu alert
+        if (t.status === 'done' || t.evidenceStatus === 'valid') {
+          continue;
+        }
 
-        if (isGhosting) {
+        const deadlineTime = new Date(t.deadline).getTime();
+        if (isNaN(deadlineTime)) {
+          continue;
+        }
+
+        const diffHours = (deadlineTime - nowTime) / (3600 * 1000);
+
+        // Kasus 1: Deadline sudah lewat dan tugas belum selesai -> Picu alert ke guru dengan bahasa netral
+        if (diffHours < 0) {
+          const hoursOverdue = Math.max(1, Math.floor((nowTime - deadlineTime) / (3600 * 1000)));
+          const assigneeName = t.assigneeId ? memberMap.get(t.assigneeId) : undefined;
+
           const alertItem: GhostingAlertItem = {
             groupId: group.id,
             groupName: group.name,
-            memberId: m.memberId,
-            memberName: m.name,
-            kind: 'ghosting',
-            message: `Kontribusi di bawah ${ContributionConfig.ghosting.minContributionPercent}% (${m.percentage}%) dan tidak mengunggah bukti selama ${hoursInactive} jam. Risiko ketidakadilan pembagian nilai.`,
-            hoursInactive,
-            contributionPercent: m.percentage,
+            taskId: t.id,
+            taskTitle: t.title,
+            assigneeId: t.assigneeId,
+            assigneeName,
+            deadline: t.deadline,
+            hoursOverdue,
+            status: t.status,
+            message: `Tugas "${t.title}" telah melewati tenggat waktu (${hoursOverdue} jam lalu) dan belum selesai. Perlu perhatian dan konfirmasi berkala.`,
           };
 
           alerts.push(alertItem);
 
           await repo.saveAiFlag({
             groupId: group.id,
-            memberId: m.memberId,
+            memberId: t.assigneeId || 'unassigned',
             kind: 'ghosting',
             detail: alertItem,
+          });
+        }
+        // Kasus 2: Deadline kurang dari N jam (default 48 jam) dan belum selesai -> Kirim pengingat ramah ke grup (tanpa menyebut nama siapa pun)
+        else if (diffHours < warnHours) {
+          const remainingHours = Math.max(1, Math.ceil(diffHours));
+          await repo.saveAiMessage({
+            groupId: group.id,
+            senderType: 'ai',
+            senderName: 'AI Asisten Rukun',
+            action: 'nudge',
+            content: `Halo rekan-rekan ${group.name}! 👋 Pengingat ramah: tugas "${t.title}" memiliki batas tenggat dalam waktu kurang dari ${remainingHours} jam. Yuk saling bantu dan koordinasikan di papan Kanban agar selesai tepat waktu! ✨`,
           });
         }
       }
@@ -93,7 +127,7 @@ export class GhostingService {
   }
 
   /**
-   * Menghasilkan ringkasan riwayat interaksi AI untuk guru
+   * Menghasilkan ringkasan progres tugas untuk guru (Privasi Terjaga: Tanpa Membaca Obrolan Siswa)
    */
   public static async getTeacherSummary(groupId: string): Promise<TeacherSummaryResponse> {
     const cached = this.summaryCache.get(groupId);
@@ -106,18 +140,37 @@ export class GhostingService {
       throw new Error(`Group dengan ID ${groupId} tidak ditemukan`);
     }
 
-    const messages = await repo.getAiMessages(groupId);
+    // Hanya membaca data tugas (tanpa membaca atau mengirim pesan chat siswa)
     const tasks = await repo.getTasks(groupId);
-    const doneTasksCount = tasks.filter((t) => t.status === 'done' || t.evidenceStatus === 'valid').length;
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter((t) => t.status === 'done' || t.evidenceStatus === 'valid').length;
+    const pendingTasks = totalTasks - completedTasks;
+    const tasksWithEvidence = tasks.filter((t) => Boolean(t.evidenceUrl)).length;
 
-    // Fallback faktual tanpa klaim karangan dan tanpa angka karangan (mis. 42)
+    // Hitung deadline terdekat dari tugas yang belum selesai
+    const pendingWithDeadlines = tasks
+      .filter((t) => t.status !== 'done' && t.evidenceStatus !== 'valid' && Boolean(t.deadline))
+      .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
+
+    const nearestDeadline = pendingWithDeadlines[0]?.deadline || null;
+
+    // Fallback faktual berbasis data tugas murni
     const mockSummaryFallback: TeacherSummaryResponse = {
-      summary: `Ringkasan AI belum tersedia. Catatan sistem: terdapat ${tasks.length} tugas (${doneTasksCount} selesai) dan ${messages.length} interaksi pesan kelompok.`,
-      totalPrompts: messages.length,
+      summary: `Ringkasan progres tugas: terdapat ${totalTasks} tugas terdaftar (${completedTasks} selesai, ${pendingTasks} belum selesai). ${
+        nearestDeadline
+          ? `Tenggat tugas terdekat adalah ${new Date(nearestDeadline).toLocaleDateString('id-ID')}.`
+          : 'Belum ada tenggat waktu terdekat.'
+      }`,
+      totalTasks,
+      completedTasks,
+      pendingTasks,
+      nearestDeadline,
       highlights: [
-        `Tercatat ${tasks.length} tugas di papan Kanban (${doneTasksCount} selesai verifikasi)`,
-        `Total interaksi pesan kelompok: ${messages.length}`,
-        `Status pemantauan: pantau berkala bukti kerja anggota yang belum selesai`,
+        `Total tugas terdaftar: ${totalTasks} (${completedTasks} selesai verifikasi)`,
+        `Tugas yang telah mengunggah bukti: ${tasksWithEvidence} dari ${totalTasks}`,
+        nearestDeadline
+          ? `Tenggat terdekat: ${new Date(nearestDeadline).toLocaleDateString('id-ID')}`
+          : 'Tidak ada tenggat waktu aktif yang mendesak',
       ],
       generatedAt: new Date().toISOString(),
       source: 'fallback',
@@ -125,13 +178,19 @@ export class GhostingService {
 
     const promptContext = `
 Kelompok: ${group.name}
-Total Pesan Chat: ${messages.length}
-Daftar Tugas:
-${tasks.map((t) => `- ${t.title} [Status: ${t.status}, Assignee: ${t.assigneeId}]`).join('\n')}
+Total Tugas: ${totalTasks}
+Tugas Selesai: ${completedTasks}
+Tugas Belum Selesai: ${pendingTasks}
+Tenggat Terdekat: ${nearestDeadline || 'Tidak ada'}
 
 <data>
-Cuplikan Diskusi Terakhir:
-${messages.slice(-10).map((m) => `${m.senderName}: "${m.content}"`).join('\n')}
+Daftar Tugas dan Status Bukti:
+${tasks
+  .map(
+    (t) =>
+      `- "${t.title}": Status=${t.status}, Bukti=${t.evidenceType || 'dokumen'} (${t.evidenceStatus || 'belum ada bukti'}), Tenggat=${t.deadline || 'tidak ada'}`
+  )
+  .join('\n')}
 </data>
 `;
 
@@ -164,7 +223,10 @@ ${messages.slice(-10).map((m) => `${m.senderName}: "${m.content}"`).join('\n')}
 
     const result: TeacherSummaryResponse = {
       summary: generated.summary,
-      totalPrompts: messages.length,
+      totalTasks,
+      completedTasks,
+      pendingTasks,
+      nearestDeadline,
       highlights: generated.highlights.length > 0 ? generated.highlights : mockSummaryFallback.highlights,
       generatedAt: new Date().toISOString(),
       source: isAiValid ? 'ai' : 'fallback',
@@ -179,14 +241,7 @@ ${messages.slice(-10).map((m) => `${m.senderName}: "${m.content}"`).join('\n')}
   }
 
   /**
-   * Mengambil transkrip lengkap chat kelompok untuk guru
-   */
-  public static async getGroupTranscript(groupId: string) {
-    return repo.getAiMessages(groupId, undefined, 200);
-  }
-
-  /**
-   * Mengirimkan nudge ramah ke murid pasif di chat kelompok
+   * Mengirimkan nudge ramah ke kelompok (tanpa menyudutkan individu)
    */
   public static async sendFriendlyNudge(groupId: string): Promise<{ sentMessageId: string; message: string; source: 'ai' | 'fallback' }> {
     const group = await repo.getGroup(groupId);
@@ -194,17 +249,15 @@ ${messages.slice(-10).map((m) => `${m.senderName}: "${m.content}"`).join('\n')}
       throw new Error(`Group dengan ID ${groupId} tidak ditemukan`);
     }
 
-    const contribution = await ContributionService.calculateGroupContribution(groupId);
-    const passiveMembers = contribution.members.filter((m) => m.percentage < 15);
-    const passiveNames = passiveMembers.map((m) => m.name).join(', ') || 'rekan-rekan';
+    const tasks = await repo.getTasks(groupId);
+    const pendingCount = tasks.filter((t) => t.status !== 'done').length;
 
-    const fallbackNudge = `Halo ${passiveNames}! 👋 Pengingat sistem: kamu belum mengunggah bukti pengerjaan tugas di papan Kanban. Ada kendala materi atau referensi? Mari sampaikan di sini agar rekan tim bisa bantu gotong royong!`;
+    const fallbackNudge = `Halo rekan-rekan ${group.name}! 👋 Pengingat ramah: terdapat ${pendingCount} tugas di papan Kanban yang masih berjalan. Mari saling bantu dan koordinasikan bila ada kendala materi ya! ✨`;
 
     const promptContext = `
 Kelompok: ${group.name}
-Anggota Kurang Aktif: ${passiveNames}
-Status Tim Saat Ini: ${contribution.balanceStatus}
-Buatkan sapaan ramah dan memotivasi tanpa menghakimi.
+Total Tugas Belum Selesai: ${pendingCount}
+Buatkan sapaan ramah, hangat, dan memotivasi seluruh anggota kelompok tanpa menyebut nama individu secara negatif.
 `;
 
     const { text: messageText, source } = await LlmClient.generateText(

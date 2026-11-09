@@ -32,18 +32,16 @@ router.post('/groups/:groupId/check-completeness', AiController.checkCompletenes
 // Hitung persentase kontribusi dan status keseimbangan tim secara deterministik
 router.get('/groups/:groupId/contributions', AiController.getContributions);
 
-// --- 6. AREA GURU: DETEKSI GHOSTING, RINGKASAN & ANALISIS KEADILAN (Fitur H, I & Peer-Review) ---
-// Peringatan otomatis deteksi ghosting (hanya untuk role Guru)
+// --- 6. AREA GURU: DETEKSI KENDALA TENGGAT, RINGKASAN TUGAS & ANALISIS KEADILAN ---
+// Peringatan otomatis tugas melewati tenggat (hanya untuk role Guru)
 router.get('/rooms/:roomId/alerts', requireTeacher, AiController.getRoomAlerts);
-// Ringkasan catatan otomatis AI untuk guru (hanya untuk role Guru)
+// Ringkasan progres tugas untuk guru berbasis data Kanban murni (hanya untuk role Guru)
 router.get('/groups/:groupId/teacher-summary', requireTeacher, AiController.getTeacherSummary);
-// Transkrip lengkap riwayat obrolan AI kelompok (hanya untuk role Guru)
-router.get('/groups/:groupId/transcript', requireTeacher, AiController.getTranscript);
 // Analisis keadilan kelas berbasis laporan rahasia peer-review (hanya untuk role Guru)
 router.post('/rooms/:roomId/analyze-fairness', requireTeacher, AiController.analyzeFairness);
 
 // --- 7. PENGINGAT RAMAH / NUDGE (Fitur J) ---
-// Kirim pengingat hangat di chat kelompok untuk anggota yang pasif
+// Kirim pengingat hangat di chat kelompok untuk anggota
 router.post('/groups/:groupId/nudge', AiController.sendNudge);
 
 export default router;

@@ -23,6 +23,8 @@ PORT=5000
 GEMINI_API_KEY=your_gemini_api_key_here # opsional jika mode mock aktif
 AI_MODEL=gemini-2.5-flash
 AI_MOCK=true # Ubah false jika ingin menggunakan API Gemini secara live
+AI_TIMEOUT_MS=10000
+GHOSTING_WARN_HOURS=48
 ```
 
 ### 3. Kompilasi & Jalankan Server:
@@ -102,15 +104,15 @@ Seluruh endpoint di bawah `/api/ai` mematuhi format respons standar tim hackatho
 
 ### 6. Area Khusus Guru (Wajib Header `x-role: TEACHER`)
 - **`GET /api/ai/rooms/:roomId/alerts`**
-  Deteksi otomatis siswa *ghosting* (kontribusi `< 10%` dan tidak ada unggahan bukti `> 72 jam`).
+  Deteksi otomatis peringatan tugas berbasis tenggat waktu (tugas tanpa deadline tidak pernah memicu alert; tugas dengan deadline mendekati `< 48` jam memicu pengingat ramah ke obrolan kelompok tanpa menyebut nama; alert ke guru hanya muncul jika deadline telah lewat dan tugas belum selesai dengan bahasa netral *"perlu perhatian"*).
 - **`GET /api/ai/groups/:groupId/teacher-summary`**
-  Ringkasan dinamika diskusi kelompok dan catatan perkembangan otomatis untuk guru.
-- **`GET /api/ai/groups/:groupId/transcript`**
-  Transkrip utuh riwayat obrolan AI kelompok.
+  Ringkasan progres tugas Kanban kelompok (jumlah total tugas, selesai, tertunda, dan tenggat terdekat) murni dari data agregat tugas tanpa mengakses atau membaca isi obrolan siswa demi privasi.
+- **`POST /api/ai/rooms/:roomId/analyze-fairness`**
+  Analisis keadilan dan iklim gotong royong berdasarkan formulir peer-review siswa dengan garansi 100% anonimitas pelapor.
 
 ### 7. Pengingat Ramah (Nudge)
 - **`POST /api/ai/groups/:groupId/nudge`**
-  Mengirimkan ajakan ramah di chat terbuka kelompok untuk anggota yang pasif tanpa mempermalukan siswa.
+  Mengirimkan ajakan ramah dan suportif ke ruang obrolan bersama kelompok agar saling membantu menyelesaikan tugas sebelum tenggat tanpa menyalahkan siapapun.
 
 ---
 

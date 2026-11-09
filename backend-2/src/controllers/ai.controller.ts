@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { sendData, sendError } from '../lib/response.js';
 import { ChatService } from '../services/chat.service.js';
 import { SuggestionService } from '../services/suggestion.service.js';
 import { AssigneeService } from '../services/assignee.service.js';
@@ -7,45 +6,43 @@ import { ValidationService } from '../services/validation.service.js';
 import { ContributionService } from '../services/contribution.service.js';
 import { GhostingService } from '../services/ghosting.service.js';
 import { FairnessService } from '../services/fairness.service.js';
+import { sendData, sendError } from '../lib/response.js';
 
+// Helper ekstraksi route params aman untuk Express 5
 function getParam(param: string | string[] | undefined): string {
   if (Array.isArray(param)) return param[0] || '';
   return param || '';
 }
 
 export class AiController {
-  // 1. Obrolan dengan AI Fasilitator Kelompok
+  // 1. Obrolan AI Fasilitator & Ide Kreatif
   static async chat(req: Request, res: Response): Promise<void> {
     try {
       const groupId = getParam(req.params.groupId);
-      const { message, action, senderName, senderId } = req.body;
+      const { message, senderId, senderName, action } = req.body;
 
       if (!message || typeof message !== 'string' || message.trim() === '') {
-        sendError(res, 400, 'VALIDATION_ERROR', 'Pesan chat tidak boleh kosong.');
+        sendError(res, 400, 'VALIDATION_ERROR', 'Pesan tidak boleh kosong.');
         return;
       }
 
-      const resolvedName =
-        senderName || (req.user?.role === 'TEACHER' ? 'Guru Pembimbing' : 'Siswa');
-      const resolvedId = senderId || req.user?.id;
-
       const result = await ChatService.processGroupChat({
         groupId,
-        senderId: resolvedId,
-        senderName: resolvedName,
+        senderId,
+        senderName: senderName || 'Siswa',
         message,
-        action: action || 'chat',
+        action,
       });
 
       sendData(res, result);
     } catch (err: any) {
-      console.error('Gagal memproses chat AI:', err.message);
+      console.error('Gagal memproses pesan AI:', err.message);
       const code = err.code || 'INTERNAL_ERROR';
-      sendError(res, 500, code, 'Gagal memproses obrolan AI. Silakan coba kembali.');
+      sendError(res, 500, code, 'Gagal memproses permintaan chat fasilitator.');
     }
   }
 
-  // 2. Ambil riwayat chat kelompok (transparan)
+  // 2. Mengambil riwayat pesan kelompok
   static async getMessages(req: Request, res: Response): Promise<void> {
     try {
       const groupId = getParam(req.params.groupId);
@@ -125,11 +122,12 @@ export class AiController {
 
       sendData(res, result);
     } catch (err: any) {
-      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal menganalisis rekomendasi penanggung jawab.');
+      console.error('Gagal merekomendasikan assignee:', err.message);
+      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal merekomendasikan penanggung jawab tugas.');
     }
   }
 
-  // 7. Validasi bukti tugas siswa
+  // 7. Validasi bukti tugas individu
   static async validateTask(req: Request, res: Response): Promise<void> {
     try {
       const taskId = getParam(req.params.taskId);
@@ -138,6 +136,7 @@ export class AiController {
       const result = await ValidationService.validateTaskEvidence(taskId, evidenceUrl);
       sendData(res, result);
     } catch (err: any) {
+      console.error('Gagal memvalidasi tugas:', err.message);
       sendError(res, 500, 'INTERNAL_ERROR', 'Gagal memvalidasi bukti tugas siswa.');
     }
   }
@@ -153,7 +152,7 @@ export class AiController {
     }
   }
 
-  // 9. Ambil rasio kontribusi kelompok (deterministik)
+  // 9. Ambil skala kontribusi riil kelompok (Deterministik)
   static async getContributions(req: Request, res: Response): Promise<void> {
     try {
       const groupId = getParam(req.params.groupId);
@@ -164,40 +163,29 @@ export class AiController {
     }
   }
 
-  // 10. Deteksi peringatan ghosting untuk Guru
+  // 10. Deteksi peringatan tenggat tugas untuk Guru
   static async getRoomAlerts(req: Request, res: Response): Promise<void> {
     try {
       const roomId = getParam(req.params.roomId);
       const alerts = await GhostingService.scanRoomAlerts(roomId);
       sendData(res, { alerts });
     } catch (err: any) {
-      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal memindai peringatan ghosting.');
+      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal memindai peringatan tenggat tugas.');
     }
   }
 
-  // 11. Ringkasan riwayat interaksi AI untuk Guru
+  // 11. Ringkasan progres tugas untuk Guru (Tanpa Mengakses Obrolan Siswa)
   static async getTeacherSummary(req: Request, res: Response): Promise<void> {
     try {
       const groupId = getParam(req.params.groupId);
       const summary = await GhostingService.getTeacherSummary(groupId);
       sendData(res, summary);
     } catch (err: any) {
-      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal memuat ringkasan interaksi guru.');
+      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal memuat ringkasan tugas guru.');
     }
   }
 
-  // 12. Transkrip utuh riwayat chat untuk Guru
-  static async getTranscript(req: Request, res: Response): Promise<void> {
-    try {
-      const groupId = getParam(req.params.groupId);
-      const messages = await GhostingService.getGroupTranscript(groupId);
-      sendData(res, { transcript: messages });
-    } catch (err: any) {
-      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal mengambil transkrip riwayat obrolan.');
-    }
-  }
-
-  // 13. Kirim pengingat ramah (Nudge) ke chat kelompok
+  // 12. Kirim pengingat ramah (Nudge) ke chat kelompok
   static async sendNudge(req: Request, res: Response): Promise<void> {
     try {
       const groupId = getParam(req.params.groupId);
@@ -208,7 +196,7 @@ export class AiController {
     }
   }
 
-  // 14. Analisis Keadilan Kelas dari Peer-Review (Khusus Guru)
+  // 13. Analisis Keadilan Kelas dari Peer-Review (Khusus Guru)
   static async analyzeFairness(req: Request, res: Response): Promise<void> {
     try {
       const roomId = getParam(req.params.roomId);
