@@ -3,6 +3,7 @@ import { repo } from '../deps/repository.stub.js';
 import { LlmClient } from '../modules/ai/llm.client.js';
 import { BASE_SYSTEM_PROMPT } from '../modules/ai/prompts/base.prompt.js';
 import { IDEAS_SYSTEM_PROMPT } from '../modules/ai/prompts/ideas.prompt.js';
+import { stripDataTags } from '../lib/sanitize.js';
 
 export interface ChatRequestParams {
   groupId: string;
@@ -53,8 +54,8 @@ export class ChatService {
     const tasks = await repo.getTasks(groupId);
     const recentMessages = await repo.getAiMessages(groupId, undefined, 15);
 
-    // Batasi panjang pesan siswa (anti-bloat & anti-injection guard)
-    const sanitizedMessage = (message || '').slice(0, 500).trim();
+    // Hapus tag <data> / </data> dan batasi panjang input
+    const sanitizedMessage = stripDataTags(message || '').slice(0, 500);
 
     // 1. Simpan pesan murid ke riwayat transparan kelompok
     await repo.saveAiMessage({

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { repo, TaskData } from '../deps/repository.stub.js';
 import { LlmClient } from '../modules/ai/llm.client.js';
 import { SPLIT_ROLES_SYSTEM_PROMPT } from '../modules/ai/prompts/split_roles.prompt.js';
+import { stripDataTags } from '../lib/sanitize.js';
 
 export interface SplitRolesRequest {
   groupId: string;
@@ -64,11 +65,10 @@ export class SuggestionService {
     const memberList = group.members;
     const defaultDeadline = deadline || new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString();
 
-    // Batasi panjang input (anti-injection & anti-bloat)
-    const sanitizedTopic = (topic || '').slice(0, 150).trim();
-    const sanitizedNotes = (notes || '').slice(0, 300).trim();
+    // Hapus tag <data> dan batasi panjang input
+    const sanitizedTopic = stripDataTags(topic || '').slice(0, 150);
+    const sanitizedNotes = stripDataTags(notes || '').slice(0, 300);
 
-    // Mock fallback realistis untuk Kelompok Majapahit / umum
     const fallbackAssignments: AssignmentItem[] = memberList.map((m, idx) => {
       const titles = [
         'Riset Dokumen & Analisis Latar Belakang',
@@ -143,7 +143,6 @@ Catatan Tambahan Siswa: "${sanitizedNotes || 'Tidak ada'}"
     // --- VALIDASI DETERMINISTIK KODE ---
     const rawAssignments = [...generated.assignments];
 
-    // 1. Pastikan setiap anggota ada minimal 1 tugas
     const assignedMemberIds = new Set(rawAssignments.map((a) => a.memberId));
     for (const member of memberList) {
       if (!assignedMemberIds.has(member.id)) {
@@ -159,7 +158,6 @@ Catatan Tambahan Siswa: "${sanitizedNotes || 'Tidak ada'}"
       }
     }
 
-    // 2. Normalisasi total weightPercent agar TEPAT 100%
     let totalWeight = rawAssignments.reduce((sum, item) => sum + (Number(item.weightPercent) || 0), 0);
     if (totalWeight <= 0) totalWeight = 100;
 
@@ -187,7 +185,6 @@ Catatan Tambahan Siswa: "${sanitizedNotes || 'Tidak ada'}"
       };
     });
 
-    // 3. Simpan usulan ke database stub AI
     const savedSuggestion = await repo.saveAiSuggestion({
       groupId,
       type: 'role_split',

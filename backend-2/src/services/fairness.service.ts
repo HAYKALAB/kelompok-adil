@@ -5,6 +5,7 @@ import {
   buildFairnessAnalysisPrompt,
   AnonymizedReportItem,
 } from '../modules/ai/prompts/fairness.prompt.js';
+import { stripDataTags, sanitizeUnknownNames } from '../lib/sanitize.js';
 
 const FairnessOutputSchema = z.object({
   fairnessScore: z.coerce.number().min(0).max(100),
@@ -84,8 +85,8 @@ export class FairnessService {
       const alias = reporterAliasMap.get(r.reporterId)!;
       const reporterRealName = memberNameMap.get(r.reporterId);
 
-      // Batasi panjang teks feedback maksimal 300 karakter (anti-bloat & injection guard)
-      let sanitizedFeedback = r.feedback.slice(0, 300).trim();
+      // 1. Hapus tag <data> / </data> dan batasi panjang teks maksimal 300 karakter
+      let sanitizedFeedback = stripDataTags(r.feedback).slice(0, 300).trim();
 
       // Kumpulkan potongan kata dari nama orang yang dilaporkan
       const reportedParts = (r.reportedMemberName || '')
@@ -98,13 +99,13 @@ export class FairnessService {
         const isFullNameReported =
           (r.reportedMemberName || '').trim().toLowerCase() === reporterRealName.trim().toLowerCase();
 
-        // 1. Samarkan nama lengkap dengan word boundary & case-insensitive
+        // Samarkan nama lengkap dengan word boundary & case-insensitive
         if (!isFullNameReported) {
           const fullNameRegex = new RegExp(`\\b${escapeRegExp(reporterRealName)}\\b`, 'gi');
           sanitizedFeedback = sanitizedFeedback.replace(fullNameRegex, alias);
         }
 
-        // 2. Samarkan potongan nama (panjang >= 3) hanya jika BUKAN bagian nama yang dilaporkan
+        // Samarkan potongan nama (panjang >= 3) hanya jika BUKAN bagian nama yang dilaporkan
         const reporterNameParts = reporterRealName
           .split(/\s+/)
           .filter((part) => part.length >= 3);
@@ -137,7 +138,6 @@ export class FairnessService {
     });
 
     // 4. Hitung skor dasar deterministik (rata-rata rating 1-5 dikonversi ke skala 0-100)
-    // Skor TIDAK BOLEH ditentukan oleh teks siswa yang mencoba prompt injection
     const avgRating = reports.reduce((acc, r) => acc + r.rating, 0) / reports.length;
     const deterministicScore = Math.round((avgRating / 5) * 100);
 
@@ -159,6 +159,13 @@ export class FairnessService {
     // 5. Eksekusi pemanggilan Gemini via LlmClient
     const prompt = buildFairnessAnalysisPrompt(anonymizedReports);
 
+    // Kumpulkan seluruh nama yang sah di dalam data untuk sanitasi output AI
+    const roomMembers = groups.flatMap((g) => g.members);
+    const validNames: string[] = roomMembers.map((m) => m.name);
+    for (let i = 1; i <= aliasCounter; i++) {
+      validNames.push(`Pelapor-${i}`);
+    }
+
     try {
       const { data: generated, source: rawSource } = await LlmClient.generateJSON<any>(
         prompt,
@@ -174,11 +181,16 @@ export class FairnessService {
         console.warn('Output Gemini tidak sesuai schema Zod, beralih ke fallback:', parsed.error.issues);
       }
 
+      // Sanitasi: pastikan tidak ada halusinasi nama orang yang tidak ada di data
+      const cleanSummary = sanitizeUnknownNames(finalData.summary, validNames);
+      const cleanAlerts = finalData.alerts.map((a) => sanitizeUnknownNames(a, validNames));
+      const cleanAdvice = sanitizeUnknownNames(finalData.teacherAdvice, validNames);
+
       return {
         fairnessScore: finalData.fairnessScore,
-        summary: finalData.summary,
-        alerts: finalData.alerts,
-        teacherAdvice: finalData.teacherAdvice,
+        summary: cleanSummary,
+        alerts: cleanAlerts,
+        teacherAdvice: cleanAdvice,
         totalReports: reports.length,
         generatedAt: now,
         source: isAiValid ? 'ai' : 'fallback',

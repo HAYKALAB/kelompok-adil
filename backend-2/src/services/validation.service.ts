@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { repo } from '../deps/repository.stub.js';
 import { LlmClient } from '../modules/ai/llm.client.js';
 import { VALIDATION_SYSTEM_PROMPT } from '../modules/ai/prompts/validation.prompt.js';
+import { stripDataTags } from '../lib/sanitize.js';
 
 export interface ValidationResponse {
   taskId: string;
@@ -43,7 +44,7 @@ export class ValidationService {
     }
 
     const rawEvidence = evidenceTextOrUrl || task.evidenceUrl || '';
-    const targetEvidence = rawEvidence.slice(0, 500).trim();
+    const targetEvidence = stripDataTags(rawEvidence).slice(0, 500);
 
     // Jika bukti sama sekali belum ada
     if (!targetEvidence || targetEvidence.length === 0) {
