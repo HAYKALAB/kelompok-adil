@@ -12,12 +12,263 @@ enum Role {
   TEACHER
 }
 
+enum RoomStatus {
+  LOBBY
+  ACTIVE
+  FINISHED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum EvidenceType {
+  GOOGLE_DOCS
+  SLIDE
+  HANDWRITTEN_PHOTO
+  WEB_LINK
+}
+
+enum EvidenceStatus {
+  VALID
+  INCOMPLETE
+  SUSPICIOUS
+  PENDING
+}
+
+enum ActivityType {
+  DOCUMENT
+  COMMENT
+  LOG
+  UPLOAD
+}
+
+enum AiSuggestionType {
+  ROLE_SPLIT
+  ASSIGNEE
+}
+
+enum AiSuggestionStatus {
+  PENDING
+  APPLIED
+  DISMISSED
+}
+
+enum AiFlagKind {
+  GHOSTING
+  LOW_CONTRIBUTION
+  TASK_OVERDUE
+}
+
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  role      Role     @default(STUDENT)
-  createdAt DateTime @default(now())
+  id                 String              @id @default(uuid())
+  name               String
+  email              String?             @unique
+  role               Role                @default(STUDENT)
+  createdAt          DateTime            @default(now())
+  taughtRooms        Room[]              @relation("RoomTeacher")
+  roomParticipants   RoomParticipant[]
+  teacherCodeTickets TeacherCodeTicket[]
 
   @@map("users")
+}
+
+model Room {
+  id             String              @id @default(uuid())
+  pin            String              @unique
+  title          String
+  subject        String?
+  className      String?
+  aiEnabled      Boolean             @default(true)
+  deadline       DateTime?
+  teacherId      String
+  targetGroups   Int                 @default(4)
+  status         RoomStatus          @default(LOBBY)
+  createdAt      DateTime            @default(now())
+  teacher        User                @relation("RoomTeacher", fields: [teacherId], references: [id])
+  participants   RoomParticipant[]
+  groups         Group[]
+  peerReports    PeerReport[]
+  teacherTickets TeacherCodeTicket[]
+  studentTickets StudentCodeTicket[]
+
+  @@index([teacherId])
+  @@map("rooms")
+}
+
+model RoomParticipant {
+  id                 String              @id @default(uuid())
+  roomId             String
+  userId             String?
+  name               String
+  role               Role                @default(STUDENT)
+  joinedAt           DateTime            @default(now())
+  room               Room                @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user               User?               @relation(fields: [userId], references: [id])
+  groupId            String?
+  group              Group?              @relation(fields: [groupId], references: [id])
+  assignedTasks      Task[]              @relation("TaskAssignee")
+  activities         Activity[]
+  reportsMade        PeerReport[]        @relation("ReportReporter")
+  reportsReceived    PeerReport[]        @relation("ReportReported")
+  aiFlags            AiFlag[]
+  studentCodeTickets StudentCodeTicket[]
+
+  @@unique([roomId, name])
+  @@index([roomId])
+  @@map("room_participants")
+}
+
+model Group {
+  id          String            @id @default(uuid())
+  roomId      String
+  groupNumber Int
+  name        String
+  room        Room              @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  members     RoomParticipant[]
+  tasks       Task[]
+  activities  Activity[]
+  messages    GroupMessage[]
+  peerReports PeerReport[]
+  suggestions AiSuggestion[]
+  flags       AiFlag[]
+
+  @@unique([roomId, groupNumber])
+  @@index([roomId])
+  @@map("groups")
+}
+
+model Task {
+  id               String           @id @default(uuid())
+  groupId          String
+  title            String
+  description      String?
+  assigneeId       String?
+  status           TaskStatus       @default(TODO)
+  weight           Int              @default(1)
+  deadline         DateTime?
+  evidenceType     EvidenceType?
+  evidenceUrl      String?
+  evidenceStatus   EvidenceStatus?
+  evidenceFeedback String?
+  createdAt        DateTime         @default(now())
+  doneAt           DateTime?
+  group            Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  assignee         RoomParticipant? @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@index([groupId])
+  @@index([assigneeId])
+  @@map("tasks")
+}
+
+model Activity {
+  id          String          @id @default(uuid())
+  groupId     String
+  memberId    String
+  type        ActivityType
+  description String?
+  createdAt   DateTime        @default(now())
+  group       Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  member      RoomParticipant @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, createdAt])
+  @@index([memberId, createdAt])
+  @@map("activities")
+}
+
+model PeerReport {
+  id         String          @id @default(uuid())
+  roomId     String
+  groupId    String
+  reporterId String
+  reportedId String
+  rating     Int
+  feedback   String
+  createdAt  DateTime        @default(now())
+  room       Room            @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  group      Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  reporter   RoomParticipant @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reported   RoomParticipant @relation("ReportReported", fields: [reportedId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@index([groupId])
+  @@map("peer_reports")
+}
+
+model GroupMessage {
+  id         String   @id @default(uuid())
+  groupId    String
+  senderName String
+  content    String
+  isAi       Boolean  @default(false)
+  action     String?
+  payload    Json?
+  createdAt  DateTime @default(now())
+  group      Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, createdAt])
+  @@map("group_messages")
+}
+
+model AiSuggestion {
+  id        String             @id @default(uuid())
+  groupId   String
+  type      AiSuggestionType
+  payload   Json
+  status    AiSuggestionStatus @default(PENDING)
+  createdAt DateTime           @default(now())
+  group     Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, createdAt])
+  @@map("ai_suggestions")
+}
+
+model AiFlag {
+  id         String           @id @default(uuid())
+  groupId    String
+  memberId   String?
+  kind       AiFlagKind
+  detail     Json
+  resolvedAt DateTime?
+  createdAt  DateTime         @default(now())
+  group      Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  member     RoomParticipant? @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, createdAt])
+  @@index([memberId])
+  @@map("ai_flags")
+}
+
+model TeacherCodeTicket {
+  id        String    @id @default(uuid())
+  code      String    @unique
+  roomId    String
+  teacherId String
+  expiresAt DateTime?
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  room      Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  teacher   User      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@index([teacherId])
+  @@map("teacher_code_tickets")
+}
+
+model StudentCodeTicket {
+  id            String          @id @default(uuid())
+  code          String          @unique
+  roomId        String
+  participantId String
+  expiresAt     DateTime?
+  usedAt        DateTime?
+  createdAt     DateTime        @default(now())
+  room          Room            @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  participant   RoomParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@index([participantId])
+  @@map("student_code_tickets")
 }
