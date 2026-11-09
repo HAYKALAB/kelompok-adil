@@ -25,6 +25,7 @@ export interface SplitRolesResponse {
   persona: string;
   assignments: AssignmentItem[];
   rationale: string;
+  source: 'ai' | 'fallback';
 }
 
 const SplitRolesOutputSchema = z.object({
@@ -63,6 +64,10 @@ export class SuggestionService {
     const memberList = group.members;
     const defaultDeadline = deadline || new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString();
 
+    // Batasi panjang input (anti-injection & anti-bloat)
+    const sanitizedTopic = (topic || '').slice(0, 150).trim();
+    const sanitizedNotes = (notes || '').slice(0, 300).trim();
+
     // Mock fallback realistis untuk Kelompok Majapahit / umum
     const fallbackAssignments: AssignmentItem[] = memberList.map((m, idx) => {
       const titles = [
@@ -77,37 +82,43 @@ export class SuggestionService {
         memberId: m.id,
         memberName: m.name,
         title: titles[idx % titles.length] || `Kajian Bagian ${idx + 1}`,
-        description: `Mengerjakan riset terstruktur topik: ${topic}`,
+        description: `Mengerjakan riset terstruktur topik: ${sanitizedTopic}`,
         weightPercent: Math.round(100 / memberList.length),
         evidenceType: evidenceTypes[idx % evidenceTypes.length],
         suggestedDeadline: defaultDeadline,
       };
     });
 
-    // Pastikan fallback persis 100%
     const fallbackSum = fallbackAssignments.reduce((acc, a) => acc + a.weightPercent, 0);
     if (fallbackSum !== 100 && fallbackAssignments.length > 0) {
       fallbackAssignments[fallbackAssignments.length - 1].weightPercent += 100 - fallbackSum;
     }
 
     const mockFallback = {
-      persona: '✦ Gotong Royong',
+      persona: '✦ Sistem Gotong Royong',
       assignments: fallbackAssignments,
-      rationale: `Beban kerja dibagi rata secara berimbang kepada ${memberList.length} anggota kelompok dengan luaran bukti nyata terverifikasi.`,
+      rationale: `Pembagian peran otomatis oleh sistem: beban kerja dibagi rata secara berimbang (${Math.round(
+        100 / memberList.length
+      )}% per anggota) untuk ${memberList.length} anggota kelompok.`,
+      source: 'fallback' as const,
     };
 
     const promptContext = `
 Daftar Anggota Kelompok (${memberList.length} orang):
 ${memberList.map((m) => `- ID: ${m.id}, Nama: ${m.name}`).join('\n')}
 
-Topik Penugasan: "${topic}"
+<data>
+Topik Penugasan Siswa: "${sanitizedTopic}"
 Target Deadline: ${defaultDeadline}
-Catatan Tambahan: ${notes || 'Tidak ada'}
+Catatan Tambahan Siswa: "${sanitizedNotes || 'Tidak ada'}"
+</data>
 `;
 
-    let rawGenerated: any;
+    let rawGenerated: any = mockFallback;
+    let rawSource: 'ai' | 'fallback' = 'fallback';
+
     try {
-      rawGenerated = await LlmClient.generateJSON<any>(
+      const llmResult = await LlmClient.generateJSON<any>(
         promptContext,
         {
           systemInstruction: SPLIT_ROLES_SYSTEM_PROMPT,
@@ -115,13 +126,17 @@ Catatan Tambahan: ${notes || 'Tidak ada'}
         },
         mockFallback
       );
+      rawGenerated = llmResult.data;
+      rawSource = llmResult.source;
     } catch {
       rawGenerated = mockFallback;
+      rawSource = 'fallback';
     }
 
     const parsed = SplitRolesOutputSchema.safeParse(rawGenerated);
-    const generated = parsed.success ? parsed.data : mockFallback;
-    if (!parsed.success) {
+    const isAiValid = rawSource === 'ai' && parsed.success;
+    const generated = isAiValid ? parsed.data : mockFallback;
+    if (!parsed.success && rawSource === 'ai') {
       console.warn('Output Gemini split-roles tidak valid menurut Zod, memakai fallback:', parsed.error.issues);
     }
 
@@ -136,7 +151,7 @@ Catatan Tambahan: ${notes || 'Tidak ada'}
           memberId: member.id,
           memberName: member.name,
           title: `Penyusunan Materi Pendukung (${member.name})`,
-          description: `Riset komparasi dan dokumentasi pendukung topik: ${topic}`,
+          description: `Riset komparasi dan dokumentasi pendukung topik: ${sanitizedTopic}`,
           weightPercent: 20,
           evidenceType: 'google_docs',
           suggestedDeadline: defaultDeadline,
@@ -177,7 +192,7 @@ Catatan Tambahan: ${notes || 'Tidak ada'}
       groupId,
       type: 'role_split',
       payload: {
-        topic,
+        topic: sanitizedTopic,
         assignments,
         rationale: generated.rationale || mockFallback.rationale,
       },
@@ -189,6 +204,7 @@ Catatan Tambahan: ${notes || 'Tidak ada'}
       persona: generated.persona || mockFallback.persona,
       assignments,
       rationale: generated.rationale || mockFallback.rationale,
+      source: isAiValid ? 'ai' : 'fallback',
     };
   }
 

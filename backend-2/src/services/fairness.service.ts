@@ -20,6 +20,7 @@ export interface FairnessAnalysisResult {
   teacherAdvice: string;
   totalReports: number;
   generatedAt: string;
+  source: 'ai' | 'fallback';
 }
 
 export class FairnessService {
@@ -44,6 +45,7 @@ export class FairnessService {
         teacherAdvice: 'Aktifkan toggle AI Fasilitator di pengaturan room untuk menjalankan analisis keadilan.',
         totalReports: 0,
         generatedAt: now,
+        source: 'fallback',
       };
     }
 
@@ -58,6 +60,7 @@ export class FairnessService {
         teacherAdvice: 'Dinamika kelompok berjalan kondusif. Tetap pantau berkala pada papan Kanban kelompok.',
         totalReports: 0,
         generatedAt: now,
+        source: 'fallback',
       };
     }
 
@@ -81,7 +84,7 @@ export class FairnessService {
       const alias = reporterAliasMap.get(r.reporterId)!;
       const reporterRealName = memberNameMap.get(r.reporterId);
 
-      // Batasi panjang teks feedback maksimal 300 karakter
+      // Batasi panjang teks feedback maksimal 300 karakter (anti-bloat & injection guard)
       let sanitizedFeedback = r.feedback.slice(0, 300).trim();
 
       // Kumpulkan potongan kata dari nama orang yang dilaporkan
@@ -134,48 +137,52 @@ export class FairnessService {
     });
 
     // 4. Hitung skor dasar deterministik (rata-rata rating 1-5 dikonversi ke skala 0-100)
+    // Skor TIDAK BOLEH ditentukan oleh teks siswa yang mencoba prompt injection
     const avgRating = reports.reduce((acc, r) => acc + r.rating, 0) / reports.length;
     const deterministicScore = Math.round((avgRating / 5) * 100);
 
-    // Fallback deterministik jika AI_MOCK aktif atau Gemini gagal
+    // Fallback realistis faktual tanpa angka karangan
     const uniqueReported = Array.from(new Set(reports.map((r) => r.reportedMemberName)));
     const mockFallback: FairnessAnalysisResult = {
       fairnessScore: Math.min(100, Math.max(0, deterministicScore)),
-      summary: `Terdapat ${reports.length} laporan peer-review yang masuk. Terindikasi ketimpangan koordinasi pada pembagian tugas subtema kelompok.`,
+      summary: `Analisis AI sedang tidak tersedia. Catatan sistem: terdapat ${reports.length} laporan peer-review masuk dengan skor keadilan ${deterministicScore}%.`,
       alerts: uniqueReported.map(
-        (name) => `${name} dilaporkan perlu perhatian dan konfirmasi terkait dokumen bukti kerja.`
+        (name) => `${name} dilaporkan dalam peer-review dan perlu konfirmasi dokumen bukti kerja.`
       ),
       teacherAdvice:
         'Disarankan mengundang perwakilan kelompok untuk berdiskusi santai guna mengidentifikasi kendala sebelum batas tenggat.',
       totalReports: reports.length,
       generatedAt: now,
+      source: 'fallback',
     };
 
     // 5. Eksekusi pemanggilan Gemini via LlmClient
     const prompt = buildFairnessAnalysisPrompt(anonymizedReports);
 
     try {
-      const generated = await LlmClient.generateJSON<any>(
+      const { data: generated, source: rawSource } = await LlmClient.generateJSON<any>(
         prompt,
         { temperature: 0.3 },
         mockFallback
       );
 
-      // Validasi hasil menggunakan Zod
       const parsed = FairnessOutputSchema.safeParse(generated);
-      if (parsed.success) {
-        return {
-          fairnessScore: parsed.data.fairnessScore,
-          summary: parsed.data.summary,
-          alerts: parsed.data.alerts,
-          teacherAdvice: parsed.data.teacherAdvice,
-          totalReports: reports.length,
-          generatedAt: now,
-        };
-      } else {
+      const isAiValid = rawSource === 'ai' && parsed.success;
+      const finalData = isAiValid ? parsed.data : mockFallback;
+
+      if (!parsed.success && rawSource === 'ai') {
         console.warn('Output Gemini tidak sesuai schema Zod, beralih ke fallback:', parsed.error.issues);
-        return mockFallback;
       }
+
+      return {
+        fairnessScore: finalData.fairnessScore,
+        summary: finalData.summary,
+        alerts: finalData.alerts,
+        teacherAdvice: finalData.teacherAdvice,
+        totalReports: reports.length,
+        generatedAt: now,
+        source: isAiValid ? 'ai' : 'fallback',
+      };
     } catch (err: any) {
       console.warn('Gagal menghubungi LLM, beralih ke fallback deterministik:', err.message);
       return mockFallback;

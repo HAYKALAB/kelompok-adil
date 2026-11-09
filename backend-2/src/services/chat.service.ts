@@ -18,6 +18,7 @@ export interface ChatResponseData {
   text: string;
   structured?: any;
   createdAt: string;
+  source: 'ai' | 'fallback';
 }
 
 const IdeasOutputSchema = z.object({
@@ -52,6 +53,9 @@ export class ChatService {
     const tasks = await repo.getTasks(groupId);
     const recentMessages = await repo.getAiMessages(groupId, undefined, 15);
 
+    // Batasi panjang pesan siswa (anti-bloat & anti-injection guard)
+    const sanitizedMessage = (message || '').slice(0, 500).trim();
+
     // 1. Simpan pesan murid ke riwayat transparan kelompok
     await repo.saveAiMessage({
       groupId,
@@ -59,7 +63,7 @@ export class ChatService {
       senderId: senderId || 'unknown-student',
       senderName,
       action,
-      content: message,
+      content: sanitizedMessage,
     });
 
     // 2. Susun konteks untuk LLM
@@ -81,18 +85,20 @@ Anggota: ${membersSummary}
 Daftar Tugas Saat Ini:
 ${tasksSummary}
 
+<data>
 Riwayat Chat Terakhir:
 ${chatHistorySummary || '(Belum ada percakapan)'}
 
-Pesan Terbaru dari ${senderName}:
-"${message}"
+Pesan Siswa (${senderName}):
+"${sanitizedMessage}"
+</data>
 `;
 
     // 3. Tangani berdasarkan Action
     if (action === 'ideas') {
       const mockIdeasFallback = {
         persona: '✦ Ringkasan Adil',
-        text: `Hai Tim ${group.name}! Ini 3 sudut pandang unik yang jarang dibahas dan dinilai berbobot oleh guru:`,
+        text: `Rekomendasi ide topik standar silabus: silakan diskusikan 3 sudut pandang materi berikut:`,
         structured: {
           ideas: [
             {
@@ -114,9 +120,11 @@ Pesan Terbaru dari ${senderName}:
         },
       };
 
-      let rawResult: any;
+      let rawResult: any = mockIdeasFallback;
+      let rawSource: 'ai' | 'fallback' = 'fallback';
+
       try {
-        rawResult = await LlmClient.generateJSON<any>(
+        const llmResult = await LlmClient.generateJSON<any>(
           promptContext,
           {
             systemInstruction: IDEAS_SYSTEM_PROMPT,
@@ -124,20 +132,24 @@ Pesan Terbaru dari ${senderName}:
           },
           mockIdeasFallback
         );
+        rawResult = llmResult.data;
+        rawSource = llmResult.source;
       } catch {
         rawResult = mockIdeasFallback;
+        rawSource = 'fallback';
       }
 
       const parsed = IdeasOutputSchema.safeParse(rawResult);
-      const result = parsed.success ? parsed.data : mockIdeasFallback;
-      if (!parsed.success) {
+      const isAiValid = rawSource === 'ai' && parsed.success;
+      const result = isAiValid ? parsed.data : mockIdeasFallback;
+
+      if (!parsed.success && rawSource === 'ai') {
         console.warn('Output Gemini ideas tidak sesuai Zod, memakai fallback:', parsed.error.issues);
       }
 
       const text = result.text || mockIdeasFallback.text;
       const structured = result.structured || mockIdeasFallback.structured;
 
-      // Simpan balasan AI
       const savedAiMsg = await repo.saveAiMessage({
         groupId,
         senderType: 'ai',
@@ -153,13 +165,14 @@ Pesan Terbaru dari ${senderName}:
         text,
         structured,
         createdAt: savedAiMsg.createdAt,
+        source: isAiValid ? 'ai' : 'fallback',
       };
     }
 
     // Default Action: 'chat'
-    const mockChatFallback = `Hai ${senderName} dan rekan-rekan ${group.name}! 👋 Senang bisa mendampingi diskusi kalian. Untuk topik ${room?.name || 'ini'}, kalian bisa mulai dengan menyepakati target luaran presentasi dan membagi peran agar pengerjaannya berimbang ya!`;
+    const mockChatFallback = `Hai ${senderName} dan rekan-rekan ${group.name}! 👋 Respon otomatis sistem: silakan sepakati pembagian tugas di papan Kanban untuk topik ${room?.name || 'ini'} agar beban kerja tim terbagi merata ya!`;
 
-    const generatedText = await LlmClient.generateText(
+    const { text: generatedText, source } = await LlmClient.generateText(
       promptContext,
       {
         systemInstruction: BASE_SYSTEM_PROMPT,
@@ -181,6 +194,7 @@ Pesan Terbaru dari ${senderName}:
       persona: '✦ Ringkasan Adil',
       text: generatedText,
       createdAt: savedAiMsg.createdAt,
+      source,
     };
   }
 

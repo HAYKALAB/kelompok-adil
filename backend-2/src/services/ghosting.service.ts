@@ -22,6 +22,7 @@ export interface TeacherSummaryResponse {
   totalPrompts: number;
   highlights: string[];
   generatedAt: string;
+  source: 'ai' | 'fallback';
 }
 
 const TeacherSummaryOutputSchema = z.object({
@@ -107,16 +108,19 @@ export class GhostingService {
 
     const messages = await repo.getAiMessages(groupId);
     const tasks = await repo.getTasks(groupId);
+    const doneTasksCount = tasks.filter((t) => t.status === 'done' || t.evidenceStatus === 'valid').length;
 
+    // Fallback faktual tanpa klaim karangan dan tanpa angka karangan (mis. 42)
     const mockSummaryFallback: TeacherSummaryResponse = {
-      summary: `AI merekomendasikan pembagian tugas pada tahap awal, namun hingga saat ini terdapat tugas yang belum memiliki bukti verifikasi dokumen pendukung. Secara umum dinamika diskusi berlangsung aktif.`,
-      totalPrompts: messages.length || 42,
+      summary: `Ringkasan AI belum tersedia. Catatan sistem: terdapat ${tasks.length} tugas (${doneTasksCount} selesai) dan ${messages.length} interaksi pesan kelompok.`,
+      totalPrompts: messages.length,
       highlights: [
-        `Terdapat ${tasks.length} tugas terdaftar di Kanban kelompok`,
-        `Interaksi tanya jawab dengan AI Asisten Kelompok berjalan ${messages.length} kali`,
-        `Perlu tindak lanjut untuk siswa yang memiliki tugas dengan deadline terdekat`,
+        `Tercatat ${tasks.length} tugas di papan Kanban (${doneTasksCount} selesai verifikasi)`,
+        `Total interaksi pesan kelompok: ${messages.length}`,
+        `Status pemantauan: pantau berkala bukti kerja anggota yang belum selesai`,
       ],
       generatedAt: new Date().toISOString(),
+      source: 'fallback',
     };
 
     const promptContext = `
@@ -125,13 +129,17 @@ Total Pesan Chat: ${messages.length}
 Daftar Tugas:
 ${tasks.map((t) => `- ${t.title} [Status: ${t.status}, Assignee: ${t.assigneeId}]`).join('\n')}
 
+<data>
 Cuplikan Diskusi Terakhir:
 ${messages.slice(-10).map((m) => `${m.senderName}: "${m.content}"`).join('\n')}
+</data>
 `;
 
-    let rawGenerated: any;
+    let rawGenerated: any = mockSummaryFallback;
+    let rawSource: 'ai' | 'fallback' = 'fallback';
+
     try {
-      rawGenerated = await LlmClient.generateJSON<any>(
+      const llmResult = await LlmClient.generateJSON<any>(
         promptContext,
         {
           systemInstruction: SUMMARY_SYSTEM_PROMPT,
@@ -139,21 +147,27 @@ ${messages.slice(-10).map((m) => `${m.senderName}: "${m.content}"`).join('\n')}
         },
         mockSummaryFallback
       );
+      rawGenerated = llmResult.data;
+      rawSource = llmResult.source;
     } catch {
       rawGenerated = mockSummaryFallback;
+      rawSource = 'fallback';
     }
 
     const parsed = TeacherSummaryOutputSchema.safeParse(rawGenerated);
-    const generated = parsed.success ? parsed.data : mockSummaryFallback;
-    if (!parsed.success) {
+    const isAiValid = rawSource === 'ai' && parsed.success;
+    const generated = isAiValid ? parsed.data : mockSummaryFallback;
+
+    if (!parsed.success && rawSource === 'ai') {
       console.warn('Output Gemini teacherSummary tidak sesuai Zod, memakai fallback:', parsed.error.issues);
     }
 
     const result: TeacherSummaryResponse = {
       summary: generated.summary,
-      totalPrompts: messages.length || generated.totalPrompts || 42,
+      totalPrompts: messages.length,
       highlights: generated.highlights.length > 0 ? generated.highlights : mockSummaryFallback.highlights,
       generatedAt: new Date().toISOString(),
+      source: isAiValid ? 'ai' : 'fallback',
     };
 
     this.summaryCache.set(groupId, {
@@ -174,7 +188,7 @@ ${messages.slice(-10).map((m) => `${m.senderName}: "${m.content}"`).join('\n')}
   /**
    * Mengirimkan nudge ramah ke murid pasif di chat kelompok
    */
-  public static async sendFriendlyNudge(groupId: string): Promise<{ sentMessageId: string; message: string }> {
+  public static async sendFriendlyNudge(groupId: string): Promise<{ sentMessageId: string; message: string; source: 'ai' | 'fallback' }> {
     const group = await repo.getGroup(groupId);
     if (!group) {
       throw new Error(`Group dengan ID ${groupId} tidak ditemukan`);
@@ -182,10 +196,9 @@ ${messages.slice(-10).map((m) => `${m.senderName}: "${m.content}"`).join('\n')}
 
     const contribution = await ContributionService.calculateGroupContribution(groupId);
     const passiveMembers = contribution.members.filter((m) => m.percentage < 15);
-
     const passiveNames = passiveMembers.map((m) => m.name).join(', ') || 'rekan-rekan';
 
-    const fallbackNudge = `Halo ${passiveNames}! 👋 Kami perhatikan kamu belum sempat mengunggah bukti pengerjaan tugas di papan Kanban. Ada kendala materi atau referensi? Jangan ragu sampaikan di sini ya agar rekan tim bisa bantu gotong royong! ✨`;
+    const fallbackNudge = `Halo ${passiveNames}! 👋 Pengingat sistem: kamu belum mengunggah bukti pengerjaan tugas di papan Kanban. Ada kendala materi atau referensi? Mari sampaikan di sini agar rekan tim bisa bantu gotong royong!`;
 
     const promptContext = `
 Kelompok: ${group.name}
@@ -194,7 +207,7 @@ Status Tim Saat Ini: ${contribution.balanceStatus}
 Buatkan sapaan ramah dan memotivasi tanpa menghakimi.
 `;
 
-    const messageText = await LlmClient.generateText(
+    const { text: messageText, source } = await LlmClient.generateText(
       promptContext,
       {
         systemInstruction: NUDGE_SYSTEM_PROMPT,
@@ -214,6 +227,7 @@ Buatkan sapaan ramah dan memotivasi tanpa menghakimi.
     return {
       sentMessageId: savedMsg.id,
       message: messageText,
+      source,
     };
   }
 }
