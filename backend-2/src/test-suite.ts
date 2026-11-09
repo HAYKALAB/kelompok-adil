@@ -1,3 +1,5 @@
+process.env.NODE_ENV = 'test';
+
 import app from './index.js';
 import http from 'http';
 import { repo } from './deps/repository.stub.js';
@@ -206,7 +208,6 @@ async function runTests() {
     );
 
     // 16. Analisis Keadilan Peer-Review (Langkah 1)
-    // 16a. Role STUDENT ditolak 403 saat akses analyze-fairness
     const resStudentFairness = await fetch(`${BASE_URL}/rooms/room-2/analyze-fairness`, {
       method: 'POST',
       headers: { 'x-role': 'STUDENT' },
@@ -216,7 +217,6 @@ async function runTests() {
       'Langkah 1: Role STUDENT ditolak 403 saat akses analyze-fairness'
     );
 
-    // 16b. Role TEACHER berhasil mendapatkan analisis keadilan dari peer reports
     const resTeacherFairness = await fetch(`${BASE_URL}/rooms/room-2/analyze-fairness`, {
       method: 'POST',
       headers: { 'x-role': 'TEACHER' },
@@ -299,6 +299,102 @@ async function runTests() {
         !msgsStr.includes('beban tugas tidak seimbang'),
       'Langkah 2: Endpoint pesan murid bebas dari kebocoran data peer report'
     );
+
+    // 22. Perbaikan Langkah 2: LlmClient.getLastPrompt() hanya aktif saat NODE_ENV === 'test'
+    process.env.NODE_ENV = 'production';
+    const promptInProd = LlmClient.getLastPrompt();
+    process.env.NODE_ENV = 'test';
+    const promptInTest = LlmClient.getLastPrompt();
+    assert(
+      promptInProd === undefined && typeof promptInTest === 'string',
+      'Perbaikan Langkah 2: getLastPrompt() mengembalikan undefined di luar NODE_ENV test'
+    );
+
+    // 23. Perbaikan Langkah 2: Word boundary & Proteksi nama tumpang tindih
+    const group2 = await repo.getGroup('group-2');
+    if (group2) {
+      group2.members.push({ id: 'm-ani', name: 'Ani' });
+    }
+
+    await repo.savePeerReport({
+      roomId: 'room-2',
+      groupId: 'group-2',
+      reporterId: 'm-ani',
+      reportedMemberId: 'm-daniel',
+      reportedMemberName: 'Daniel Surya',
+      rating: 2,
+      feedback: 'Saya Ani sudah mengingatkan Daniel berkali-kali.',
+    });
+
+    await repo.savePeerReport({
+      roomId: 'room-2',
+      groupId: 'group-2',
+      reporterId: 'm-fajar',
+      reportedMemberId: 'm-fajar-ahmad',
+      reportedMemberName: 'Fajar Ahmad',
+      rating: 1,
+      feedback: 'Saya Fajar Nugraha melaporkan bahwa Fajar Ahmad sama sekali belum mengirim tugas.',
+    });
+
+    await fetch(`${BASE_URL}/rooms/room-2/analyze-fairness`, {
+      method: 'POST',
+      headers: { 'x-role': 'TEACHER' },
+    });
+
+    const boundaryPrompt = LlmClient.getLastPrompt() || '';
+    const danielIntact = boundaryPrompt.includes('Daniel') && !boundaryPrompt.includes('DPelapor');
+    const fajarAhmadIntact = boundaryPrompt.includes('Fajar Ahmad');
+    const aniRedacted = !/\bAni\b/i.test(boundaryPrompt.replace(/Daniel/g, ''));
+    const fajarNugrahaRedacted = !boundaryPrompt.includes('Fajar Nugraha');
+
+    assert(
+      danielIntact && fajarAhmadIntact && aniRedacted && fajarNugrahaRedacted,
+      'Perbaikan Langkah 2: Word boundary tepat ("Ani" tidak merusak "Daniel") dan nama orang terlapor ("Fajar Ahmad") tidak tertukar'
+    );
+
+    // 24. Langkah 3: Ketahanan Fallback LlmClient saat output rusak / error
+    const testFallback = { fallbackField: 'aman', score: 100 };
+    const directFallbackResult = await LlmClient.generateJSON(
+      'prompt invalid json test',
+      {},
+      testFallback
+    );
+    assert(
+      directFallbackResult.fallbackField === 'aman' && directFallbackResult.score === 100,
+      'Langkah 3: LlmClient.generateJSON selalu mengembalikan fallback deterministik saat mode mock atau error'
+    );
+
+    // 25. Langkah 3: Validasi Zod dan Fallback pada SuggestionService
+    const resSplitValid = await fetch(`${BASE_URL}/groups/group-1/split-roles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic: 'Topik Riset Zod Validation' }),
+    }).then(json);
+    const assignmentsValid = resSplitValid.data?.assignments || [];
+    assert(
+      assignmentsValid.every(
+        (a: any) =>
+          typeof a.weightPercent === 'number' &&
+          a.weightPercent >= 0 &&
+          a.weightPercent <= 100 &&
+          typeof a.title === 'string'
+      ),
+      'Langkah 3: Output split-roles tervalidasi skema Zod (bobot 0-100, field terstruktur)'
+    );
+
+    // 26. Langkah 3: Validasi Zod pada ValidationService
+    const resValTask = await fetch(`${BASE_URL}/tasks/task-1/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ evidenceUrl: 'https://docs.google.com/valid' }),
+    }).then(json);
+    assert(
+      typeof resValTask.data?.score === 'number' &&
+        resValTask.data?.score >= 0 &&
+        resValTask.data?.score <= 100 &&
+        ['valid', 'incomplete', 'suspicious'].includes(resValTask.data?.status),
+      'Langkah 3: Output validasi tugas tervalidasi skema Zod (skor 0-100 dan status enum sah)'
+    );
   } catch (e: any) {
     console.error('Terjadi error saat pengujian:', e);
     allPassed = false;
@@ -306,7 +402,7 @@ async function runTests() {
     server.close();
     console.log('\n=========================================');
     if (allPassed) {
-      console.log('🎉 SEMUA 21 PENGUJIAN FITUR & KONTRAK BARU BERHASIL (100% PASS)!');
+      console.log('🎉 SEMUA 26 PENGUJIAN FITUR & KONTRAK BARU BERHASIL (100% PASS)!');
     } else {
       console.log('⚠️ TERDAPAT PENGUJIAN YANG GAGAL.');
     }

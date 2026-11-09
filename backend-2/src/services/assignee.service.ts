@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { repo } from '../deps/repository.stub.js';
 import { ContributionService } from './contribution.service.js';
 import { LlmClient } from '../modules/ai/llm.client.js';
@@ -29,6 +30,18 @@ export interface RecommendAssigneeResponse {
   }>;
   message: string;
 }
+
+const AssigneeOutputSchema = z.object({
+  estimatedWeight: z.object({
+    level: z.enum(['ringan', 'sedang', 'berat']),
+    rangePercent: z.tuple([
+      z.coerce.number().min(0).max(100),
+      z.coerce.number().min(0).max(100),
+    ]),
+    reason: z.string().max(500),
+  }),
+  narrativeMessage: z.string().max(500).optional(),
+});
 
 export class AssigneeService {
   /**
@@ -65,12 +78,11 @@ export class AssigneeService {
           memberId: m.memberId,
           name: m.name,
           currentLoadPercent: m.assignedLoadPercent,
-          starred: idx === 0, // Beban terendah mendapat bintang rekomendasi utama
+          starred: idx === 0,
         });
       }
     });
 
-    // Jika semua anggota di atas 35% (misal anggota sedikit), tetap sediakan rekomendasi
     if (recommendations.length === 0 && sortedMembers.length > 0) {
       recommendations.push({
         memberId: sortedMembers[0].memberId,
@@ -100,9 +112,9 @@ ${sortedMembers.map((m) => `- ${m.name}: ${m.assignedLoadPercent}%`).join('\n')}
 Rekomendasi Utama: ${recommendations[0]?.name || 'Belum ada'}
 `;
 
-    let generated: any;
+    let rawGenerated: any;
     try {
-      generated = await LlmClient.generateJSON<any>(
+      rawGenerated = await LlmClient.generateJSON<any>(
         promptContext,
         {
           systemInstruction: ASSIGNEE_RECOMMENDATION_SYSTEM_PROMPT,
@@ -111,10 +123,16 @@ Rekomendasi Utama: ${recommendations[0]?.name || 'Belum ada'}
         mockWeightFallback
       );
     } catch {
-      generated = mockWeightFallback;
+      rawGenerated = mockWeightFallback;
     }
 
-    const estimatedWeight = generated.estimatedWeight || mockWeightFallback.estimatedWeight;
+    const parsed = AssigneeOutputSchema.safeParse(rawGenerated);
+    const generated = parsed.success ? parsed.data : mockWeightFallback;
+    if (!parsed.success) {
+      console.warn('Output Gemini recommendAssignee tidak sesuai Zod, memakai fallback:', parsed.error.issues);
+    }
+
+    const estimatedWeight = generated.estimatedWeight;
     const message =
       generated.narrativeMessage ||
       `Beban tim saat ini ${contributionData.balanceStatus}. Rekomendasi tugas ini ke ${recommendations[0]?.name} (${recommendations[0]?.currentLoadPercent}%) agar beban tim tetap berimbang!`;

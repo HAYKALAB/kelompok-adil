@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { repo } from '../deps/repository.stub.js';
 import { ContributionConfig } from '../config/contribution.config.js';
 import { ContributionService } from './contribution.service.js';
@@ -23,6 +24,12 @@ export interface TeacherSummaryResponse {
   generatedAt: string;
 }
 
+const TeacherSummaryOutputSchema = z.object({
+  summary: z.string().max(1000),
+  totalPrompts: z.coerce.number().optional(),
+  highlights: z.array(z.string().max(300)).default([]),
+});
+
 export class GhostingService {
   private static summaryCache: Map<string, { data: TeacherSummaryResponse; expiry: number }> = new Map();
 
@@ -36,7 +43,6 @@ export class GhostingService {
       throw new Error(`Room dengan ID ${roomId} tidak ditemukan`);
     }
 
-    // Hanya berjalan jika guru mengaktifkan toggle AI di room
     if (!room.aiEnabled) {
       return [];
     }
@@ -49,7 +55,6 @@ export class GhostingService {
       const contribution = await ContributionService.calculateGroupContribution(group.id);
 
       for (const m of contribution.members) {
-        // Cek durasi inaktif dalam jam
         let hoursInactive = 999;
         if (m.lastActiveAt) {
           const lastActiveTime = new Date(m.lastActiveAt).getTime();
@@ -73,7 +78,6 @@ export class GhostingService {
 
           alerts.push(alertItem);
 
-          // Simpan flag di repo AI
           await repo.saveAiFlag({
             groupId: group.id,
             memberId: m.memberId,
@@ -91,7 +95,6 @@ export class GhostingService {
    * Menghasilkan ringkasan riwayat interaksi AI untuk guru
    */
   public static async getTeacherSummary(groupId: string): Promise<TeacherSummaryResponse> {
-    // Cek cache 10 menit
     const cached = this.summaryCache.get(groupId);
     if (cached && cached.expiry > Date.now()) {
       return cached.data;
@@ -126,9 +129,9 @@ Cuplikan Diskusi Terakhir:
 ${messages.slice(-10).map((m) => `${m.senderName}: "${m.content}"`).join('\n')}
 `;
 
-    let generated: any;
+    let rawGenerated: any;
     try {
-      generated = await LlmClient.generateJSON<any>(
+      rawGenerated = await LlmClient.generateJSON<any>(
         promptContext,
         {
           systemInstruction: SUMMARY_SYSTEM_PROMPT,
@@ -137,17 +140,22 @@ ${messages.slice(-10).map((m) => `${m.senderName}: "${m.content}"`).join('\n')}
         mockSummaryFallback
       );
     } catch {
-      generated = mockSummaryFallback;
+      rawGenerated = mockSummaryFallback;
+    }
+
+    const parsed = TeacherSummaryOutputSchema.safeParse(rawGenerated);
+    const generated = parsed.success ? parsed.data : mockSummaryFallback;
+    if (!parsed.success) {
+      console.warn('Output Gemini teacherSummary tidak sesuai Zod, memakai fallback:', parsed.error.issues);
     }
 
     const result: TeacherSummaryResponse = {
-      summary: generated.summary || mockSummaryFallback.summary,
+      summary: generated.summary,
       totalPrompts: messages.length || generated.totalPrompts || 42,
-      highlights: Array.isArray(generated.highlights) ? generated.highlights : mockSummaryFallback.highlights,
+      highlights: generated.highlights.length > 0 ? generated.highlights : mockSummaryFallback.highlights,
       generatedAt: new Date().toISOString(),
     };
 
-    // Cache selama 10 menit
     this.summaryCache.set(groupId, {
       data: result,
       expiry: Date.now() + 10 * 60 * 1000,
@@ -172,27 +180,30 @@ ${messages.slice(-10).map((m) => `${m.senderName}: "${m.content}"`).join('\n')}
       throw new Error(`Group dengan ID ${groupId} tidak ditemukan`);
     }
 
-    const mockNudgeFallback = {
-      message: 'Hai teman-teman! Yuk kita cek lagi progres tugas untuk subtema masing-masing. Ada bagian materi yang butuh kita diskusikan bareng biar makin lancar? Semangat ya! 🚀',
-    };
+    const contribution = await ContributionService.calculateGroupContribution(groupId);
+    const passiveMembers = contribution.members.filter((m) => m.percentage < 15);
 
-    let generated: any;
-    try {
-      generated = await LlmClient.generateJSON<any>(
-        `Kelompok: ${group.name}`,
-        {
-          systemInstruction: NUDGE_SYSTEM_PROMPT,
-          temperature: 0.5,
-        },
-        mockNudgeFallback
-      );
-    } catch {
-      generated = mockNudgeFallback;
-    }
+    const passiveNames = passiveMembers.map((m) => m.name).join(', ') || 'rekan-rekan';
 
-    const messageText = generated.message || mockNudgeFallback.message;
+    const fallbackNudge = `Halo ${passiveNames}! 👋 Kami perhatikan kamu belum sempat mengunggah bukti pengerjaan tugas di papan Kanban. Ada kendala materi atau referensi? Jangan ragu sampaikan di sini ya agar rekan tim bisa bantu gotong royong! ✨`;
 
-    const saved = await repo.saveAiMessage({
+    const promptContext = `
+Kelompok: ${group.name}
+Anggota Kurang Aktif: ${passiveNames}
+Status Tim Saat Ini: ${contribution.balanceStatus}
+Buatkan sapaan ramah dan memotivasi tanpa menghakimi.
+`;
+
+    const messageText = await LlmClient.generateText(
+      promptContext,
+      {
+        systemInstruction: NUDGE_SYSTEM_PROMPT,
+        temperature: 0.6,
+      },
+      fallbackNudge
+    );
+
+    const savedMsg = await repo.saveAiMessage({
       groupId,
       senderType: 'ai',
       senderName: 'AI Asisten Rukun',
@@ -201,7 +212,7 @@ ${messages.slice(-10).map((m) => `${m.senderName}: "${m.content}"`).join('\n')}
     });
 
     return {
-      sentMessageId: saved.id,
+      sentMessageId: savedMsg.id,
       message: messageText,
     };
   }

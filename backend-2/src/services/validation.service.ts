@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { repo } from '../deps/repository.stub.js';
 import { LlmClient } from '../modules/ai/llm.client.js';
 import { VALIDATION_SYSTEM_PROMPT } from '../modules/ai/prompts/validation.prompt.js';
@@ -19,6 +20,13 @@ export interface CompletenessResponse {
   readinessLevel: 'siap_presentasi' | 'hampir_siap' | 'butuh_perhatian';
   missingChapters: string[];
 }
+
+const ValidationOutputSchema = z.object({
+  status: z.enum(['valid', 'incomplete', 'suspicious']),
+  score: z.coerce.number().min(0).max(100),
+  feedback: z.string().max(500),
+  missing: z.array(z.string().max(200)).default([]),
+});
 
 export class ValidationService {
   /**
@@ -66,9 +74,9 @@ Format Bukti Wajib: ${task.evidenceType || 'google_docs'}
 Bukti Yang Diserahkan: "${targetEvidence}"
 `;
 
-    let generated: any;
+    let rawGenerated: any;
     try {
-      generated = await LlmClient.generateJSON<any>(
+      rawGenerated = await LlmClient.generateJSON<any>(
         promptContext,
         {
           systemInstruction: VALIDATION_SYSTEM_PROMPT,
@@ -77,13 +85,19 @@ Bukti Yang Diserahkan: "${targetEvidence}"
         mockValidationFallback
       );
     } catch {
-      generated = mockValidationFallback;
+      rawGenerated = mockValidationFallback;
     }
 
-    const status = generated.status || 'valid';
-    const score = Number(generated.score) || 85;
-    const feedback = generated.feedback || mockValidationFallback.feedback;
-    const missing = Array.isArray(generated.missing) ? generated.missing : [];
+    const parsed = ValidationOutputSchema.safeParse(rawGenerated);
+    const generated = parsed.success ? parsed.data : mockValidationFallback;
+    if (!parsed.success) {
+      console.warn('Output Gemini validateTask tidak sesuai Zod, memakai fallback:', parsed.error.issues);
+    }
+
+    const status = generated.status;
+    const score = Number(generated.score);
+    const feedback = generated.feedback;
+    const missing = generated.missing;
 
     // Perbarui status tugas di repo
     await repo.updateTask(taskId, {

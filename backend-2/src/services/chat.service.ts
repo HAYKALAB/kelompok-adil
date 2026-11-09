@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { repo } from '../deps/repository.stub.js';
 import { LlmClient } from '../modules/ai/llm.client.js';
 import { BASE_SYSTEM_PROMPT } from '../modules/ai/prompts/base.prompt.js';
@@ -18,6 +19,22 @@ export interface ChatResponseData {
   structured?: any;
   createdAt: string;
 }
+
+const IdeasOutputSchema = z.object({
+  persona: z.string().optional().default('✦ Ringkasan Adil'),
+  text: z.string().max(1000).optional().default(''),
+  structured: z.object({
+    ideas: z
+      .array(
+        z.object({
+          title: z.string().max(200),
+          angle: z.string().max(500),
+          difficulty: z.enum(['ringan', 'sedang', 'berat']).optional().default('sedang'),
+        })
+      )
+      .min(1),
+  }),
+});
 
 export class ChatService {
   /**
@@ -97,14 +114,28 @@ Pesan Terbaru dari ${senderName}:
         },
       };
 
-      const result = await LlmClient.generateJSON<any>(
-        promptContext,
-        {
-          systemInstruction: IDEAS_SYSTEM_PROMPT,
-          temperature: 0.7,
-        },
-        mockIdeasFallback
-      );
+      let rawResult: any;
+      try {
+        rawResult = await LlmClient.generateJSON<any>(
+          promptContext,
+          {
+            systemInstruction: IDEAS_SYSTEM_PROMPT,
+            temperature: 0.7,
+          },
+          mockIdeasFallback
+        );
+      } catch {
+        rawResult = mockIdeasFallback;
+      }
+
+      const parsed = IdeasOutputSchema.safeParse(rawResult);
+      const result = parsed.success ? parsed.data : mockIdeasFallback;
+      if (!parsed.success) {
+        console.warn('Output Gemini ideas tidak sesuai Zod, memakai fallback:', parsed.error.issues);
+      }
+
+      const text = result.text || mockIdeasFallback.text;
+      const structured = result.structured || mockIdeasFallback.structured;
 
       // Simpan balasan AI
       const savedAiMsg = await repo.saveAiMessage({
@@ -112,15 +143,15 @@ Pesan Terbaru dari ${senderName}:
         senderType: 'ai',
         senderName: 'AI Asisten Rukun',
         action: 'ideas',
-        content: result.text || mockIdeasFallback.text,
-        structuredPayload: result.structured || mockIdeasFallback.structured,
+        content: text,
+        structuredPayload: structured,
       });
 
       return {
         messageId: savedAiMsg.id,
         persona: result.persona || '✦ Ringkasan Adil',
-        text: result.text || mockIdeasFallback.text,
-        structured: result.structured || mockIdeasFallback.structured,
+        text,
+        structured,
         createdAt: savedAiMsg.createdAt,
       };
     }

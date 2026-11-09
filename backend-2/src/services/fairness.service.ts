@@ -61,7 +61,7 @@ export class FairnessService {
       };
     }
 
-    // 3. Anonimisasi Pelapor (TUGAS 2: Identitas asli pelapor tidak dikirim ke AI)
+    // 3. Anonimisasi Pelapor (Identitas asli pelapor tidak dikirim ke AI)
     const groups = await repo.getGroupsByRoom(roomId);
     const memberNameMap = new Map<string, string>();
     for (const g of groups) {
@@ -72,6 +72,7 @@ export class FairnessService {
 
     const reporterAliasMap = new Map<string, string>();
     let aliasCounter = 1;
+    const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     const anonymizedReports: AnonymizedReportItem[] = reports.map((r) => {
       if (!reporterAliasMap.has(r.reporterId)) {
@@ -83,30 +84,45 @@ export class FairnessService {
       // Batasi panjang teks feedback maksimal 300 karakter
       let sanitizedFeedback = r.feedback.slice(0, 300).trim();
 
+      // Kumpulkan potongan kata dari nama orang yang dilaporkan
+      const reportedParts = (r.reportedMemberName || '')
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((part) => part.length >= 2);
+
       // Samarkan penyebutan nama pelapor sendiri di teks feedback
       if (reporterRealName) {
-        const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const isFullNameReported =
+          (r.reportedMemberName || '').trim().toLowerCase() === reporterRealName.trim().toLowerCase();
 
-        // Samarkan nama lengkap terlebih dahulu
-        const fullNameRegex = new RegExp(escapeRegExp(reporterRealName), 'gi');
-        sanitizedFeedback = sanitizedFeedback.replace(fullNameRegex, alias);
+        // 1. Samarkan nama lengkap dengan word boundary & case-insensitive
+        if (!isFullNameReported) {
+          const fullNameRegex = new RegExp(`\\b${escapeRegExp(reporterRealName)}\\b`, 'gi');
+          sanitizedFeedback = sanitizedFeedback.replace(fullNameRegex, alias);
+        }
 
-        // Samarkan bagian nama dengan panjang minimal 3 karakter
-        const nameParts = reporterRealName.split(/\s+/).filter((part) => part.length >= 3);
-        for (const part of nameParts) {
+        // 2. Samarkan potongan nama (panjang >= 3) hanya jika BUKAN bagian nama yang dilaporkan
+        const reporterNameParts = reporterRealName
+          .split(/\s+/)
+          .filter((part) => part.length >= 3);
+
+        for (const part of reporterNameParts) {
+          const partLower = part.toLowerCase();
+          if (reportedParts.includes(partLower)) {
+            continue; // Lewati agar potongan nama orang yang dilaporkan tidak tertukar menjadi alias
+          }
           const partRegex = new RegExp(`\\b${escapeRegExp(part)}\\b`, 'gi');
           sanitizedFeedback = sanitizedFeedback.replace(partRegex, alias);
         }
       }
 
-      // Samarkan juga jika reporterId tertulis di feedback
+      // Samarkan juga jika reporterId tertulis di feedback dengan word boundary
       if (r.reporterId) {
-        const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const idRegex = new RegExp(escapeRegExp(r.reporterId), 'gi');
+        const idRegex = new RegExp(`\\b${escapeRegExp(r.reporterId)}\\b`, 'gi');
         sanitizedFeedback = sanitizedFeedback.replace(idRegex, alias);
       }
 
-      // Bersihkan pengulangan alias berurutan jika ada (mis. "Pelapor-1 Pelapor-1")
+      // Bersihkan pengulangan alias berurutan jika ada (mis. "Pelapor-1 Pelapor-1" -> "Pelapor-1")
       sanitizedFeedback = sanitizedFeedback.replace(new RegExp(`(${alias})(\\s+\\1)+`, 'gi'), '$1');
 
       return {

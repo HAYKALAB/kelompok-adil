@@ -10,7 +10,7 @@ export interface GenerateOptions {
 
 export class LlmClient {
   private static aiInstance: GoogleGenAI | null = null;
-  private static lastPromptSent: string | null = null;
+  private static lastPromptSent: string | undefined = undefined;
 
   private static getClient(): GoogleGenAI | null {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -31,8 +31,11 @@ export class LlmClient {
     return process.env.AI_MODEL || 'gemini-2.5-flash';
   }
 
-  // Menyimpan rekaman prompt terakhir untuk inspeksi pengujian privasi
-  public static getLastPrompt(): string | null {
+  // Rekaman prompt hanya disimpan dan dapat diakses saat NODE_ENV === 'test'
+  public static getLastPrompt(): string | undefined {
+    if (process.env.NODE_ENV !== 'test') {
+      return undefined;
+    }
     return this.lastPromptSent;
   }
 
@@ -68,7 +71,9 @@ export class LlmClient {
     options?: GenerateOptions,
     mockFallback?: string
   ): Promise<string> {
-    this.lastPromptSent = userPrompt;
+    if (process.env.NODE_ENV === 'test') {
+      this.lastPromptSent = userPrompt;
+    }
 
     if (this.isMockMode()) {
       return (
@@ -82,18 +87,26 @@ export class LlmClient {
       return mockFallback || 'Layanan AI offline (mode mock aktif).';
     }
 
-    return this.executeWithRetry(async () => {
-      const response = await ai.models.generateContent({
-        model: this.getModel(),
-        contents: userPrompt,
-        config: {
-          systemInstruction: options?.systemInstruction,
-          temperature: options?.temperature ?? 0.7,
-        },
-      });
+    try {
+      return await this.executeWithRetry(async () => {
+        const response = await ai.models.generateContent({
+          model: this.getModel(),
+          contents: userPrompt,
+          config: {
+            systemInstruction: options?.systemInstruction,
+            temperature: options?.temperature ?? 0.7,
+          },
+        });
 
-      return response.text?.trim() || '';
-    });
+        return response.text?.trim() || '';
+      });
+    } catch (err: any) {
+      if (mockFallback !== undefined) {
+        console.warn('Pemanggilan generateText gagal, beralih ke fallback:', err.message);
+        return mockFallback;
+      }
+      throw err;
+    }
   }
 
   public static async generateJSON<T>(
@@ -101,7 +114,9 @@ export class LlmClient {
     options?: GenerateOptions,
     mockFallback?: T
   ): Promise<T> {
-    this.lastPromptSent = userPrompt;
+    if (process.env.NODE_ENV === 'test') {
+      this.lastPromptSent = userPrompt;
+    }
 
     if (this.isMockMode()) {
       if (mockFallback !== undefined) return mockFallback;
@@ -114,26 +129,33 @@ export class LlmClient {
       throw new Error('AI_UNAVAILABLE: Tidak ada API key.');
     }
 
-    return this.executeWithRetry(async () => {
-      const response = await ai.models.generateContent({
-        model: this.getModel(),
-        contents: userPrompt,
-        config: {
-          systemInstruction: options?.systemInstruction,
-          temperature: options?.temperature ?? 0.3,
-          responseMimeType: 'application/json',
-          responseSchema: options?.responseSchema,
-        },
-      });
+    try {
+      return await this.executeWithRetry(async () => {
+        const response = await ai.models.generateContent({
+          model: this.getModel(),
+          contents: userPrompt,
+          config: {
+            systemInstruction: options?.systemInstruction,
+            temperature: options?.temperature ?? 0.3,
+            responseMimeType: 'application/json',
+            responseSchema: options?.responseSchema,
+          },
+        });
 
-      const text = response.text?.trim() || '{}';
-      try {
-        return JSON.parse(text) as T;
-      } catch {
-        // Membersihkan markdown fence jika model menyertakan format blok
-        const cleaned = text.replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
-        return JSON.parse(cleaned) as T;
+        const text = response.text?.trim() || '{}';
+        try {
+          return JSON.parse(text) as T;
+        } catch {
+          const cleaned = text.replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
+          return JSON.parse(cleaned) as T;
+        }
+      });
+    } catch (err: any) {
+      if (mockFallback !== undefined) {
+        console.warn('Pemanggilan generateJSON gagal atau tidak valid, beralih ke fallback:', err.message);
+        return mockFallback;
       }
-    });
+      throw err;
+    }
   }
 }
