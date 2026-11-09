@@ -1,7 +1,9 @@
 import app from './index.js';
 import http from 'http';
+import { repo } from './deps/repository.stub.js';
+import { LlmClient } from './modules/ai/llm.client.js';
 
-const PORT = 5055; // Port khusus untuk automated test
+const PORT = 5055;
 const BASE_URL = `http://127.0.0.1:${PORT}/api/ai`;
 
 async function runTests() {
@@ -23,7 +25,7 @@ async function runTests() {
   }
 
   try {
-    // 1. Health check (format baru: { data: { ... } }, tanpa "ok")
+    // 1. Health check (format: { data: { ... } }, tanpa "ok")
     const resHealth = await fetch(`${BASE_URL}/health`).then(json);
     assert(
       resHealth.ok === undefined && resHealth.data?.status === 'ready',
@@ -203,7 +205,7 @@ async function runTests() {
       'Tugas 1: Route tak dikenal ditangani handler 404 dengan code NOT_FOUND'
     );
 
-    // 16. Analisis Keadilan Peer-Review (Tugas 1 Baru)
+    // 16. Analisis Keadilan Peer-Review (Langkah 1)
     // 16a. Role STUDENT ditolak 403 saat akses analyze-fairness
     const resStudentFairness = await fetch(`${BASE_URL}/rooms/room-2/analyze-fairness`, {
       method: 'POST',
@@ -239,6 +241,64 @@ async function runTests() {
         Boolean(resEmptyFairness.data?.summary),
       'Langkah 1: Room tanpa laporan menghasilkan respon kosong yang jelas (skor 100)'
     );
+
+    // 18. Anonimisasi Pelapor & Sanitasi Nama di Teks Bebas (Langkah 2)
+    await repo.savePeerReport({
+      roomId: 'room-2',
+      groupId: 'group-2',
+      reporterId: 'm-intan',
+      reportedMemberId: 'm-dani',
+      reportedMemberName: 'Dani Saputra',
+      rating: 2,
+      feedback: 'Saya Intan Permata (m-intan), saya dan Intan merasa beban tugas tidak seimbang.',
+    });
+
+    await fetch(`${BASE_URL}/rooms/room-2/analyze-fairness`, {
+      method: 'POST',
+      headers: { 'x-role': 'TEACHER' },
+    });
+
+    const lastPrompt = LlmClient.getLastPrompt() || '';
+    const hasReporterFullName = lastPrompt.includes('Intan Permata');
+    const hasReporterFirstName = /\bIntan\b/i.test(lastPrompt);
+    const hasReporterId = lastPrompt.includes('m-intan');
+    const hasReporterAlias = lastPrompt.includes('Pelapor-1');
+    const hasReportedName = lastPrompt.includes('Dani Saputra');
+
+    assert(
+      !hasReporterFullName && !hasReporterFirstName && !hasReporterId && hasReporterAlias && hasReportedName,
+      'Langkah 2: Prompt ke LLM bebas dari nama & ID asli pelapor di teks feedback, tersamarkan menjadi alias'
+    );
+
+    // 19. Data asli di repository tidak dimodifikasi oleh proses anonimisasi
+    const room2Reports = await repo.getPeerReportsByRoom('room-2');
+    const originalReport = room2Reports.find((r) => r.reportedMemberName === 'Dani Saputra');
+    assert(
+      originalReport?.feedback.includes('Saya Intan Permata') === true,
+      'Langkah 2: Data asli laporan di repository tetap utuh dan tidak dimodifikasi'
+    );
+
+    // 20. Proteksi Akses Siswa Terhadap Endpoint Khusus Guru
+    const resTranscriptStudent = await fetch(`${BASE_URL}/groups/group-2/transcript`, {
+      headers: { 'x-role': 'STUDENT' },
+    });
+    const resSummaryStudent = await fetch(`${BASE_URL}/groups/group-2/teacher-summary`, {
+      headers: { 'x-role': 'STUDENT' },
+    });
+    assert(
+      resTranscriptStudent.status === 403 && resSummaryStudent.status === 403,
+      'Langkah 2: Role STUDENT ditolak 403 dari endpoint transcript & teacher-summary'
+    );
+
+    // 21. Endpoint Pesan Siswa Tidak Membocorkan Peer Report
+    const resGroupMsgs = await fetch(`${BASE_URL}/groups/group-2/messages`).then(json);
+    const msgsStr = JSON.stringify(resGroupMsgs);
+    assert(
+      !msgsStr.includes('Intan Permata') &&
+        !msgsStr.includes('Pelapor-') &&
+        !msgsStr.includes('beban tugas tidak seimbang'),
+      'Langkah 2: Endpoint pesan murid bebas dari kebocoran data peer report'
+    );
   } catch (e: any) {
     console.error('Terjadi error saat pengujian:', e);
     allPassed = false;
@@ -246,7 +306,7 @@ async function runTests() {
     server.close();
     console.log('\n=========================================');
     if (allPassed) {
-      console.log('🎉 SEMUA 17 PENGUJIAN FITUR & KONTRAK BARU BERHASIL (100% PASS)!');
+      console.log('🎉 SEMUA 21 PENGUJIAN FITUR & KONTRAK BARU BERHASIL (100% PASS)!');
     } else {
       console.log('⚠️ TERDAPAT PENGUJIAN YANG GAGAL.');
     }
