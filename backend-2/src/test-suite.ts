@@ -138,7 +138,6 @@ async function runTests() {
     );
 
     // 11. Role Guard & Normalisasi Role (Tugas 2)
-    // 11a. Test role STUDENT (ditolak 403)
     const resMuridAlerts = await fetch(`${BASE_URL}/rooms/room-2/alerts`, {
       headers: { 'x-role': 'STUDENT' },
     });
@@ -150,7 +149,6 @@ async function runTests() {
       'Tugas 2: Role STUDENT ditolak 403 dengan format { error: { code, message } }'
     );
 
-    // 11b. Test alias lama "murid" (dinormalisasi ke STUDENT, tetap ditolak 403)
     const resAliasMurid = await fetch(`${BASE_URL}/rooms/room-2/alerts`, {
       headers: { 'x-role': 'murid' },
     });
@@ -171,7 +169,6 @@ async function runTests() {
       `Tugas 2: Role TEACHER berhasil mengakses alerts dan mendeteksi murid pasif (${alerts[0]?.memberName})`
     );
 
-    // 12b. Test alias "guru"
     const resAliasGuru = await fetch(`${BASE_URL}/rooms/room-2/alerts`, {
       headers: { 'x-role': 'guru' },
     }).then(json);
@@ -205,6 +202,43 @@ async function runTests() {
       res404.status === 404 && data404.error?.code === 'NOT_FOUND',
       'Tugas 1: Route tak dikenal ditangani handler 404 dengan code NOT_FOUND'
     );
+
+    // 16. Analisis Keadilan Peer-Review (Tugas 1 Baru)
+    // 16a. Role STUDENT ditolak 403 saat akses analyze-fairness
+    const resStudentFairness = await fetch(`${BASE_URL}/rooms/room-2/analyze-fairness`, {
+      method: 'POST',
+      headers: { 'x-role': 'STUDENT' },
+    });
+    assert(
+      resStudentFairness.status === 403,
+      'Langkah 1: Role STUDENT ditolak 403 saat akses analyze-fairness'
+    );
+
+    // 16b. Role TEACHER berhasil mendapatkan analisis keadilan dari peer reports
+    const resTeacherFairness = await fetch(`${BASE_URL}/rooms/room-2/analyze-fairness`, {
+      method: 'POST',
+      headers: { 'x-role': 'TEACHER' },
+    }).then(json);
+    assert(
+      resTeacherFairness.data?.totalReports === 2 &&
+        typeof resTeacherFairness.data?.fairnessScore === 'number' &&
+        resTeacherFairness.data?.fairnessScore >= 0 &&
+        resTeacherFairness.data?.fairnessScore <= 100 &&
+        Boolean(resTeacherFairness.data?.summary),
+      'Langkah 1: Role TEACHER berhasil mendapatkan analisis keadilan skor 0-100 & ringkasan'
+    );
+
+    // 17. Analisis Keadilan saat Room belum memiliki laporan (Langkah 1)
+    const resEmptyFairness = await fetch(`${BASE_URL}/rooms/room-1/analyze-fairness`, {
+      method: 'POST',
+      headers: { 'x-role': 'TEACHER' },
+    }).then(json);
+    assert(
+      resEmptyFairness.data?.totalReports === 0 &&
+        resEmptyFairness.data?.fairnessScore === 100 &&
+        Boolean(resEmptyFairness.data?.summary),
+      'Langkah 1: Room tanpa laporan menghasilkan respon kosong yang jelas (skor 100)'
+    );
   } catch (e: any) {
     console.error('Terjadi error saat pengujian:', e);
     allPassed = false;
@@ -212,7 +246,7 @@ async function runTests() {
     server.close();
     console.log('\n=========================================');
     if (allPassed) {
-      console.log('🎉 SEMUA 15 PENGUJIAN FITUR & KONTRAK BARU BERHASIL (100% PASS)!');
+      console.log('🎉 SEMUA 17 PENGUJIAN FITUR & KONTRAK BARU BERHASIL (100% PASS)!');
     } else {
       console.log('⚠️ TERDAPAT PENGUJIAN YANG GAGAL.');
     }

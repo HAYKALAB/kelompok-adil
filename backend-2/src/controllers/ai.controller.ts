@@ -6,6 +6,7 @@ import { AssigneeService } from '../services/assignee.service.js';
 import { ValidationService } from '../services/validation.service.js';
 import { ContributionService } from '../services/contribution.service.js';
 import { GhostingService } from '../services/ghosting.service.js';
+import { FairnessService } from '../services/fairness.service.js';
 
 function getParam(param: string | string[] | undefined): string {
   if (Array.isArray(param)) return param[0] || '';
@@ -204,6 +205,18 @@ export class AiController {
       sendData(res, result);
     } catch (err: any) {
       sendError(res, 500, 'INTERNAL_ERROR', 'Gagal mengirimkan pengingat ramah ke kelompok.');
+    }
+  }
+
+  // 14. Analisis Keadilan Kelas dari Peer-Review (Khusus Guru)
+  static async analyzeFairness(req: Request, res: Response): Promise<void> {
+    try {
+      const roomId = getParam(req.params.roomId);
+      const result = await FairnessService.analyzeRoomFairness(roomId);
+      sendData(res, result);
+    } catch (err: any) {
+      console.error('Gagal memproses analisis keadilan:', err.message);
+      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal memproses analisis keadilan kelas.');
     }
   }
 }

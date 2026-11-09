@@ -102,6 +102,19 @@ export interface AiContributionSnapshot {
   computedAt: string;
 }
 
+// Entitas Laporan Rahasia Peer-Review Murid
+export interface PeerReport {
+  id: string;
+  roomId: string;
+  groupId: string;
+  reporterId: string; // ID siswa pelapor (DIJAGA PRIVASINYA, TIDAK BOLEH BOCOR KE AI / SISWA LAIN)
+  reportedMemberId: string;
+  reportedMemberName: string;
+  rating: number; // 1 - 5
+  feedback: string;
+  createdAt: string;
+}
+
 // In-Memory Database Store
 class RepositoryStub {
   private rooms: Map<string, RoomData> = new Map();
@@ -109,6 +122,7 @@ class RepositoryStub {
   private tasks: Map<string, TaskData> = new Map();
   private activities: ActivityData[] = [];
   private teachers: Map<string, TeacherData> = new Map();
+  private peerReports: PeerReport[] = [];
 
   // Tabel AI
   private aiMessages: AiMessage[] = [];
@@ -152,7 +166,6 @@ class RepositoryStub {
       ],
     });
 
-    // Tasks Group 1 (Dafano beban tinggi 41%, Salsa 22%, Bima 24%, Nadya 13%)
     const now = new Date();
     const twoDaysAgo = new Date(now.getTime() - 48 * 3600 * 1000).toISOString();
     const oneDayAgo = new Date(now.getTime() - 24 * 3600 * 1000).toISOString();
@@ -294,15 +307,13 @@ class RepositoryStub {
         weight: 20,
         deadline: twoDaysAgo,
         evidenceType: 'google_docs',
-        // Belum mengunggah bukti sama sekali!
         createdAt: fourDaysAgo,
       },
     ];
 
     g2Tasks.forEach((t) => this.tasks.set(t.id, t));
 
-    // Activities Group 2 (Sesuai rasio kalkulasi deterministik: Intan 42%, Fajar 38%, Dani 15%, Rafi 5%)
-    // Intan: 2 docs (10) + 4 comments (2) + task 30 = 42
+    // Activities Group 2
     for (let i = 0; i < 2; i++) {
       this.activities.push({ id: `act-intan-doc-${i}`, groupId: 'group-2', memberId: 'm-intan', type: 'document', at: oneDayAgo });
     }
@@ -310,7 +321,6 @@ class RepositoryStub {
       this.activities.push({ id: `act-intan-com-${i}`, groupId: 'group-2', memberId: 'm-intan', type: 'comment', at: oneDayAgo });
     }
 
-    // Fajar: 2 docs (10) + 6 comments (3) + task 25 = 38
     for (let i = 0; i < 2; i++) {
       this.activities.push({ id: `act-fajar-doc-${i}`, groupId: 'group-2', memberId: 'm-fajar', type: 'document', at: oneDayAgo });
     }
@@ -318,7 +328,6 @@ class RepositoryStub {
       this.activities.push({ id: `act-fajar-com-${i}`, groupId: 'group-2', memberId: 'm-fajar', type: 'comment', at: oneDayAgo });
     }
 
-    // Dani: 2 docs (10) + 1 log (2) + 6 comments (3) = 15
     for (let i = 0; i < 2; i++) {
       this.activities.push({ id: `act-dani-doc-${i}`, groupId: 'group-2', memberId: 'm-dani', type: 'document', at: twoDaysAgo });
     }
@@ -327,7 +336,6 @@ class RepositoryStub {
       this.activities.push({ id: `act-dani-com-${i}`, groupId: 'group-2', memberId: 'm-dani', type: 'comment', at: twoDaysAgo });
     }
 
-    // Rafi: 1 log (2) + 6 comments (3) = 5 (terakhir aktif 80 jam lalu)
     this.activities.push({
       id: 'act-rafi-1',
       groupId: 'group-2',
@@ -339,6 +347,30 @@ class RepositoryStub {
     for (let i = 0; i < 6; i++) {
       this.activities.push({ id: `act-rafi-com-${i}`, groupId: 'group-2', memberId: 'm-rafi', type: 'comment', at: fourDaysAgo });
     }
+
+    // Seed Peer Reports (Laporan Rahasia Masuk untuk Room 2)
+    this.peerReports.push({
+      id: 'rep-sri-1',
+      roomId: 'room-2',
+      groupId: 'group-2',
+      reporterId: 'm-intan',
+      reportedMemberId: 'm-rafi',
+      reportedMemberName: 'Rafi Ahmad',
+      rating: 1,
+      feedback: 'Tidak merespon chat kelompok & belum mengerjakan bab bagiannya sejak Selasa. Kami kesulitan menyusun kesimpulan materi.',
+      createdAt: new Date(now.getTime() - 12 * 3600 * 1000).toISOString(),
+    });
+    this.peerReports.push({
+      id: 'rep-sri-2',
+      roomId: 'room-2',
+      groupId: 'group-2',
+      reporterId: 'm-fajar',
+      reportedMemberId: 'm-rafi',
+      reportedMemberName: 'Rafi Ahmad',
+      rating: 2,
+      feedback: 'Belum ada bukti dokumen atau catatan riset yang diunggah ke tugasnya.',
+      createdAt: new Date(now.getTime() - 8 * 3600 * 1000).toISOString(),
+    });
   }
 
   // --- API Method Contracts ---
@@ -405,6 +437,26 @@ class RepositoryStub {
 
   public async getGroupsByRoom(roomId: string): Promise<GroupData[]> {
     return Array.from(this.groups.values()).filter((g) => g.roomId === roomId);
+  }
+
+  // --- Peer Reports Methods ---
+
+  public async savePeerReport(report: Omit<PeerReport, 'id' | 'createdAt'>): Promise<PeerReport> {
+    const saved: PeerReport = {
+      ...report,
+      id: `rep-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      createdAt: new Date().toISOString(),
+    };
+    this.peerReports.push(saved);
+    return saved;
+  }
+
+  public async getPeerReportsByRoom(roomId: string): Promise<PeerReport[]> {
+    return this.peerReports.filter((r) => r.roomId === roomId);
+  }
+
+  public async getPeerReportsByGroup(groupId: string): Promise<PeerReport[]> {
+    return this.peerReports.filter((r) => r.groupId === groupId);
   }
 
   // --- AI Storage Methods ---
