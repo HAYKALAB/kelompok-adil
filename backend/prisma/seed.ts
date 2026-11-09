@@ -80,7 +80,7 @@ async function main() {
   // --- Tiket kode guru (tetap) ---
   await prisma.teacherCodeTicket.upsert({
     where: { code: DEMO_TEACHER_CODE },
-    update: { roomId: room.id, teacherId: teacher.id, expiresAt: FUTURE },
+    update: { roomId: room.id, teacherId: teacher.id, expiresAt: FUTURE, usedAt: null },
     create: {
       code: DEMO_TEACHER_CODE,
       roomId: room.id,
