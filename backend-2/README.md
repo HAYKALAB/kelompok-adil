@@ -21,9 +21,13 @@ Isi file `.env`:
 ```env
 PORT=5000
 
+# Mode Otentikasi: 'jwt' (Bearer Token dari Backend 1) atau 'stub' (x-user-id / x-role)
+AUTH_MODE=stub
+JWT_SECRET= # Wajib minimal 16 karakter jika AUTH_MODE=jwt (harus sama dengan Backend 1)
+
 # Mode Repository: 'stub' (offline) atau 'db' (PostgreSQL / Neon)
 REPO_MODE=stub
-DATABASE_URL= # Isi jika REPO_MODE=db
+BACKEND2_DATABASE_URL= # Isi jika REPO_MODE=db
 
 GEMINI_API_KEY=your_gemini_api_key_here # opsional jika mode mock aktif
 AI_MODEL=gemini-2.5-flash
@@ -53,6 +57,28 @@ npm run test:db
 
 ---
 
+## 🔐 Mode Otentikasi (`AUTH_MODE`)
+
+Backend 2 mendukung dua mode otentikasi:
+
+1. **Mode JWT (`AUTH_MODE=jwt`) — Standar Produksi**:
+   - **Header Wajib**: Klien/Frontend wajib mengirimkan header `Authorization: Bearer <token>` pada setiap permintaan ke `/api/ai/*`.
+   - **Verifikasi Kriptografi**: Token diverifikasi menggunakan algoritma `HS256` dengan `JWT_SECRET` yang sama persis dengan Backend 1.
+   - **Payload Sesi**: Token memuat identitas terverifikasi `{ id: string, role: 'STUDENT' | 'TEACHER' }` di mana `id` adalah `RoomParticipant.id`.
+   - **Abaikan Header Stub**: Header dev lama (`x-user-id` dan `x-role`) diabaikan sepenuhnya untuk mencegah eskalasi peran (*spoofing*).
+   - **Tanpa Identitas Default**: Permintaan tanpa token atau dengan token yang tidak valid/kedaluwarsa akan langsung ditolak dengan status HTTP `401 UNAUTHORIZED`.
+   - **Kewajiban Pasangan Mode**: Mode `AUTH_MODE=jwt` **wajib dipasangkan dengan `REPO_MODE=db`**. Jika dipasangkan dengan `REPO_MODE=stub`, ID partisipan riil dari token JWT tidak akan ditemukan di data simulasi in-memory dan sebagian besar endpoint kelompok akan menolak akses.
+   - **Aturan Ketat Produksi**: Jika `NODE_ENV === 'production'` dan `AUTH_MODE === 'stub'`, server secara otomatis **menolak menyala** demi keamanan data siswa.
+
+2. **Mode Stub (`AUTH_MODE=stub`) — Dev & Testing Lokal**:
+   - Membaca identitas pengguna melalui header simulasi `x-user-id` (default `m-dafano`) dan `x-role` (default `STUDENT`).
+   - Hanya digunakan untuk pengembangan lokal dan pengujian offline tanpa memerlukan login Backend 1.
+
+> **Petunjuk Integrasi Frontend**:  
+> Frontend wajib menyertakan header `Authorization: Bearer <token>` yang didapatkan saat join/login kelas Backend 1 untuk setiap panggilan API ke Backend 2 (`http://localhost:5000/api/ai/*`).
+
+---
+
 ## 🗄️ Mode Repository: Stub vs Database (`REPO_MODE`)
 
 Backend 2 mendukung dua mode penyimpanan data melalui variabel environment `REPO_MODE`:
@@ -64,7 +90,7 @@ Backend 2 mendukung dua mode penyimpanan data melalui variabel environment `REPO
 
 2. **Mode Database (`REPO_MODE=db`)**:
    - Membaca data langsung dari tabel PostgreSQL / Neon milik Backend 1 dengan SSL aktif.
-   - **Keamanan Data & Privasi Koneksi**: Pesan error dan log server tidak pernah mencetak string koneksi, password, atau `DATABASE_URL`.
+   - **Keamanan Data & Privasi Koneksi**: Pesan error dan log server tidak pernah mencetak string koneksi, token, password, atau secret.
    - **Ketahanan Server (Anti-Crash)**: Jika koneksi ke database terputus atau gagal, server tetap menyala dan mengembalikan status HTTP `503 SERVICE_UNAVAILABLE` yang jelas bagi klien.
    - **Skrip `npm run test:db`**: Menguji koneksi database secara read-only (hanya operasi `SELECT` pada tabel `rooms` dan `groups`, tanpa penulisan apa pun).
 
@@ -91,15 +117,11 @@ Seluruh endpoint di bawah `/api/ai` mematuhi format respons standar tim hackatho
 ```json
 {
   "error": {
-    "code": "VALIDATION_ERROR | FORBIDDEN_TEACHER_ONLY | FORBIDDEN_STUDENTS_ONLY | FORBIDDEN_GROUP_MEMBER_ONLY | NOT_FOUND | SERVICE_UNAVAILABLE | INTERNAL_ERROR",
+    "code": "VALIDATION_ERROR | UNAUTHORIZED | FORBIDDEN_TEACHER_ONLY | FORBIDDEN_STUDENTS_ONLY | FORBIDDEN_GROUP_MEMBER_ONLY | NOT_FOUND | SERVICE_UNAVAILABLE | INTERNAL_ERROR",
     "message": "Pesan deskripsi error yang ramah pengguna"
   }
 }
 ```
-
-### 3. Header Otentikasi (Stub):
-- `x-user-id`: ID pengguna (contoh: `m-dafano`, `guru-1`). Catatan: Identitas masih memakai stub sampai tiket otentikasi guru/siswa dari Backend 1 siap.
-- `x-role`: Role pengguna, mendukung `STUDENT` atau `TEACHER` (kompatibel dengan enum Prisma Backend 1; alias lama `murid` dan `guru` dinormalisasi otomatis).
 
 ---
 
@@ -135,7 +157,7 @@ Seluruh endpoint di bawah `/api/ai` mematuhi format respons standar tim hackatho
 - **`GET /api/ai/groups/:groupId/contributions`**
   Menghitung rasio kontribusi riil per siswa berdasarkan tugas selesai, dokumen, catatan riset, dan komentar (kalkulasi matematis akurat).
 
-### 6. Area Khusus Guru (Wajib Header `x-role: TEACHER`)
+### 6. Area Khusus Guru (Wajib Header `x-role: TEACHER` atau Token Guru)
 - **`GET /api/ai/rooms/:roomId/alerts`**
   Deteksi otomatis peringatan tugas berbasis tenggat waktu:
   - **Kapan & di mana pengingat dikirim**: Pengingat ramah dikirim otomatis ke ruang chat kelompok (`group_messages`) saat tugas Kanban belum selesai dan sisa waktu menuju tenggat `< 48` jam (`GHOSTING_WARN_HOURS`).

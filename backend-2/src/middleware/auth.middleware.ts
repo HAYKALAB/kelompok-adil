@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { sendError } from '../lib/response.js';
 import { repo } from '../deps/repository.stub.js';
+import { verifySession } from '../lib/jwt.js';
 
 export type UserRole = 'STUDENT' | 'TEACHER';
 
@@ -20,7 +21,7 @@ declare global {
 
 /**
  * Normalisasi role agar kompatibel dengan enum Prisma Backend 1 (STUDENT | TEACHER)
- * serta mendukung alias kompatibilitas lama ('guru' dan 'murid').
+ * serta mendukung alias kompatibilitas lama ('guru' dan 'murid') pada mode stub.
  */
 function normalizeRole(rawRole: string | undefined): UserRole {
   if (!rawRole) return 'STUDENT';
@@ -32,23 +33,70 @@ function normalizeRole(rawRole: string | undefined): UserRole {
 }
 
 /**
- * CATATAN ARSITEKTUR:
- * Ini adalah middleware stub otentikasi sementara untuk Backend 2.
- * Setelah Backend 1 menyelesaikan modul autentikasi (lihat docs/auth-plan.md),
- * middleware ini akan digantikan untuk memverifikasi token JWT/session asli dari Backend 1,
- * sementara bentuk objek `req.user` ({ id, role: 'STUDENT' | 'TEACHER' }) tetap dipertahankan.
+ * Mengambil mode otentikasi aktif:
+ * - 'jwt': Verifikasi token Bearer JWT dari Backend 1 (default pada NODE_ENV === 'production').
+ * - 'stub': Membaca header x-user-id dan x-role (hanya untuk dev dan test lokal).
  */
-export function authStub(req: Request, _res: Response, next: NextFunction): void {
-  const userId = (req.headers['x-user-id'] as string) || 'm-dafano';
-  const rawRole = req.headers['x-role'] as string | undefined;
-
-  req.user = {
-    id: userId,
-    role: normalizeRole(rawRole),
-  };
-
-  next();
+export function getAuthMode(): 'jwt' | 'stub' {
+  const envMode = process.env.AUTH_MODE?.trim().toLowerCase();
+  if (envMode === 'jwt' || envMode === 'stub') {
+    return envMode;
+  }
+  return process.env.NODE_ENV === 'production' ? 'jwt' : 'stub';
 }
+
+/**
+ * Middleware otentikasi utama Backend 2.
+ * Mengadaptasi perilaku berdasarkan AUTH_MODE.
+ */
+export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
+  const mode = getAuthMode();
+
+  if (mode === 'jwt') {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      sendError(
+        res,
+        401,
+        'UNAUTHORIZED',
+        'Token otentikasi tidak ditemukan. Harap sertakan header Authorization: Bearer <token>.'
+      );
+      return;
+    }
+
+    const token = authHeader.slice(7).trim();
+    if (!token) {
+      sendError(res, 401, 'UNAUTHORIZED', 'Token otentikasi kosong.');
+      return;
+    }
+
+    try {
+      const session = verifySession(token);
+      // Di mode JWT: abaikan x-role dan x-user-id sepenuhnya!
+      req.user = {
+        id: session.id,
+        role: session.role,
+      };
+      next();
+    } catch (err: any) {
+      sendError(res, 401, 'UNAUTHORIZED', err.message || 'Token tidak valid atau sudah kedaluwarsa.');
+      return;
+    }
+  } else {
+    // Mode Stub: perilaku lama untuk dev dan test lokal
+    const userId = (req.headers['x-user-id'] as string) || 'm-dafano';
+    const rawRole = req.headers['x-role'] as string | undefined;
+
+    req.user = {
+      id: userId,
+      role: normalizeRole(rawRole),
+    };
+    next();
+  }
+}
+
+// Alias kompatibilitas
+export const authStub = authMiddleware;
 
 /**
  * Guard otorisasi khusus: hanya pengguna dengan role TEACHER yang diizinkan.

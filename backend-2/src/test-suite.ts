@@ -1,11 +1,13 @@
 process.env.NODE_ENV = 'test';
 process.env.REPO_MODE = 'stub'; // Wajib: npm test selalu memakai repository stub apa pun isi .env
+process.env.AUTH_MODE = 'stub'; // Wajib: pengujian suite dasar memakai mode stub
 
 import app from './index.js';
 import http from 'http';
 import { repo } from './deps/repository.stub.js';
 import { LlmClient } from './modules/ai/llm.client.js';
 import { stripDataTags, sanitizeUnknownNames } from './lib/sanitize.js';
+import { signSession } from './lib/jwt.js';
 
 const PORT = 5055;
 const BASE_URL = `http://127.0.0.1:${PORT}/api/ai`;
@@ -673,6 +675,72 @@ process.env.REPO_MODE = 'stub'; // Wajib: npm test selalu memakai repository stu
       nudgeCount1 === 1 && nudgeCount2 === 1,
       'Pengingat Deadline: Memanggil alerts dua kali tidak membuat pengingat ganda di grup (de-duplikasi sukses)'
     );
+
+    // 36. Mode Otentikasi JWT: Verifikasi Bearer Token dari Backend 1
+    process.env.AUTH_MODE = 'jwt';
+    const TEST_JWT_SECRET = 'kunci-rahasia-pengujian-lokal-minimal-16-karakter';
+    process.env.JWT_SECRET = TEST_JWT_SECRET;
+
+    const validStudentToken = signSession({ id: 'm-dafano', role: 'STUDENT' }, TEST_JWT_SECRET);
+    const validTeacherToken = signSession({ id: 'guru-1', role: 'TEACHER' }, TEST_JWT_SECRET);
+    const expiredToken = signSession({ id: 'm-dafano', role: 'STUDENT' }, TEST_JWT_SECRET, { expiresIn: -10 });
+    const invalidSigToken = signSession({ id: 'm-dafano', role: 'STUDENT' }, 'secret-palsu-salah-tanda-tangan-999');
+
+    // 36a. Tanpa token -> 401 UNAUTHORIZED
+    const resNoToken = await fetch(`${BASE_URL}/groups/group-1/messages`);
+    const dataNoToken: any = await resNoToken.json();
+
+    // 36b. Token kedaluwarsa -> 401 UNAUTHORIZED
+    const resExpired = await fetch(`${BASE_URL}/groups/group-1/messages`, {
+      headers: { Authorization: `Bearer ${expiredToken}` },
+    });
+    const dataExpired: any = await resExpired.json();
+
+    // 36c. Tanda tangan salah -> 401 UNAUTHORIZED
+    const resInvalidSig = await fetch(`${BASE_URL}/groups/group-1/messages`, {
+      headers: { Authorization: `Bearer ${invalidSigToken}` },
+    });
+    const dataInvalidSig: any = await resInvalidSig.json();
+
+    // 36d. Header x-role: TEACHER dengan token siswa tetap ditolak 403 (mengabaikan x-role)
+    const resSpoofedRole = await fetch(`${BASE_URL}/rooms/room-2/alerts`, {
+      headers: {
+        Authorization: `Bearer ${validStudentToken}`,
+        'x-role': 'TEACHER', // Upaya memalsukan peran lewat header
+      },
+    });
+    const dataSpoofedRole: any = await resSpoofedRole.json();
+
+    // 36e. Token guru ke endpoint chat kelompok -> 403 FORBIDDEN_STUDENTS_ONLY
+    const resTeacherChat = await fetch(`${BASE_URL}/groups/group-1/messages`, {
+      headers: { Authorization: `Bearer ${validTeacherToken}` },
+    });
+    const dataTeacherChat: any = await resTeacherChat.json();
+
+    // 36f. Token anggota sah kelompok ke endpoint chat -> 200 OK
+    const resMemberChat = await fetch(`${BASE_URL}/groups/group-1/messages`, {
+      headers: { Authorization: `Bearer ${validStudentToken}` },
+    });
+    const dataMemberChat: any = await resMemberChat.json();
+
+    assert(
+      resNoToken.status === 401 &&
+        dataNoToken.error?.code === 'UNAUTHORIZED' &&
+        resExpired.status === 401 &&
+        dataExpired.error?.code === 'UNAUTHORIZED' &&
+        resInvalidSig.status === 401 &&
+        dataInvalidSig.error?.code === 'UNAUTHORIZED' &&
+        resSpoofedRole.status === 403 &&
+        dataSpoofedRole.error?.code === 'FORBIDDEN_TEACHER_ONLY' &&
+        resTeacherChat.status === 403 &&
+        dataTeacherChat.error?.code === 'FORBIDDEN_STUDENTS_ONLY' &&
+        resMemberChat.status === 200 &&
+        Array.isArray(dataMemberChat.data?.messages),
+      'Mode JWT: Verifikasi Bearer token (tanpa token 401, expired 401, tanda tangan salah 401, spoofing x-role 403, guru ke chat 403, anggota sah 200)'
+    );
+
+    // Kembalikan mode ke stub setelah pengujian
+    process.env.AUTH_MODE = 'stub';
   } catch (e: any) {
     console.error('Terjadi error saat pengujian:', e);
     allPassed = false;
@@ -680,7 +748,7 @@ process.env.REPO_MODE = 'stub'; // Wajib: npm test selalu memakai repository stu
     server.close();
     console.log('\n=========================================');
     if (allPassed) {
-      console.log('🎉 SEMUA 35 PENGUJIAN FITUR, KONTRAK & KEAMANAN BERHASIL (100% PASS)!');
+      console.log('🎉 SEMUA 36 PENGUJIAN FITUR, KONTRAK & KEAMANAN BERHASIL (100% PASS)!');
     } else {
       console.log('⚠️ TERDAPAT PENGUJIAN YANG GAGAL.');
     }
