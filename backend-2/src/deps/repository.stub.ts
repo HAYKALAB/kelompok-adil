@@ -1,122 +1,36 @@
 /**
- * Interface & In-Memory Stub Repository untuk data dari Backend 1.
- * Bertindak sebagai buffer agar Backend 2 tidak mengutak-atik tabel core Backend 1.
+ * In-Memory Stub Repository untuk data dari Backend 1.
+ * Mengimplementasikan kontrak IRepository dan memilih instance berdasarkan REPO_MODE.
  */
 
-export interface RoomData {
-  id: string;
-  name: string;
-  subject: string;
-  class: string;
-  deadline: string;
-  aiEnabled: boolean;
-  teacherId: string;
-}
+export * from './repository.interface.js';
+import {
+  IRepository,
+  RoomData,
+  MemberData,
+  GroupData,
+  TaskData,
+  ActivityData,
+  TeacherData,
+  AiMessage,
+  AiSuggestion,
+  AiFlag,
+  AiContributionSnapshot,
+  PeerReport,
+} from './repository.interface.js';
 
-export interface MemberData {
-  id: string;
-  name: string;
-}
+export class DatabaseServiceUnavailableError extends Error {
+  public readonly status = 503;
+  public readonly code = 'SERVICE_UNAVAILABLE';
 
-export interface GroupData {
-  id: string;
-  roomId: string;
-  name: string;
-  members: MemberData[];
-}
-
-export interface TaskData {
-  id: string;
-  groupId: string;
-  title: string;
-  description?: string;
-  assigneeId?: string;
-  status: 'todo' | 'in_progress' | 'done';
-  weight: number; // 1-100 persen
-  deadline?: string;
-  evidenceType?: 'google_docs' | 'slide' | 'handwritten_photo' | 'web_link';
-  evidenceUrl?: string;
-  evidenceStatus?: 'valid' | 'incomplete' | 'suspicious' | 'pending';
-  evidenceFeedback?: string;
-  createdAt: string;
-  doneAt?: string;
-}
-
-export interface ActivityData {
-  id: string;
-  groupId: string;
-  memberId: string;
-  type: 'document' | 'comment' | 'log' | 'upload';
-  description?: string;
-  at: string;
-}
-
-export interface TeacherData {
-  id: string;
-  name: string;
-  email: string;
-}
-
-// Entitas milik modul AI
-export interface AiMessage {
-  id: string;
-  groupId: string;
-  senderType: 'member' | 'ai';
-  senderId?: string;
-  senderName: string;
-  action: 'chat' | 'ideas' | 'split_roles' | 'check_completeness' | 'nudge';
-  content: string;
-  structuredPayload?: any;
-  createdAt: string;
-}
-
-export interface AiSuggestion {
-  id: string;
-  groupId: string;
-  type: 'role_split' | 'assignee';
-  payload: any;
-  status: 'pending' | 'applied' | 'dismissed';
-  createdAt: string;
-}
-
-export interface AiFlag {
-  id: string;
-  groupId: string;
-  memberId: string;
-  kind: 'ghosting' | 'low_contribution';
-  detail: any;
-  resolvedAt?: string;
-  createdAt: string;
-}
-
-export interface AiContributionSnapshot {
-  groupId: string;
-  memberId: string;
-  percentage: number;
-  breakdown: {
-    documents: number;
-    comments: number;
-    logs: number;
-    tasksDone: number;
-  };
-  computedAt: string;
-}
-
-// Entitas Laporan Rahasia Peer-Review Murid
-export interface PeerReport {
-  id: string;
-  roomId: string;
-  groupId: string;
-  reporterId: string; // ID siswa pelapor (DIJAGA PRIVASINYA, TIDAK BOLEH BOCOR KE AI / SISWA LAIN)
-  reportedMemberId: string;
-  reportedMemberName: string;
-  rating: number; // 1 - 5
-  feedback: string;
-  createdAt: string;
+  constructor(message = 'Layanan database sedang tidak tersedia atau sedang dalam penyesuaian skema.') {
+    super(message);
+    this.name = 'DatabaseServiceUnavailableError';
+  }
 }
 
 // In-Memory Database Store
-class RepositoryStub {
+export class RepositoryStub implements IRepository {
   private rooms: Map<string, RoomData> = new Map();
   private groups: Map<string, GroupData> = new Map();
   private tasks: Map<string, TaskData> = new Map();
@@ -465,6 +379,8 @@ class RepositoryStub {
     const saved: AiMessage = {
       ...msg,
       id: `ai-msg-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      payload: msg.payload || msg.structuredPayload,
+      structuredPayload: msg.structuredPayload || msg.payload,
       createdAt: new Date().toISOString(),
     };
     this.aiMessages.push(saved);
@@ -525,4 +441,28 @@ class RepositoryStub {
   }
 }
 
-export const repo = new RepositoryStub();
+// Instance singleton stub
+const stubInstance = new RepositoryStub();
+
+/**
+ * Factory untuk memilih implementasi repository berdasarkan variabel environment REPO_MODE.
+ * Default: 'stub'.
+ * Jika 'db' aktif sebelum repository.db.ts terpasang, mengembalikan adapter 503 yang aman tanpa membocorkan kredensial koneksi.
+ */
+function createRepository(): IRepository {
+  return new Proxy(stubInstance as unknown as IRepository, {
+    get(target, prop, receiver) {
+      const mode = (process.env.REPO_MODE || 'stub').toLowerCase().trim();
+      if (mode === 'db') {
+        return async () => {
+          throw new DatabaseServiceUnavailableError(
+            'Layanan database Backend 1 sedang dalam sinkronisasi skema. Gunakan REPO_MODE=stub sementara waktu.'
+          );
+        };
+      }
+      return Reflect.get(target, prop, receiver);
+    },
+  });
+}
+
+export const repo: IRepository = createRepository();

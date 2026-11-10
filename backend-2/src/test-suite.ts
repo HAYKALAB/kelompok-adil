@@ -1,4 +1,5 @@
 process.env.NODE_ENV = 'test';
+process.env.REPO_MODE = 'stub'; // Wajib: npm test selalu memakai repository stub apa pun isi .env
 
 import app from './index.js';
 import http from 'http';
@@ -322,6 +323,7 @@ async function runTests() {
     process.env.NODE_ENV = 'production';
     const promptInProd = LlmClient.getLastPrompt();
     process.env.NODE_ENV = 'test';
+process.env.REPO_MODE = 'stub'; // Wajib: npm test selalu memakai repository stub apa pun isi .env
     const promptInTest = LlmClient.getLastPrompt();
     assert(
       promptInProd === undefined && typeof promptInTest === 'string',
