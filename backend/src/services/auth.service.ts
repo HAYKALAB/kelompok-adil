@@ -9,11 +9,25 @@ export async function joinRoomAsStudent(pin: string, name: string) {
     throw new AppError(404, 'ROOM_NOT_FOUND', 'Room tidak ditemukan.');
   }
 
-  const participant = await prisma.roomParticipant.upsert({
+  const existing = await prisma.roomParticipant.findUnique({
     where: { roomId_name: { roomId: room.id, name } },
-    update: {},
-    create: { roomId: room.id, name, role: 'STUDENT' },
   });
+
+  if (existing) {
+    throw new AppError(409, 'NAME_ALREADY_USED', 'Nama sudah dipakai peserta lain.');
+  }
+
+  let participant;
+  try {
+    participant = await prisma.roomParticipant.create({
+      data: { roomId: room.id, name, role: 'STUDENT' },
+    });
+  } catch (err: any) {
+    if (err?.code === 'P2002') {
+      throw new AppError(409, 'NAME_ALREADY_USED', 'Nama sudah dipakai peserta lain.');
+    }
+    throw err;
+  }
 
   return {
     participant,
@@ -32,33 +46,45 @@ export async function joinRoomAsTeacher(pin: string, name: string, code: string)
   if (!ticket || ticket.roomId !== room.id) {
     throw new AppError(401, 'INVALID_TEACHER_CODE', 'Kode guru tidak valid.');
   }
-  if (ticket.usedAt) {
-    throw new AppError(403, 'TEACHER_CODE_USED', 'Kode guru sudah digunakan.');
-  }
-  if (ticket.expiresAt && new Date(ticket.expiresAt).getTime() < Date.now()) {
-    throw new AppError(403, 'TEACHER_CODE_EXPIRED', 'Kode guru sudah kedaluwarsa.');
-  }
+  // Kode guru tidak hangus: tidak ada cek usedAt, tidak ada cek expiresAt.
+  // Ticket dibuat dengan expiresAt = null (tidak kedaluwarsa) dan reusable.
 
   const existing = await prisma.roomParticipant.findUnique({
     where: { roomId_name: { roomId: room.id, name } },
   });
-  if (existing && existing.role !== 'TEACHER') {
+  // Sudah pernah login sebagai guru di room ini → login ulang saja (token baru)
+  if (existing && existing.role === 'TEACHER') {
+    return {
+      participant: existing,
+      token: signSession({ id: existing.id, role: existing.role }),
+    };
+  }
+  // Nama dipakai peserta STUDENT → tolak
+  if (existing) {
     throw new AppError(409, 'NAME_ALREADY_USED', 'Nama sudah dipakai peserta lain.');
   }
 
-  await prisma.teacherCodeTicket.update({
-    where: { code },
-    data: { usedAt: new Date() },
-  });
-
-  const participant = await prisma.roomParticipant.upsert({
-    where: { roomId_name: { roomId: room.id, name } },
-    update: { role: 'TEACHER', userId: room.teacherId },
-    create: { roomId: room.id, name, role: 'TEACHER', userId: room.teacherId },
+  const participant = await prisma.roomParticipant.create({
+    data: { roomId: room.id, name, role: 'TEACHER', userId: room.teacherId },
   });
 
   return {
     participant,
     token: signSession({ id: participant.id, role: participant.role }),
   };
+}
+
+export async function registerTeacher(name: string) {
+  const prisma = getPrisma();
+  const existing = await prisma.user.findFirst({ where: { name } });
+  if (existing) {
+    throw new AppError(409, 'NAME_ALREADY_USED', 'Nama sudah dipakai.');
+  }
+
+  const user = await prisma.user.create({
+    data: { name, email: null, role: 'TEACHER' },
+  });
+
+  const token = signSession({ id: user.id, role: 'TEACHER' });
+  return { user, token };
 }
