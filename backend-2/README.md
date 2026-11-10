@@ -21,9 +21,9 @@ Isi file `.env`:
 ```env
 PORT=5000
 
-# Mode Otentikasi: 'jwt' (Bearer Token dari Backend 1) atau 'stub' (x-user-id / x-role)
+# Mode Otentikasi: 'jwt' (default jika kosong/tidak dikenali) atau 'stub' (HANYA untuk lokal)
 AUTH_MODE=stub
-JWT_SECRET= # Wajib minimal 16 karakter jika AUTH_MODE=jwt (harus sama dengan Backend 1)
+JWT_SECRET= # Wajib minimal 16 karakter jika mode jwt aktif (harus sama dengan Backend 1)
 
 # Mode Repository: 'stub' (offline) atau 'db' (PostgreSQL / Neon)
 REPO_MODE=stub
@@ -61,7 +61,8 @@ npm run test:db
 
 Backend 2 mendukung dua mode otentikasi:
 
-1. **Mode JWT (`AUTH_MODE=jwt`) — Standar Produksi**:
+1. **Mode JWT (`AUTH_MODE=jwt`) — Default Aman & Standar Produksi**:
+   - **Perilaku Default**: Jika `AUTH_MODE` dikosongkan atau diisi nilai yang tidak dikenali, sistem otomatis memakai mode `jwt`.
    - **Header Wajib**: Klien/Frontend wajib mengirimkan header `Authorization: Bearer <token>` pada setiap permintaan ke `/api/ai/*`.
    - **Verifikasi Kriptografi**: Token diverifikasi menggunakan algoritma `HS256` dengan `JWT_SECRET` yang sama persis dengan Backend 1.
    - **Payload Sesi**: Token memuat identitas terverifikasi `{ id: string, role: 'STUDENT' | 'TEACHER' }` di mana `id` adalah `RoomParticipant.id`.
@@ -70,9 +71,10 @@ Backend 2 mendukung dua mode otentikasi:
    - **Kewajiban Pasangan Mode**: Mode `AUTH_MODE=jwt` **wajib dipasangkan dengan `REPO_MODE=db`**. Jika dipasangkan dengan `REPO_MODE=stub`, ID partisipan riil dari token JWT tidak akan ditemukan di data simulasi in-memory dan sebagian besar endpoint kelompok akan menolak akses.
    - **Aturan Ketat Produksi**: Jika `NODE_ENV === 'production'` dan `AUTH_MODE === 'stub'`, server secara otomatis **menolak menyala** demi keamanan data siswa.
 
-2. **Mode Stub (`AUTH_MODE=stub`) — Dev & Testing Lokal**:
+2. **Mode Stub (`AUTH_MODE=stub`) — Hanya untuk Lokal**:
+   - Hanya aktif apabila `AUTH_MODE=stub` ditulis secara eksplisit di environment lokal.
    - Membaca identitas pengguna melalui header simulasi `x-user-id` (default `m-dafano`) dan `x-role` (default `STUDENT`).
-   - Hanya digunakan untuk pengembangan lokal dan pengujian offline tanpa memerlukan login Backend 1.
+   - **Hanya digunakan untuk pengembangan lokal dan pengujian offline** tanpa memerlukan login Backend 1 (otomatis dipaksa aktif saat menjalankan `npm test`).
 
 > **Petunjuk Integrasi Frontend**:  
 > Frontend wajib menyertakan header `Authorization: Bearer <token>` yang didapatkan saat join/login kelas Backend 1 untuk setiap panggilan API ke Backend 2 (`http://localhost:5000/api/ai/*`).

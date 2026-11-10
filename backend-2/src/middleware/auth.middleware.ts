@@ -34,15 +34,15 @@ function normalizeRole(rawRole: string | undefined): UserRole {
 
 /**
  * Mengambil mode otentikasi aktif:
- * - 'jwt': Verifikasi token Bearer JWT dari Backend 1 (default pada NODE_ENV === 'production').
- * - 'stub': Membaca header x-user-id dan x-role (hanya untuk dev dan test lokal).
+ * - 'jwt': Verifikasi token Bearer JWT dari Backend 1 (default jika AUTH_MODE kosong atau tidak dikenali).
+ * - 'stub': Membaca header x-user-id dan x-role (hanya aktif jika AUTH_MODE=stub ditulis eksplisit; hanya untuk dev & test lokal).
  */
 export function getAuthMode(): 'jwt' | 'stub' {
   const envMode = process.env.AUTH_MODE?.trim().toLowerCase();
-  if (envMode === 'jwt' || envMode === 'stub') {
-    return envMode;
+  if (envMode === 'stub') {
+    return 'stub';
   }
-  return process.env.NODE_ENV === 'production' ? 'jwt' : 'stub';
+  return 'jwt';
 }
 
 /**

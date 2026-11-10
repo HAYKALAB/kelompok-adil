@@ -2,17 +2,19 @@ process.env.NODE_ENV = 'test';
 process.env.REPO_MODE = 'stub'; // Wajib: npm test selalu memakai repository stub apa pun isi .env
 process.env.AUTH_MODE = 'stub'; // Wajib: pengujian suite dasar memakai mode stub
 
-import app from './index.js';
 import http from 'http';
 import { repo } from './deps/repository.stub.js';
 import { LlmClient } from './modules/ai/llm.client.js';
 import { stripDataTags, sanitizeUnknownNames } from './lib/sanitize.js';
-import { signSession } from './lib/jwt.js';
+import { signSession } from './test-utils.js';
+import { getAuthMode } from './middleware/auth.middleware.js';
 
 const PORT = 5055;
 const BASE_URL = `http://127.0.0.1:${PORT}/api/ai`;
 
 async function runTests() {
+  const indexMod = await import('./index.js');
+  const app = ((indexMod.default as any)?.default ?? indexMod.default) as http.RequestListener;
   const server = http.createServer(app);
   await new Promise<void>((resolve) => server.listen(PORT, () => resolve()));
   console.log(`\n🧪 Server pengujian berjalan di port ${PORT}\n`);
@@ -739,6 +741,31 @@ process.env.REPO_MODE = 'stub'; // Wajib: npm test selalu memakai repository stu
       'Mode JWT: Verifikasi Bearer token (tanpa token 401, expired 401, tanda tangan salah 401, spoofing x-role 403, guru ke chat 403, anggota sah 200)'
     );
 
+    // 37. Default AUTH_MODE terbalik: kosong / undefined / tidak dikenali menghasilkan mode jwt
+    delete process.env.AUTH_MODE;
+    const modeUndefined = getAuthMode();
+
+    process.env.AUTH_MODE = '';
+    const modeEmpty = getAuthMode();
+    const resEmptyModeNoToken = await fetch(`${BASE_URL}/groups/group-1/messages`);
+    const dataEmptyModeNoToken: any = await resEmptyModeNoToken.json();
+    const resEmptyModeHealth = await fetch(`${BASE_URL}/health`, {
+      headers: { Authorization: `Bearer ${validStudentToken}` },
+    }).then(json);
+
+    process.env.AUTH_MODE = 'mode-tidak-dikenal';
+    const modeUnknown = getAuthMode();
+
+    assert(
+      modeUndefined === 'jwt' &&
+        modeEmpty === 'jwt' &&
+        modeUnknown === 'jwt' &&
+        resEmptyModeNoToken.status === 401 &&
+        dataEmptyModeNoToken.error?.code === 'UNAUTHORIZED' &&
+        resEmptyModeHealth.data?.authMode === 'jwt',
+      'Default AUTH_MODE: Kosong, undefined, atau tidak dikenali menghasilkan mode jwt (menolak request tanpa token)'
+    );
+
     // Kembalikan mode ke stub setelah pengujian
     process.env.AUTH_MODE = 'stub';
   } catch (e: any) {
@@ -748,7 +775,7 @@ process.env.REPO_MODE = 'stub'; // Wajib: npm test selalu memakai repository stu
     server.close();
     console.log('\n=========================================');
     if (allPassed) {
-      console.log('🎉 SEMUA 36 PENGUJIAN FITUR, KONTRAK & KEAMANAN BERHASIL (100% PASS)!');
+      console.log('🎉 SEMUA 37 PENGUJIAN FITUR, KONTRAK & KEAMANAN BERHASIL (100% PASS)!');
     } else {
       console.log('⚠️ TERDAPAT PENGUJIAN YANG GAGAL.');
     }

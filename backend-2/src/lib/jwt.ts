@@ -47,19 +47,3 @@ export function verifySession(token: string, secretOverride?: string): SessionPa
     role: session.role,
   };
 }
-
-/**
- * Helper penandatanganan token untuk pengujian lokal / simulasi.
- */
-export function signSession(
-  payload: SessionPayload,
-  secretOverride?: string,
-  options?: jwt.SignOptions
-): string {
-  const secret = secretOverride || process.env.JWT_SECRET || '';
-  return jwt.sign(payload, secret, {
-    algorithm: 'HS256',
-    expiresIn: '7d',
-    ...options,
-  });
-}
