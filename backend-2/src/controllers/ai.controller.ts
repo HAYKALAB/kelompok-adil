@@ -14,6 +14,33 @@ function getParam(param: string | string[] | undefined): string {
   return param || '';
 }
 
+/**
+ * Meneruskan error infrastruktur (503 SERVICE_UNAVAILABLE, 501 NOT_IMPLEMENTED) apa adanya,
+ * serta menggunakan fallback status & pesan aman untuk error lainnya.
+ */
+function handleControllerError(
+  res: Response,
+  err: any,
+  fallbackMessage: string,
+  defaultStatus = 500,
+  defaultCode = 'INTERNAL_ERROR'
+): void {
+  if (err && (err.status === 503 || err.status === 501)) {
+    sendError(
+      res,
+      err.status,
+      err.code || (err.status === 503 ? 'SERVICE_UNAVAILABLE' : 'NOT_IMPLEMENTED'),
+      err.message || fallbackMessage
+    );
+    return;
+  }
+
+  const status = typeof err?.status === 'number' ? err.status : defaultStatus;
+  const code = err?.code || defaultCode;
+  const message = defaultStatus < 500 ? err?.message || fallbackMessage : fallbackMessage;
+  sendError(res, status, code, message);
+}
+
 export class AiController {
   // 1. Obrolan AI Fasilitator & Ide Kreatif
   static async chat(req: Request, res: Response): Promise<void> {
@@ -37,8 +64,7 @@ export class AiController {
       sendData(res, result);
     } catch (err: any) {
       console.error('Gagal memproses pesan AI:', err.message);
-      const code = err.code || 'INTERNAL_ERROR';
-      sendError(res, 500, code, 'Gagal memproses permintaan chat fasilitator.');
+      handleControllerError(res, err, 'Gagal memproses permintaan chat fasilitator.');
     }
   }
 
@@ -51,7 +77,7 @@ export class AiController {
       const messages = await ChatService.getGroupMessages(groupId, since);
       sendData(res, { messages });
     } catch (err: any) {
-      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal memuat riwayat pesan kelompok.');
+      handleControllerError(res, err, 'Gagal memuat riwayat pesan kelompok.');
     }
   }
 
@@ -76,8 +102,7 @@ export class AiController {
       sendData(res, result);
     } catch (err: any) {
       console.error('Gagal split roles:', err.message);
-      const code = err.code || 'INTERNAL_ERROR';
-      sendError(res, 500, code, 'Gagal menyusun usulan pembagian peran adil.');
+      handleControllerError(res, err, 'Gagal menyusun usulan pembagian peran adil.');
     }
   }
 
@@ -88,7 +113,7 @@ export class AiController {
       const result = await SuggestionService.applySuggestion(suggestionId);
       sendData(res, result);
     } catch (err: any) {
-      sendError(res, 400, 'VALIDATION_ERROR', err.message || 'Gagal menerapkan tugas ke Kanban.');
+      handleControllerError(res, err, 'Gagal menerapkan tugas ke Kanban.', 400, 'VALIDATION_ERROR');
     }
   }
 
@@ -99,7 +124,7 @@ export class AiController {
       const success = await SuggestionService.dismissSuggestion(suggestionId);
       sendData(res, { dismissed: success });
     } catch (err: any) {
-      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal membatalkan usulan peran.');
+      handleControllerError(res, err, 'Gagal membatalkan usulan peran.');
     }
   }
 
@@ -123,7 +148,7 @@ export class AiController {
       sendData(res, result);
     } catch (err: any) {
       console.error('Gagal merekomendasikan assignee:', err.message);
-      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal merekomendasikan penanggung jawab tugas.');
+      handleControllerError(res, err, 'Gagal merekomendasikan penanggung jawab tugas.');
     }
   }
 
@@ -137,7 +162,7 @@ export class AiController {
       sendData(res, result);
     } catch (err: any) {
       console.error('Gagal memvalidasi tugas:', err.message);
-      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal memvalidasi bukti tugas siswa.');
+      handleControllerError(res, err, 'Gagal memvalidasi bukti tugas siswa.');
     }
   }
 
@@ -148,7 +173,7 @@ export class AiController {
       const result = await ValidationService.checkGroupCompleteness(groupId);
       sendData(res, result);
     } catch (err: any) {
-      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal memeriksa kelengkapan bab kelompok.');
+      handleControllerError(res, err, 'Gagal memeriksa kelengkapan bab kelompok.');
     }
   }
 
@@ -159,7 +184,7 @@ export class AiController {
       const result = await ContributionService.calculateGroupContribution(groupId);
       sendData(res, result);
     } catch (err: any) {
-      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal menghitung skala kontribusi kelompok.');
+      handleControllerError(res, err, 'Gagal menghitung skala kontribusi kelompok.');
     }
   }
 
@@ -170,7 +195,7 @@ export class AiController {
       const alerts = await GhostingService.scanRoomAlerts(roomId);
       sendData(res, { alerts });
     } catch (err: any) {
-      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal memindai peringatan tenggat tugas.');
+      handleControllerError(res, err, 'Gagal memindai peringatan tenggat tugas.');
     }
   }
 
@@ -181,7 +206,7 @@ export class AiController {
       const summary = await GhostingService.getTeacherSummary(groupId);
       sendData(res, summary);
     } catch (err: any) {
-      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal memuat ringkasan tugas guru.');
+      handleControllerError(res, err, 'Gagal memuat ringkasan tugas guru.');
     }
   }
 
@@ -192,7 +217,7 @@ export class AiController {
       const result = await GhostingService.sendFriendlyNudge(groupId);
       sendData(res, result);
     } catch (err: any) {
-      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal mengirimkan pengingat ramah ke kelompok.');
+      handleControllerError(res, err, 'Gagal mengirimkan pengingat ramah ke kelompok.');
     }
   }
 
@@ -204,7 +229,7 @@ export class AiController {
       sendData(res, result);
     } catch (err: any) {
       console.error('Gagal memproses analisis keadilan:', err.message);
-      sendError(res, 500, 'INTERNAL_ERROR', 'Gagal memproses analisis keadilan kelas.');
+      handleControllerError(res, err, 'Gagal memproses analisis keadilan kelas.');
     }
   }
 }

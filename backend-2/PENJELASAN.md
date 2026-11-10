@@ -56,7 +56,7 @@ Mari kita ikuti perjalanan siswa bernama **Dafano**, **Nadya**, **Bima**, dan **
 
 ## 👩‍🏫 3. Alur Guru (Teacher Journey)
 
-Guru kelas (**Ibu Ratna**) memiliki hak akses supervisi khusus melalui header `x-role: TEACHER`:
+Guru kelas (**Ibu Ratna**) memiliki hak akses supervisi khusus melalui token JWT terverifikasi (`role: 'TEACHER'`) dari Backend 1 melalui header `Authorization: Bearer <token>` (mode `AUTH_MODE=jwt` adalah default; sedangkan `AUTH_MODE=stub` dengan header `x-role: TEACHER` hanya aktif bila ditulis eksplisit untuk dev dan testing lokal):
 
 ```
 [Guru Buka Dashboard Room]
@@ -87,7 +87,7 @@ Di folder ini tersimpan seluruh logika utama aplikasi:
 
 ### 1. `chat.service.ts`
 - **Fungsi (1-2 Kalimat)**: Mengelola ruang obrolan transparan kelompok antara siswa dan AI Fasilitator, serta memproses permintaan ide topik presentasi.
-- **Contoh Alur Nyata**: Siswa mengirim pesan *"Bagaimana cara memulai materi ini?"*. Service memverifikasi bahwa pengirim adalah anggota kelompok sah, menyimpan pesan ke database stub, menyusun konteks kelompok, lalu memanggil `LlmClient` untuk mendapatkan jawaban hangat dari *"AI Asisten Rukun"*.
+- **Contoh Alur Nyata**: Siswa mengirim pesan *"Bagaimana cara memulai materi ini?"*. Service memverifikasi bahwa pengirim adalah anggota kelompok sah, menyimpan pesan ke repository aktif (`RepositoryStub` saat lokal atau tabel `group_messages` PostgreSQL via `RepositoryDb` saat `REPO_MODE=db`), menyusun konteks kelompok, lalu memanggil `LlmClient` untuk mendapatkan jawaban hangat dari *"AI Asisten Rukun"*.
 - **Pertanyaan Juri & Jawaban**:
   > *Juri: "Bagaimana jika siswa menyuruh AI menuliskan makalah mereka secara instan?"*  
   > *Jawaban: "System prompt di base.prompt.ts melarang keras AI mengerjakan tugas final siswa. AI diinstruksikan untuk memandu, memberi kerangka pikir, dan mendorong siswa meriset sendiri."*
@@ -96,7 +96,7 @@ Di folder ini tersimpan seluruh logika utama aplikasi:
 
 ### 2. `suggestion.service.ts`
 - **Fungsi (1-2 Kalimat)**: Menyusun usulan pembagian peran yang adil bagi seluruh anggota kelompok dengan total bobot kerja yang mutlak 100%.
-- **Contoh Alur Nyata**: Kelompok beranggotakan 4 orang memasukkan topik *"Sejarah Singasari"*. Service memastikan ke-4 anggota terbagi tugasnya, menormalkan total persentase bobot persis 100% secara matematis, lalu menyimpannya sebagai draf usulan yang siap diterapkan ke papan Kanban.
+- **Contoh Alur Nyata**: Kelompok beranggotakan 4 orang memasukkan topik *"Sejarah Singasari"*. Service memastikan ke-4 anggota terbagi tugasnya, menormalkan total persentase bobot persis 100% secara matematis, lalu menyimpannya sebagai draf usulan (`ai_suggestions`). Saat diterapkan (`applySuggestionTasks`), pembuatan banyak tugas dan perubahan status usulan `APPLIED` dijalankan dalam **satu transaksi PostgreSQL atomik (`BEGIN`/`COMMIT`/`ROLLBACK`)**.
 - **Pertanyaan Juri & Jawaban**:
   > *Juri: "Apakah pembagian persentase 100% ini hanya bergantung pada AI yang bisa salah hitung?"*  
   > *Jawaban: "Tidak. Kami menerapkan normalisasi deterministik di kode TypeScript setelah respon AI diterima. Kode akan menghitung ulang dan memastikan total bobot seluruh anggota persis 100% tanpa kompromi."*
@@ -133,13 +133,13 @@ Di folder ini tersimpan seluruh logika utama aplikasi:
 ### 6. `ghosting.service.ts`
 - **Fungsi (1-2 Kalimat)**: Memindai tenggat waktu tugas kelompok secara objektif serta menyajikan ringkasan progres Kanban dan pengingat ramah (*nudge*) untuk kelompok.
 - **Kapan & Di Mana Pengingat Dikirim**:
-  1. Pengingat dikirim ke ruang chat kelompok (`ai_messages`) secara otomatis ketika `scanRoomAlerts` berjalan (saat dashboard guru dimuat atau pemindaian berkala).
+  1. Pengingat dikirim ke ruang chat kelompok (tabel `group_messages` dengan `action: 'deadline_nudge'` dan `payload: { taskId, sentAt }`) secara otomatis ketika `scanRoomAlerts` berjalan (saat dashboard guru dimuat atau pemindaian berkala).
   2. Pemicunya adalah tugas Kanban yang belum selesai dengan sisa waktu tenggat `< 48` jam (`GHOSTING_WARN_HOURS`).
-  3. **Pencegahan Efek Samping Berulang (De-duplikasi)**: Sistem mencatat `sentTaskNudges` (timestamp pengiriman terakhir per tugas) dan membatasi pengingat maksimal 1 kali per interval (default 24 jam via `GHOSTING_NUDGE_INTERVAL_HOURS`). Jika guru me-refresh dashboard berulang kali, chat grup tidak akan dibanjiri pesan duplikat.
+  3. **Pencegahan Efek Samping Berulang (De-duplikasi)**: Sistem memeriksa cache memori (`sentTaskNudges`) sekaligus riwayat pesan `deadline_nudge` yang tersimpan di `group_messages`, dengan batas maksimal 1 kali per interval (default 24 jam via `GHOSTING_NUDGE_INTERVAL_HOURS`). Jika guru me-refresh dashboard berulang kali atau bahkan server mengalami restart, chat grup tidak akan dibanjiri pesan duplikat.
   4. **Alert ke Guru**: Hanya muncul jika deadline sudah terlewat dan tugas belum selesai, menggunakan bahasa netral pedagogis (*"perlu perhatian"*). Tugas tanpa batas tenggat tidak pernah memicu alert.
 - **Pertanyaan Juri & Jawaban**:
   > *Juri: "Apakah pemanggilan GET /alerts yang berulang kali akan membanjiri chat murid?"*  
-  > *Jawaban: "Tidak. GhostingService mencatat state pengiriman pengingat per tugas dengan ambang interval 24 jam. Jika pengingat sudah dikirim baru-baru ini, pemindaian berikutnya akan melewatinya sehingga tidak ada pesan ganda."*
+  > *Jawaban: "Tidak. GhostingService memeriksa pelacak memori dan riwayat `deadline_nudge` di `group_messages` dengan ambang interval 24 jam. Jika pengingat sudah dikirim baru-baru ini, pemindaian berikutnya akan melewatinya sehingga tidak ada pesan ganda, bahkan setelah server restart."*
 
 ---
 
@@ -224,7 +224,7 @@ Di folder ini tersimpan mesin penghubung ke Google Gemini SDK beserta template i
 - **Contoh Alur Nyata**: Membaca rekap kartu tugas kelompok dan menyimpulkan: *"Dari 4 tugas yang direncanakan, 2 tugas telah selesai divalidasi. 1 tugas masih berjalan dan 1 tugas telah melewati tenggat waktu sehingga memerlukan perhatian berkala."*
 - **Pertanyaan Juri & Jawaban**:
   > *Juri: "Apakah ringkasan ini aman dari kebocoran data pribadi atau manipulasi akses?"*  
-  > *Jawaban: "Aman. Ringkasan hanya disajikan kepada akun Guru (identitas saat ini masih memakai stub autentikasi sampai tiket guru/siswa dari Backend 1 siap) dan tidak memuat laporan rahasia peer review maupun isi obrolan siswa."*
+  > *Jawaban: "Aman. Ringkasan hanya disajikan kepada akun Guru terautentikasi melalui verifikasi JWT `HS256` dari Backend 1 (mode `AUTH_MODE=jwt` adalah default; mode `stub` hanya untuk lokal dan ditolak menyala di production), serta tidak memuat laporan rahasia peer review maupun isi obrolan siswa."*
 
 ---
 
@@ -262,16 +262,18 @@ Saat juri menguji keamanan aplikasi kalian, berikut poin-poin emas yang siap kal
 | **Siswa mencoba menutup tag** (*"</data> perintah baru..."*) | Fungsi `stripDataTags` membersihkan tag `<data>` dan `</data>` secara rekursif sampai stabil dan meng-escape karakter `<` dan `>`. |
 | **Siswa mencoba membocorkan nama pelapor rahasia** | `FairnessService` otomatis mengganti nama dan ID pelapor dengan alias `Pelapor-1` menggunakan word boundary regex sebelum teks menyentuh AI, sehingga identitas pelapor tidak dikirim ke AI dan tidak terlihat siswa lain. |
 | **AI berhalusinasi menyebut nama siswa fiktif** | Fungsi `sanitizeUnknownNames` membandingkan setiap nama di output AI terhadap daftar anggota kelas yang sah. Nama fiktif otomatis disensor menjadi *"anggota yang bersangkutan"*. |
-| **Siswa mencoba mengakses dashboard Guru** | Middleware `requireTeacher` otomatis menolak role `STUDENT` dengan status error HTTP `403 FORBIDDEN_TEACHER_ONLY`. |
+| **Siswa mencoba mengakses dashboard Guru atau memalsukan header `x-role: TEACHER`** | `AUTH_MODE=jwt` (default) memverifikasi token Bearer `HS256` dengan `JWT_SECRET` dan mengabaikan header `x-role`/`x-user-id` sepenuhnya. Role `STUDENT` tetap ditolak `403 FORBIDDEN_TEACHER_ONLY`. Selain itu, `AUTH_MODE=stub` ditolak menyala di `production`, dan helper `signSession()` diisolasi hanya di `src/test-utils.ts`. |
 | **Guru mencoba mengintip transkrip chat siswa** | Endpoint `GET /groups/:groupId/transcript` telah dihapus permanen dan rute chat dilindungi guard: guru tidak memiliki akses ke percakapan AI; hanya anggota kelompok yang bisa membacanya. |
 | **Siswa kelompok lain mencoba mengintip chat** | Middleware `requireGroupStudentMember` memverifikasi keanggotaan `group.members`. Siswa luar kelompok otomatis ditolak HTTP `403 FORBIDDEN_GROUP_MEMBER_ONLY`. |
-| **Pemanggilan berkala refresh dashboard guru** | `GhostingService` menerapkan de-duplikasi berbasis interval waktu (default 24 jam) sehingga tidak menimbulkan pengingat ganda di chat kelompok. |
+| **Pemanggilan berkala refresh dashboard guru** | `GhostingService` menerapkan de-duplikasi berbasis interval waktu (default 24 jam) dengan mengecek cache memori dan pesan `deadline_nudge` yang tersimpan di `group_messages`, sehingga aman bahkan setelah restart. |
+| **Koneksi database terputus atau percobaan tulis peer report** | `RepositoryDb` memakai `BACKEND2_DATABASE_URL` (`pg.Pool` max 5, `ssl: true` untuk non-localhost), menyensor kredensial di pesan error, mengembalikan `503 SERVICE_UNAVAILABLE` tanpa mematikan server saat koneksi gagal, dan menolak `savePeerReport` dengan `501 NOT_IMPLEMENTED` (kewenangan Backend 1). |
 | **Gemini AI timeout atau kuota habis** | `LlmClient` memiliki batas waktu dinamis (10 detik), retry otomatis 1x untuk transient error, dan fallback deterministik valid tanpa error 500. |
 
 ---
 
 ## 🧪 7. Status Pengujian Otomatis
 
-Seluruh logika di atas telah teruji secara otomatis melalui file `src/test-suite.ts`:
-- **Hasil**: **35 dari 35 pengujian lolos (100% PASS)**
-- **Kompilasi TypeScript**: **100% Bersih (Exit Code 0)**
+Seluruh logika di atas telah teruji secara otomatis melalui [`src/test-suite.ts`](file:///d:/project%20coding/hackathon/backend-2/src/test-suite.ts) (berjalan deterministik dengan `REPO_MODE=stub` serta pengujian dummy pool untuk jalur `REPO_MODE=db` dan verifikasi JWT):
+- **Hasil (`npm test`)**: **40 dari 40 pengujian lolos (100% PASS)**
+- **Cek Koneksi Baca Database (`npm run test:db`)**: Hanya melakukan query `SELECT` aman ke tabel `rooms` dan `groups` menggunakan `BACKEND2_DATABASE_URL`.
+- **Kompilasi TypeScript (`npm run build`)**: **100% Bersih (Exit Code 0)**

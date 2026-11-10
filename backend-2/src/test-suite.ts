@@ -3,7 +3,15 @@ process.env.REPO_MODE = 'stub'; // Wajib: npm test selalu memakai repository stu
 process.env.AUTH_MODE = 'stub'; // Wajib: pengujian suite dasar memakai mode stub
 
 import http from 'http';
-import { repo } from './deps/repository.stub.js';
+import { repo, setDbPoolOverrideForTest } from './deps/repository.stub.js';
+import {
+  DbEnumMapper,
+  QueryablePool,
+  RepositoryDb,
+  sanitizeDbErrorMessage,
+  toIsoString,
+} from './deps/repository.db.js';
+import { GhostingService } from './services/ghosting.service.js';
 import { LlmClient } from './modules/ai/llm.client.js';
 import { stripDataTags, sanitizeUnknownNames } from './lib/sanitize.js';
 import { signSession } from './test-utils.js';
@@ -661,21 +669,25 @@ process.env.REPO_MODE = 'stub'; // Wajib: npm test selalu memakai repository stu
     });
     const msgsAfterFirstScan = await repo.getAiMessages(testGroupId);
     const nudgeCount1 = msgsAfterFirstScan.filter(
-      (m) => m.action === 'nudge' && m.content.includes('Tugas Dekat Deadline Uji Nudge')
+      (m) => m.action === 'deadline_nudge' && m.content.includes('Tugas Dekat Deadline Uji Nudge')
     ).length;
 
-    // Panggilan kedua (simulasi refresh halaman guru): Tidak boleh ada pesan duplikat
+    // Simulasi restart server (hapus tracker memori) + panggilan kedua: tidak boleh ada pesan ganda karena tersimpan di group_messages
+    GhostingService.resetNudgeTracker();
     await fetch(`${BASE_URL}/rooms/${testRoomId}/alerts`, {
       headers: { 'x-role': 'TEACHER' },
     });
     const msgsAfterSecondScan = await repo.getAiMessages(testGroupId);
+    const persistedNudgeMsg = msgsAfterSecondScan.find(
+      (m) => m.action === 'deadline_nudge' && m.content.includes('Tugas Dekat Deadline Uji Nudge')
+    );
     const nudgeCount2 = msgsAfterSecondScan.filter(
-      (m) => m.action === 'nudge' && m.content.includes('Tugas Dekat Deadline Uji Nudge')
+      (m) => m.action === 'deadline_nudge' && m.content.includes('Tugas Dekat Deadline Uji Nudge')
     ).length;
 
     assert(
-      nudgeCount1 === 1 && nudgeCount2 === 1,
-      'Pengingat Deadline: Memanggil alerts dua kali tidak membuat pengingat ganda di grup (de-duplikasi sukses)'
+      nudgeCount1 === 1 && nudgeCount2 === 1 && Boolean(persistedNudgeMsg?.payload?.taskId),
+      'Pengingat Deadline: Memanggil alerts dua kali (bahkan setelah reset tracker) tidak membuat pengingat ganda berkat persistensi payload taskId'
     );
 
     // 36. Mode Otentikasi JWT: Verifikasi Bearer Token dari Backend 1
@@ -768,6 +780,218 @@ process.env.REPO_MODE = 'stub'; // Wajib: npm test selalu memakai repository stu
 
     // Kembalikan mode ke stub setelah pengujian
     process.env.AUTH_MODE = 'stub';
+
+    // 38. RepositoryDb: Enum mapping dua arah, konversi Date -> ISO, sanitasi error & penulisan peer report 501
+    const sampleDate = new Date('2026-11-12T10:30:00.000Z');
+    const enumOk =
+      DbEnumMapper.taskStatusToApp('IN_PROGRESS') === 'in_progress' &&
+      DbEnumMapper.taskStatusToDb('in_progress') === 'IN_PROGRESS' &&
+      DbEnumMapper.evidenceTypeToApp('HANDWRITTEN_PHOTO') === 'handwritten_photo' &&
+      DbEnumMapper.evidenceTypeToDb('handwritten_photo') === 'HANDWRITTEN_PHOTO' &&
+      DbEnumMapper.evidenceStatusToApp('SUSPICIOUS') === 'suspicious' &&
+      DbEnumMapper.evidenceStatusToDb('suspicious') === 'SUSPICIOUS' &&
+      DbEnumMapper.activityTypeToApp('DOCUMENT') === 'document' &&
+      DbEnumMapper.suggestionTypeToApp('ROLE_SPLIT') === 'role_split' &&
+      DbEnumMapper.suggestionStatusToDb('dismissed') === 'DISMISSED' &&
+      DbEnumMapper.flagKindToApp('TASK_OVERDUE') === 'task_overdue' &&
+      DbEnumMapper.flagKindToDb('task_overdue') === 'TASK_OVERDUE';
+
+    const dateOk =
+      toIsoString(sampleDate) === '2026-11-12T10:30:00.000Z' &&
+      toIsoString('2026-11-12T10:30:00.000Z') === '2026-11-12T10:30:00.000Z' &&
+      toIsoString(null) === undefined &&
+      toIsoString(undefined) === undefined;
+
+    const leakedUrl = 'postgresql://backend2:RahasiaSangatKuat99@ep-cool-neon.aws.neon.tech/kelompok_adil?sslmode=require';
+    const sanitizedErr = sanitizeDbErrorMessage(new Error(`Gagal terhubung ke ${leakedUrl} password=secret123`));
+    const sanitizeOk =
+      !sanitizedErr.includes('RahasiaSangatKuat99') &&
+      !sanitizedErr.includes('secret123') &&
+      !sanitizedErr.includes('ep-cool-neon');
+
+    const isolatedDbRepo = new RepositoryDb();
+    let peerReport501Ok = false;
+    try {
+      await isolatedDbRepo.savePeerReport({
+        roomId: 'r1',
+        groupId: 'g1',
+        reporterId: 'm1',
+        reportedMemberId: 'm2',
+        reportedMemberName: 'Rafi',
+        rating: 1,
+        feedback: 'test',
+      });
+    } catch (err: any) {
+      peerReport501Ok = err?.status === 501 && err?.code === 'NOT_IMPLEMENTED';
+    }
+
+    assert(
+      enumOk && dateOk && sanitizeOk && peerReport501Ok,
+      'RepositoryDb: Enum dua arah, konversi Date->ISO, sanitasi error & savePeerReport 501 berfungsi benar'
+    );
+
+    // 39. RepositoryDb: Transaksi atomik applySuggestionTasks (COMMIT & ROLLBACK) + client.release() + 503 saat BACKEND2_DATABASE_URL kosong
+    const rollbackLog: string[] = [];
+    let rollbackReleased = false;
+    const rollbackDummyPool: QueryablePool = {
+      async query() {
+        return { rows: [], rowCount: 0 };
+      },
+      async connect() {
+        return {
+          async query(sql: string) {
+            const head = sql.trim().split(/\s+/)[0].toUpperCase();
+            rollbackLog.push(head);
+            if (sql.includes('UPDATE "ai_suggestions"')) {
+              return { rows: [], rowCount: 0 }; // Paksa gagal agar memicu ROLLBACK
+            }
+            if (sql.includes('INSERT INTO "tasks"')) {
+              return {
+                rows: [
+                  {
+                    id: 't-tx-1',
+                    groupId: 'g-tx',
+                    title: 'Tugas Transaksi',
+                    description: 'desc',
+                    assigneeId: 'm-1',
+                    status: 'TODO',
+                    weight: 100,
+                    deadline: sampleDate,
+                    evidenceType: 'GOOGLE_DOCS',
+                    createdAt: sampleDate,
+                  },
+                ],
+                rowCount: 1,
+              };
+            }
+            return { rows: [], rowCount: 0 };
+          },
+          release() {
+            rollbackReleased = true;
+          },
+        };
+      },
+    };
+
+    const txRepo = new RepositoryDb(rollbackDummyPool);
+    let txRolledBack = false;
+    try {
+      await txRepo.applySuggestionTasks('sug-sudah-terproses', 'g-tx', [
+        { title: 'Tugas 1', status: 'todo', weight: 100, deadline: sampleDate.toISOString(), evidenceType: 'google_docs' },
+      ]);
+    } catch {
+      txRolledBack = true;
+    }
+
+    const prevDbUrl = process.env.BACKEND2_DATABASE_URL;
+    try {
+      delete process.env.BACKEND2_DATABASE_URL;
+      setDbPoolOverrideForTest(null);
+      process.env.REPO_MODE = 'db';
+      const resDb503 = await fetch(`${BASE_URL}/groups/group-1/contributions`);
+      const dataDb503: any = await resDb503.json();
+
+      assert(
+        txRolledBack &&
+          rollbackLog.includes('BEGIN') &&
+          rollbackLog.includes('ROLLBACK') &&
+          !rollbackLog.includes('COMMIT') &&
+          rollbackReleased &&
+          resDb503.status === 503 &&
+          dataDb503.error?.code === 'SERVICE_UNAVAILABLE',
+        'RepositoryDb: Transaksi applySuggestionTasks melakukan ROLLBACK + release client saat gagal, dan mode db tanpa URL mengembalikan 503'
+      );
+    } finally {
+      process.env.REPO_MODE = 'stub';
+      if (prevDbUrl !== undefined) process.env.BACKEND2_DATABASE_URL = prevDbUrl;
+    }
+
+    // 40. Mode DB Dummy Pool: FairnessService tetap menyamarkan reporterId & nama pelapor di prompt LLM
+    const dummyDbPool: QueryablePool = {
+      async query(sql: string) {
+        if (sql.includes('FROM "rooms"')) {
+          return {
+            rows: [
+              {
+                id: 'room-db-1',
+                title: 'Kelas Sejarah Mode DB',
+                subject: 'Sejarah',
+                className: 'XI IPS 1',
+                deadline: new Date('2026-12-01T00:00:00.000Z'),
+                aiEnabled: true,
+                teacherId: 'guru-db-1',
+              },
+            ],
+            rowCount: 1,
+          };
+        }
+        if (sql.includes('FROM "groups"')) {
+          return {
+            rows: [{ id: 'group-db-1', roomId: 'room-db-1', name: 'Kelompok Garuda' }],
+            rowCount: 1,
+          };
+        }
+        if (sql.includes('FROM "room_participants"')) {
+          return {
+            rows: [
+              { id: 'p-pelapor-rahasia', groupId: 'group-db-1', name: 'Siti Rahma' },
+              { id: 'p-terlapor-db', groupId: 'group-db-1', name: 'Bima Sakti' },
+            ],
+            rowCount: 2,
+          };
+        }
+        if (sql.includes('FROM "peer_reports"')) {
+          return {
+            rows: [
+              {
+                id: 'rep-db-1',
+                roomId: 'room-db-1',
+                groupId: 'group-db-1',
+                reporterId: 'p-pelapor-rahasia',
+                reportedMemberId: 'p-terlapor-db',
+                reportedMemberName: 'Bima Sakti',
+                rating: 2,
+                feedback: 'Saya Siti Rahma (p-pelapor-rahasia) merasa Bima Sakti belum menyetor dokumen.',
+                createdAt: new Date('2026-11-10T08:00:00.000Z'),
+              },
+            ],
+            rowCount: 1,
+          };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+      async connect() {
+        return {
+          async query() {
+            return { rows: [], rowCount: 0 };
+          },
+          release() {},
+        };
+      },
+    };
+
+    try {
+      setDbPoolOverrideForTest(dummyDbPool);
+      process.env.REPO_MODE = 'db';
+      const resFairnessDb = await fetch(`${BASE_URL}/rooms/room-db-1/analyze-fairness`, {
+        method: 'POST',
+        headers: { 'x-role': 'TEACHER', 'Content-Type': 'application/json' },
+      });
+      const dataFairnessDb: any = await resFairnessDb.json();
+      const dbFairnessPrompt = LlmClient.getLastPrompt() || '';
+
+      assert(
+        resFairnessDb.status === 200 &&
+          dataFairnessDb.data?.totalReports === 1 &&
+          dbFairnessPrompt.includes('Pelapor-1') &&
+          !dbFairnessPrompt.includes('Siti Rahma') &&
+          !dbFairnessPrompt.includes('p-pelapor-rahasia'),
+        'Mode DB (Dummy Pool): FairnessService menyamarkan nama & ID pelapor menjadi Pelapor-1 pada prompt LLM'
+      );
+    } finally {
+      setDbPoolOverrideForTest(null);
+      process.env.REPO_MODE = 'stub';
+    }
   } catch (e: any) {
     console.error('Terjadi error saat pengujian:', e);
     allPassed = false;
@@ -775,7 +999,7 @@ process.env.REPO_MODE = 'stub'; // Wajib: npm test selalu memakai repository stu
     server.close();
     console.log('\n=========================================');
     if (allPassed) {
-      console.log('🎉 SEMUA 37 PENGUJIAN FITUR, KONTRAK & KEAMANAN BERHASIL (100% PASS)!');
+      console.log('🎉 SEMUA 40 PENGUJIAN FITUR, KONTRAK & KEAMANAN BERHASIL (100% PASS)!');
     } else {
       console.log('⚠️ TERDAPAT PENGUJIAN YANG GAGAL.');
     }

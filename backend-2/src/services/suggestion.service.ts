@@ -229,8 +229,7 @@ Catatan Tambahan Siswa: "${sanitizedNotes || 'Tidak ada'}"
       evidenceType: a.evidenceType,
     }));
 
-    const created = await repo.createTasks(sug.groupId, newTasks);
-    await repo.updateAiSuggestionStatus(suggestionId, 'applied');
+    const created = await repo.applySuggestionTasks(suggestionId, sug.groupId, newTasks);
 
     return {
       appliedCount: created.length,

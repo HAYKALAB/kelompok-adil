@@ -51,11 +51,12 @@ export class GhostingService {
    * Peringatan kendala tugas untuk dashboard guru (Aturan Baru Berbasis Tenggat)
    * 
    * KAPAN DAN DI MANA PENGINGAT DIKIRIM:
-   * - Pengingat ramah otomatis dikirim ke ruang obrolan terbuka kelompok (tabel ai_messages)
-   *   ketika tugas Kanban kelompok belum selesai dan sisa waktu menuju tenggat < warnHours (default 48 jam).
+   * - Pengingat ramah otomatis dikirim ke ruang obrolan terbuka kelompok (tabel group_messages)
+   *   dengan action 'deadline_nudge' dan payload { taskId, sentAt } ketika tugas Kanban kelompok
+   *   belum selesai dan sisa waktu menuju tenggat < warnHours (default 48 jam).
    * - PENCEGAHAN EFEK SAMPING BERULANG:
    *   Setiap tugas memiliki batas pengiriman maksimal satu pengingat per interval (default 24 jam via GHOSTING_NUDGE_INTERVAL_HOURS).
-   *   Jika dipanggil berulang kali (misalnya refresh halaman guru), sistem tidak akan mengirimkan pengingat ganda.
+   *   Pengecekan memakai cache in-memory DAN riwayat group_messages yang terpersisten (tahan restart).
    * - ALERT GURU:
    *   HANYA muncul jika deadline SUDAH LEWAT dan tugas BELUM SELESAI, dengan bahasa netral ("perlu perhatian").
    * - TUGAS TANPA DEADLINE:
@@ -82,6 +83,7 @@ export class GhostingService {
       group.members.forEach((m) => memberMap.set(m.id, m.name));
 
       const tasks = await repo.getTasks(group.id);
+      let recentDeadlineNudges: Map<string, number> | null = null;
 
       for (const t of tasks) {
         // 1. Tugas tanpa deadline TIDAK PERNAH memicu alert ke guru
@@ -130,8 +132,33 @@ export class GhostingService {
         }
         // Kasus 2: Deadline kurang dari N jam (default 48 jam) dan belum selesai -> Kirim pengingat ramah ke grup (tanpa menyebut nama siapa pun)
         else if (diffHours < warnHours) {
-          // Pencegahan efek samping berulang: cek apakah pengingat untuk tugas ini sudah pernah dikirim dalam jeda waktu nudgeIntervalHours
-          const lastSentTime = GhostingService.sentTaskNudges.get(t.id);
+          // 1. Cek pelacak in-memory terlebih dahulu
+          let lastSentTime = GhostingService.sentTaskNudges.get(t.id);
+
+          // 2. Cek catatan pengingat yang tersimpan di group_messages agar tahan restart server
+          if (!lastSentTime || nowTime - lastSentTime >= nudgeIntervalMs) {
+            if (recentDeadlineNudges === null) {
+              recentDeadlineNudges = new Map();
+              const sinceIso = new Date(nowTime - nudgeIntervalMs).toISOString();
+              const recentMsgs = await repo.getAiMessages(group.id, sinceIso, 100);
+              for (const m of recentMsgs) {
+                const msgPayload = m.payload ?? m.structuredPayload;
+                if (m.action === 'deadline_nudge' && msgPayload?.taskId) {
+                  const msgTime = new Date(m.createdAt).getTime();
+                  const prev = recentDeadlineNudges.get(msgPayload.taskId) ?? 0;
+                  if (msgTime > prev) {
+                    recentDeadlineNudges.set(msgPayload.taskId, msgTime);
+                  }
+                }
+              }
+            }
+            const persistedTime = recentDeadlineNudges.get(t.id);
+            if (persistedTime && (!lastSentTime || persistedTime > lastSentTime)) {
+              lastSentTime = persistedTime;
+              GhostingService.sentTaskNudges.set(t.id, persistedTime);
+            }
+          }
+
           if (lastSentTime && nowTime - lastSentTime < nudgeIntervalMs) {
             // Sudah dikirim baru-baru ini, lewati agar tidak menimbulkan spam pengingat duplikat
             continue;
@@ -142,12 +169,19 @@ export class GhostingService {
             groupId: group.id,
             senderType: 'ai',
             senderName: 'AI Asisten Rukun',
-            action: 'nudge',
+            action: 'deadline_nudge',
             content: `Halo rekan-rekan ${group.name}! 👋 Pengingat ramah: tugas "${t.title}" memiliki batas tenggat dalam waktu kurang dari ${remainingHours} jam. Yuk saling bantu dan koordinasikan di papan Kanban agar selesai tepat waktu! ✨`,
+            payload: {
+              taskId: t.id,
+              sentAt: new Date(nowTime).toISOString(),
+            },
           });
 
           // Catat bahwa pengingat telah dikirim untuk tugas ini
           GhostingService.sentTaskNudges.set(t.id, nowTime);
+          if (recentDeadlineNudges) {
+            recentDeadlineNudges.set(t.id, nowTime);
+          }
         }
       }
     }

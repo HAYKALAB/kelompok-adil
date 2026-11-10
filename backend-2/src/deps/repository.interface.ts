@@ -3,6 +3,26 @@
  * Digunakan oleh implementasi Stub (In-Memory) dan Database PostgreSQL (Backend 1).
  */
 
+export class DatabaseServiceUnavailableError extends Error {
+  public readonly status = 503;
+  public readonly code = 'SERVICE_UNAVAILABLE';
+
+  constructor(message = 'Layanan database sedang tidak tersedia atau gagal dihubungi.') {
+    super(message);
+    this.name = 'DatabaseServiceUnavailableError';
+  }
+}
+
+export class NotImplementedError extends Error {
+  public readonly status = 501;
+  public readonly code = 'NOT_IMPLEMENTED';
+
+  constructor(message = 'Operasi ini tidak tersedia pada Backend 2.') {
+    super(message);
+    this.name = 'NotImplementedError';
+  }
+}
+
 export interface RoomData {
   id: string;
   name: string;
@@ -60,10 +80,10 @@ export interface TeacherData {
 export interface AiMessage {
   id: string;
   groupId: string;
-  senderType: 'member' | 'ai';
+  senderType: 'member' | 'student' | 'ai';
   senderId?: string;
   senderName: string;
-  action?: 'chat' | 'ideas' | 'split_roles' | 'check_completeness' | 'nudge' | string;
+  action?: 'chat' | 'ideas' | 'split_roles' | 'check_completeness' | 'nudge' | 'deadline_nudge' | string;
   content: string;
   payload?: any; // Kolom Json payload di skema Backend 1
   structuredPayload?: any; // Kompatibilitas backwards service
@@ -132,6 +152,11 @@ export interface IRepository {
   saveAiSuggestion(sug: Omit<AiSuggestion, 'id' | 'createdAt'>): Promise<AiSuggestion>;
   getAiSuggestion(id: string): Promise<AiSuggestion | null>;
   updateAiSuggestionStatus(id: string, status: 'pending' | 'applied' | 'dismissed'): Promise<AiSuggestion | null>;
+  applySuggestionTasks(
+    suggestionId: string,
+    groupId: string,
+    newTasks: Omit<TaskData, 'id' | 'groupId' | 'createdAt'>[]
+  ): Promise<TaskData[]>;
   saveAiFlag(flag: Omit<AiFlag, 'id' | 'createdAt'>): Promise<AiFlag>;
   getAiFlags(groupId?: string): Promise<AiFlag[]>;
   saveSnapshot(snapshot: AiContributionSnapshot): Promise<void>;

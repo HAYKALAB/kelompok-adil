@@ -17,18 +17,27 @@ async function runDbTest() {
   console.log('🔍 Menjalankan Pengujian Baca Database (REPO_MODE=db)');
   console.log('----------------------------------------------------');
 
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = process.env.BACKEND2_DATABASE_URL;
   if (!connectionString || connectionString.trim() === '') {
-    console.error('❌ Gagal: Variabel environment DATABASE_URL belum diatur.');
-    console.error('💡 Silakan isi DATABASE_URL pada file .env untuk menguji koneksi database.');
+    console.error('❌ Gagal: Variabel environment BACKEND2_DATABASE_URL belum diatur.');
+    console.error('💡 Silakan isi BACKEND2_DATABASE_URL pada file .env untuk menguji koneksi database.');
     process.exit(1);
   }
 
-  // Tentukan konfigurasi SSL yang kompatibel dengan serverless PostgreSQL (Neon)
-  const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
+  // Tentukan konfigurasi SSL terverifikasi penuh untuk host non-localhost (Neon)
+  let isLocal = false;
+  try {
+    const parsed = new URL(connectionString);
+    const host = parsed.hostname.toLowerCase();
+    isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  } catch {
+    isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
+  }
+
   const pool = new Pool({
     connectionString,
-    ssl: isLocal ? false : { rejectUnauthorized: false },
+    max: 5,
+    ssl: isLocal ? false : true,
     connectionTimeoutMillis: 5000,
   });
 

@@ -17,17 +17,10 @@ import {
   AiFlag,
   AiContributionSnapshot,
   PeerReport,
+  DatabaseServiceUnavailableError,
+  NotImplementedError,
 } from './repository.interface.js';
-
-export class DatabaseServiceUnavailableError extends Error {
-  public readonly status = 503;
-  public readonly code = 'SERVICE_UNAVAILABLE';
-
-  constructor(message = 'Layanan database sedang tidak tersedia atau sedang dalam penyesuaian skema.') {
-    super(message);
-    this.name = 'DatabaseServiceUnavailableError';
-  }
-}
+import { RepositoryDb } from './repository.db.js';
 
 // In-Memory Database Store
 export class RepositoryStub implements IRepository {
@@ -417,6 +410,20 @@ export class RepositoryStub implements IRepository {
     return sug;
   }
 
+  public async applySuggestionTasks(
+    suggestionId: string,
+    groupId: string,
+    newTasks: Omit<TaskData, 'id' | 'groupId' | 'createdAt'>[]
+  ): Promise<TaskData[]> {
+    const sug = this.aiSuggestions.get(suggestionId);
+    if (!sug || sug.status !== 'pending') {
+      throw new Error('Usulan tidak ditemukan atau sudah diproses');
+    }
+    const created = await this.createTasks(groupId, newTasks);
+    sug.status = 'applied';
+    return created;
+  }
+
   public async saveAiFlag(flag: Omit<AiFlag, 'id' | 'createdAt'>): Promise<AiFlag> {
     const saved: AiFlag = {
       ...flag,
@@ -441,28 +448,33 @@ export class RepositoryStub implements IRepository {
   }
 }
 
-// Instance singleton stub
+// Instance singleton stub & database
 const stubInstance = new RepositoryStub();
+const dbInstance = new RepositoryDb();
 
 /**
  * Factory untuk memilih implementasi repository berdasarkan variabel environment REPO_MODE.
  * Default: 'stub'.
- * Jika 'db' aktif sebelum repository.db.ts terpasang, mengembalikan adapter 503 yang aman tanpa membocorkan kredensial koneksi.
+ * Jika REPO_MODE=db, mendelegasikan seluruh operasi ke RepositoryDb (PostgreSQL pg.Pool).
  */
 function createRepository(): IRepository {
   return new Proxy(stubInstance as unknown as IRepository, {
-    get(target, prop, receiver) {
+    get(_target, prop) {
       const mode = (process.env.REPO_MODE || 'stub').toLowerCase().trim();
-      if (mode === 'db') {
-        return async () => {
-          throw new DatabaseServiceUnavailableError(
-            'Layanan database Backend 1 sedang dalam sinkronisasi skema. Gunakan REPO_MODE=stub sementara waktu.'
-          );
-        };
-      }
-      return Reflect.get(target, prop, receiver);
+      const activeRepo: any = mode === 'db' ? dbInstance : stubInstance;
+      const value = Reflect.get(activeRepo, prop, activeRepo);
+      return typeof value === 'function' ? value.bind(activeRepo) : value;
     },
   });
 }
 
+export { DatabaseServiceUnavailableError, NotImplementedError };
 export const repo: IRepository = createRepository();
+
+/**
+ * Khusus environment test: mengarahkan RepositoryDb memakai dummy pool saat REPO_MODE=db diuji.
+ */
+export function setDbPoolOverrideForTest(pool: Parameters<RepositoryDb['setPoolOverrideForTest']>[0]): void {
+  if (process.env.NODE_ENV !== 'test') return;
+  dbInstance.setPoolOverrideForTest(pool);
+}

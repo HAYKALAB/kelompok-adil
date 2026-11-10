@@ -91,15 +91,18 @@ Backend 2 mendukung dua mode penyimpanan data melalui variabel environment `REPO
    - Seluruh pengujian rutin (`npm test`) secara mutlak dipaksa berjalan pada mode stub untuk menjamin stabilitas CI/CD.
 
 2. **Mode Database (`REPO_MODE=db`)**:
-   - Membaca data langsung dari tabel PostgreSQL / Neon milik Backend 1 dengan SSL aktif.
-   - **Keamanan Data & Privasi Koneksi**: Pesan error dan log server tidak pernah mencetak string koneksi, token, password, atau secret.
+   - Menghubungkan ke PostgreSQL / Neon milik Backend 1 menggunakan variabel environment **`BACKEND2_DATABASE_URL`** dengan `pg.Pool` ringan (`max: 5`) dan SSL terverifikasi penuh (`ssl: true` untuk host non-localhost, SSL dinonaktifkan hanya untuk `localhost` / `127.0.0.1`).
+   - **Hak Akses Role Database (`backend2`)**: Role `backend2` hanya memiliki hak `SELECT` pada seluruh tabel serta `INSERT`/`UPDATE` terbatas pada `tasks`, `ai_suggestions`, `ai_flags`, dan `group_messages` (tanpa `DELETE`). Tabel `rooms`, `groups`, `activities`, dan `peer_reports` hanya boleh dibaca.
+   - **Penulisan Peer Report (`501 NOT_IMPLEMENTED`)**: Penulisan laporan `peer_reports` merupakan tugas endpoint **Backend 1**. Jika ada pemanggilan tulis (`savePeerReport`) di mode `db`, Backend 2 menolak dengan status HTTP `501 NOT_IMPLEMENTED`.
+   - **Transaksi Atomik**: Operasi multi-baris seperti penerapan usulan peran (`applySuggestionTasks`: insert tugas baru + update status usulan `APPLIED`) dijalankan dalam satu transaksi (`BEGIN` / `COMMIT` / `ROLLBACK`).
+   - **Keamanan Data & Privasi Koneksi**: Pesan error dan log server tidak pernah mencetak `BACKEND2_DATABASE_URL`, string koneksi, token, password, atau secret.
    - **Ketahanan Server (Anti-Crash)**: Jika koneksi ke database terputus atau gagal, server tetap menyala dan mengembalikan status HTTP `503 SERVICE_UNAVAILABLE` yang jelas bagi klien.
-   - **Skrip `npm run test:db`**: Menguji koneksi database secara read-only (hanya operasi `SELECT` pada tabel `rooms` dan `groups`, tanpa penulisan apa pun).
+   - **Skrip `npm run test:db`**: Menguji koneksi database memakai `BACKEND2_DATABASE_URL` secara read-only (hanya operasi `SELECT` pada tabel `rooms` dan `groups`, tanpa penulisan apa pun).
 
-### ⚠️ Keterbatasan Mode Database (Data In-Memory):
-Beberapa data operasional internal tetap disimpan di memori (*in-memory*) demi performa dan pencegahan spam:
-- **Pelacakan Pengingat Tenggat (`sentTaskNudges`)**: Riwayat timestamp pengiriman pengingat ramah per tugas disimpan in-memory guna mencegah pesan duplikat ke chat grup dalam jendela interval 24 jam.
-- **Cache Ringkasan Guru (`summaryCache`)**: Hasil komputasi dan analisis ringkasan progres tugas guru disimpan in-memory selama 10 menit untuk menghemat beban database dan kuota LLM.
+### ⚠️ Keterbatasan & Persistensi Mode Database:
+- **Pengingat Tenggat (`deadline_nudge`)**: Catatan pengingat ramah kini juga dipersistenkan ke tabel `group_messages` dengan `action = 'deadline_nudge'` dan `payload = { taskId, sentAt }` (selain cache in-memory `sentTaskNudges`), sehingga de-duplikasi pengingat tetap bertahan meskipun server mengalami restart.
+- **Cache Ringkasan Guru (`summaryCache`)**: Hasil komputasi dan analisis ringkasan progres tugas guru disimpan *in-memory* selama 10 menit untuk menghemat beban database dan kuota LLM.
+- **Snapshot Kontribusi (`snapshotsCache`)**: Karena skema database Backend 1 tidak memiliki tabel snapshot kontribusi, pemanggilan `saveSnapshot` dan `getLatestSnapshots` tetap disimpan *in-memory*.
 
 ---
 
@@ -119,7 +122,7 @@ Seluruh endpoint di bawah `/api/ai` mematuhi format respons standar tim hackatho
 ```json
 {
   "error": {
-    "code": "VALIDATION_ERROR | UNAUTHORIZED | FORBIDDEN_TEACHER_ONLY | FORBIDDEN_STUDENTS_ONLY | FORBIDDEN_GROUP_MEMBER_ONLY | NOT_FOUND | SERVICE_UNAVAILABLE | INTERNAL_ERROR",
+    "code": "VALIDATION_ERROR | UNAUTHORIZED | FORBIDDEN_TEACHER_ONLY | FORBIDDEN_STUDENTS_ONLY | FORBIDDEN_GROUP_MEMBER_ONLY | NOT_FOUND | NOT_IMPLEMENTED | SERVICE_UNAVAILABLE | INTERNAL_ERROR",
     "message": "Pesan deskripsi error yang ramah pengguna"
   }
 }
@@ -162,8 +165,8 @@ Seluruh endpoint di bawah `/api/ai` mematuhi format respons standar tim hackatho
 ### 6. Area Khusus Guru (Wajib Header `x-role: TEACHER` atau Token Guru)
 - **`GET /api/ai/rooms/:roomId/alerts`**
   Deteksi otomatis peringatan tugas berbasis tenggat waktu:
-  - **Kapan & di mana pengingat dikirim**: Pengingat ramah dikirim otomatis ke ruang chat kelompok (`group_messages`) saat tugas Kanban belum selesai dan sisa waktu menuju tenggat `< 48` jam (`GHOSTING_WARN_HOURS`).
-  - **Pencegahan pesan ganda**: Sistem mencatat waktu pengiriman dan membatasi maksimal 1 pengingat per tugas per interval (default 24 jam via `GHOSTING_NUDGE_INTERVAL_HOURS`). Pemanggilan berulang (misal refresh dashboard guru) tidak menimbulkan spam pesan duplikat.
+  - **Kapan & di mana pengingat dikirim**: Pengingat ramah dikirim otomatis ke ruang chat kelompok (`group_messages` dengan `action: "deadline_nudge"` dan `payload: { taskId, sentAt }`) saat tugas Kanban belum selesai dan sisa waktu menuju tenggat `< 48` jam (`GHOSTING_WARN_HOURS`).
+  - **Pencegahan pesan ganda**: Sistem mencatat waktu pengiriman di memori sekaligus memeriksa riwayat `group_messages` (`action = 'deadline_nudge'`) sehingga membatasi maksimal 1 pengingat per tugas per interval (default 24 jam via `GHOSTING_NUDGE_INTERVAL_HOURS`), termasuk setelah server restart.
   - **Alert ke Guru**: Hanya muncul jika deadline telah lewat dan tugas belum selesai dengan bahasa netral *"perlu perhatian"*. Tugas tanpa deadline tidak pernah memicu alert.
 - **`GET /api/ai/groups/:groupId/teacher-summary`**
   Ringkasan progres tugas Kanban kelompok (jumlah total tugas, selesai, tertunda, dan tenggat terdekat) murni dari data agregat tugas tanpa mengakses atau membaca isi obrolan siswa demi privasi.
