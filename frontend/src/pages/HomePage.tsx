@@ -1,18 +1,22 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom'
 
 const MASCOT_URL =
   'https://lh3.googleusercontent.com/aida/AEtjO1W5eZPrRliobZqL7wjMSsv9q12K9-2ZiW7u3Vggyi3NHg1EiT2-_FIyJFaiy7GVBpetGWXcV91c2HzchqV-9RucCrkr4Atyps34eet5RVzN_pDDGpsYtm3tF78FON0KtYUyftgwSVYa5r9yLYnw8-wjWY9jUJ4magzvYQhjlvzq7w-SyC0yUcdugwx-dcuLYo7kV4hrTUVcM3VWZVbaIiTL4iFe0rFglynUz9Uen5hZWA';
 
 export function HomePage() {
   const [pin, setPin] = useState('');
+  const navigate = useNavigate();
+
+  const punyaKelompok = true;
 
   const handleBuatRoom = () => {
-    // TODO: arahkan ke halaman guru buat room
+    navigate('/workspace');
   };
 
   const handleMasuk = () => {
-    // TODO: kirim `pin` ke backend lalu arahkan ke lobi
-    console.log('PIN:', pin);
+    // TODO: validasi PIN ke backend
+    navigate('/workspace');
   };
 
   return (
@@ -156,6 +160,7 @@ export function HomePage() {
         </div>
 
         {/* Pratinjau */}
+        {punyaKelompok && (
         <div className="flex flex-col gap-3 max-w-md md:max-w-3xl mx-auto w-full pt-2">
           <div className="flex items-center justify-between px-1">
             <span className="font-label-sticker text-label-sticker text-on-surface-variant uppercase tracking-wider">
@@ -210,6 +215,7 @@ export function HomePage() {
             </div>
           </div>
         </div>
+        )}
       </div>
     </main>
   );
