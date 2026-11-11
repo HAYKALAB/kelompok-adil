@@ -3,6 +3,7 @@ import { HomePage } from './pages/HomePage';
 import { StatusPage } from './pages/StatusPage';
 import { WorkspacePage } from './pages/WorkspacePage';
 import { TeacherDashboardPage } from './pages/TeacherDashboardPage';
+import { AiFasilitatorPage} from './pages/AiFasilitatorPage';
 
 export function App() {
   return (
@@ -12,6 +13,7 @@ export function App() {
         <Route path="/status" element={<StatusPage />} />
         <Route path="/workspace/${pin}" element={<WorkspacePage />} />
         <Route path="/guru" element={<TeacherDashboardPage />} />
+        <Route path="/ai" element={<AiFasilitatorPage />} />
       </Routes> 
     </div>
   );

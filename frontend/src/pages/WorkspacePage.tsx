@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { TambahTugasModal, type TugasBaru } from '../components/TambahTugasModal';
+import { LaporRahasiaModal} from '../components/LaporanRahasiaModal';
 
 const MASCOT_URL =
   'https://lh3.googleusercontent.com/aida/AEtjO1W5eZPrRliobZqL7wjMSsv9q12K9-2ZiW7u3Vggyi3NHg1EiT2-_FIyJFaiy7GVBpetGWXcV91c2HzchqV-9RucCrkr4Atyps34eet5RVzN_pDDGpsYtm3tF78FON0KtYUyftgwSVYa5r9yLYnw8-wjWY9jUJ4magzvYQhjlvzq7w-SyC0yUcdugwx-dcuLYo7kV4hrTUVcM3VWZVbaIiTL4iFe0rFglynUz9Uen5hZWA';
@@ -88,6 +89,7 @@ export function WorkspacePage() {
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
   const [reaksi, setReaksi] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [laporOpen, setLaporOpen] = useState(false);
   const mulaiKerjakan = (id: number) => {
     // TODO: PATCH status tugas ke backend
     setTasks((prev) =>
@@ -344,6 +346,15 @@ const simpanTugas = (data: TugasBaru) => {
                 </span>
               </div>
             </div>
+
+          <button
+              type="button"
+              onClick={() => setLaporOpen(true)}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-surface-container-low text-on-surface-variant hover:text-primary shadow-[2px_2px_0px_#0f1b34] font-label-md text-label-md active:scale-[0.98] transition-all"
+            >
+              <span className="material-symbols-outlined text-[16px] text-primary">shield_lock</span>
+              <span>Ada kendala di kelompok? Lapor rahasia ke guru</span>
+            </button>
           </div>
 
           {/* Tab */}
@@ -520,6 +531,19 @@ const simpanTugas = (data: TugasBaru) => {
           id,
           name: MEMBERS[id].name,
           beban: MEMBERS[id].share,
+          avatar: MEMBERS[id].avatar,
+        }))}
+      />
+      <LaporRahasiaModal
+        open={laporOpen}
+        onClose={() => setLaporOpen(false)}
+        currentUserId="DF"
+        onSubmit={async (laporan) => {
+          // TODO: POST ke backend
+        }}
+        members={(Object.keys(MEMBERS) as MemberId[]).map((id) => ({
+          id,
+          name: MEMBERS[id].name,
           avatar: MEMBERS[id].avatar,
         }))}
       />
