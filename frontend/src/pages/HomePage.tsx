@@ -11,12 +11,13 @@ export function HomePage() {
   const punyaKelompok = true;
 
   const handleBuatRoom = () => {
-    navigate('/workspace');
+    // TODO: arahkan ke halaman buat room; sementara ke dashboard guru
+    navigate('/guru');
   };
 
   const handleMasuk = () => {
-    // TODO: validasi PIN ke backend
-    navigate('/workspace');
+   if (pin.length !== 6) return; // opsional: validasi PIN 
+    navigate('/Workspace/${pin}');
   };
 
   return (

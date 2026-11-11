@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
 import { StatusPage } from './pages/StatusPage';
 import { WorkspacePage } from './pages/WorkspacePage';
+import { TeacherDashboardPage } from './pages/TeacherDashboardPage';
 
 export function App() {
   return (
@@ -9,7 +10,8 @@ export function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/status" element={<StatusPage />} />
-        <Route path="/Workspace" element={<WorkspacePage />} />
+        <Route path="/workspace/${pin}" element={<WorkspacePage />} />
+        <Route path="/guru" element={<TeacherDashboardPage />} />
       </Routes> 
     </div>
   );
