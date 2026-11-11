@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { TambahTugasModal, type TugasBaru } from '../components/TambahTugasModal';
+
 
 const MASCOT_URL =
   'https://lh3.googleusercontent.com/aida/AEtjO1W5eZPrRliobZqL7wjMSsv9q12K9-2ZiW7u3Vggyi3NHg1EiT2-_FIyJFaiy7GVBpetGWXcV91c2HzchqV-9RucCrkr4Atyps34eet5RVzN_pDDGpsYtm3tF78FON0KtYUyftgwSVYa5r9yLYnw8-wjWY9jUJ4magzvYQhjlvzq7w-SyC0yUcdugwx-dcuLYo7kV4hrTUVcM3VWZVbaIiTL4iFe0rFglynUz9Uen5hZWA';
@@ -86,11 +88,13 @@ export function WorkspacePage() {
   const [tab, setTab] = useState<(typeof TABS)[number]['key']>('kanban');
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
   const [reaksi, setReaksi] = useState<string | null>(null);
-
+  const [modalOpen, setModalOpen] = useState(false);
   const mulaiKerjakan = (id: number) => {
     // TODO: PATCH status tugas ke backend
     setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, status: 'doing', progress: 0 } : t)),
+      prev.map((t) =>
+        t.id === id ? { ...t, status: 'doing', progress: 0 } : t,
+      ),
     );
   };
 
@@ -105,9 +109,24 @@ export function WorkspacePage() {
     );
   };
 
-  const bukaModalTugas = () => {
-    // TODO: buka modal "Tambah Tugas Baru" (layar berikutnya)
-  };
+  const bukaModalTugas = () => setModalOpen(true);
+
+const simpanTugas = (data: TugasBaru) => {
+  // TODO: POST tugas baru ke backend
+  setTasks((prev) => [
+    ...prev,
+    {
+      id: Date.now(),
+      title: data.title,
+      desc: data.desc || 'Belum ada deskripsi',
+      status: 'todo',
+      assignee: data.assignee as MemberId,
+      progress: 0,
+      deadline: data.deadline.replace(/^\S+\s/, ''),
+    },
+  ]);
+  setModalOpen(false);
+};
 
   const todo = tasks.filter((t) => t.status === 'todo');
   const doing = tasks.filter((t) => t.status === 'doing');
@@ -494,6 +513,17 @@ export function WorkspacePage() {
           </div>
         </div>
       </main>
+      <TambahTugasModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={simpanTugas}
+        members={(Object.keys(MEMBERS) as MemberId[]).map((id) => ({
+          id,
+          name: MEMBERS[id].name,
+          beban: MEMBERS[id].share,
+          avatar: MEMBERS[id].avatar,
+        }))}
+      />
     </div>
   );
 }
