@@ -93,3 +93,52 @@ Seluruh endpoint di bawah menggunakan prefix `/api`, wajib header `Authorization
     ]
   }
   ```
+
+---
+
+## Tahap 3: Update Progres Tugas (`task-progress`)
+
+### Perbarui Persentase Progres Tugas
+- **Endpoint:** `PATCH /api/tasks/:taskId/progress`
+- **Otorisasi:** **Hanya** penanggung jawab tugas (`task.assigneeId === req.user.id`). Anggota lain dan guru ditolak `403`.
+- **Body:**
+  - `progress` (integer `0–100`, wajib)
+  - `note` (string, opsional, maks 200 karakter)
+- **Aturan Transisi Status:**
+  - `0` $\rightarrow$ `status: "TODO"`, `doneAt: null`
+  - `1–99` $\rightarrow$ `status: "IN_PROGRESS"`, `doneAt: null` (jika sebelumnya `100`/`DONE`, `doneAt` dikosongkan)
+  - `100` $\rightarrow$ `status: "DONE"`, `doneAt` diisi waktu saat ini
+- **Efek samping:** Setiap update menulis 1 baris ke `activities` (`type: "LOG"`, berisi judul tugas dan persentase).
+- **Respons `200 OK`:** `{ "data": { ...updatedTask } }`
+
+---
+
+## Tahap 4: Monitor Progres Guru (`progress-monitor`)
+
+### Pantau Progres Seluruh Kelompok di Kelas
+- **Endpoint:** `GET /api/rooms/:roomId/progress`
+- **Otorisasi:** **Hanya** Guru kelas (`roomId`) tersebut. Siswa dan guru kelas lain ditolak `403`.
+- **Perhitungan Berbobot:**
+  - Kelompok: `progressPercent = sum(weight * progress) / sum(weight)` (atau `0` jika belum ada tugas), ditambah `statusCounts` (`todo`, `inProgress`, `done`) dan `nearestDeadline` (tugas belum `DONE` terdekat).
+  - Anggota: `participantId`, `name`, `taskCount`, dan `progressPercent` berbobot dari tugas yang ia pegang (`null` jika belum memegang tugas).
+- **Respons `200 OK`:**
+  ```json
+  {
+    "data": {
+      "roomId": "uuid",
+      "groups": [
+        {
+          "groupId": "uuid",
+          "name": "Kelompok 1",
+          "progressPercent": 75,
+          "statusCounts": { "todo": 0, "inProgress": 1, "done": 1 },
+          "nearestDeadline": "2026-11-20T09:59:00.000Z",
+          "members": [
+            { "participantId": "uuid", "name": "Dafano", "taskCount": 2, "progressPercent": 75 },
+            { "participantId": "uuid", "name": "Nadya", "taskCount": 0, "progressPercent": null }
+          ]
+        }
+      ]
+    }
+  }
+  ```
