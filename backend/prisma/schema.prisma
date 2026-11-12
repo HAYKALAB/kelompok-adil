@@ -148,6 +148,7 @@ model Task {
   assigneeId       String?
   status           TaskStatus       @default(TODO)
   weight           Int              @default(1)
+  progress         Int              @default(0)
   deadline         DateTime?
   evidenceType     EvidenceType?
   evidenceUrl      String?

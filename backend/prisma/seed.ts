@@ -153,14 +153,14 @@ async function main() {
 
     // Tasks: 2 per group
     const taskDefs = [
-      { gi: 0, title: 'Studi Pustaka Negarakretagama', description: 'Rangkum biografi Kertanegara dari kakawin pupuh 13-16', weight: 60, status: 'IN_PROGRESS', ai: 0, deadline: new Date(now.getTime() + 3 * day), evidenceType: 'GOOGLE_DOCS' },
-      { gi: 0, title: 'Peta Wilayah Kekuasaan Maritim', description: 'Visualisasi jalur ekspedisi laut Majapahit', weight: 40, status: 'TODO', ai: 1, deadline: new Date(now.getTime() + 5 * day), evidenceType: 'SLIDE' },
-      { gi: 1, title: 'Riset Prasasti Kedukan Bukit', description: 'Transkripsi isi prasasti dan rute dapunta hyang', weight: 55, status: 'DONE', ai: 0, deadline: new Date(now.getTime() - 1 * day), evidenceType: 'GOOGLE_DOCS', doneAt: new Date(now.getTime() - 1 * day) },
-      { gi: 1, title: 'Peta Jalur Niaga Selat Malaka', description: 'Peta grafis bandar perdagangan laut', weight: 45, status: 'IN_PROGRESS', ai: 1, deadline: new Date(now.getTime() + 2 * day), evidenceType: 'SLIDE' },
-      { gi: 2, title: 'Sejarah Berdirinya Mataram Islam', description: 'Kronologi dan sumber primer', weight: 50, status: 'TODO', ai: 0, deadline: new Date(now.getTime() + 6 * day), evidenceType: 'GOOGLE_DOCS' },
-      { gi: 2, title: 'Analisis Sistem Pemerintahan Mataram', description: 'Struktur kerajaan dan bukti', weight: 50, status: 'TODO', ai: 1, deadline: new Date(now.getTime() + 6 * day), evidenceType: 'WEB_LINK' },
-      { gi: 3, title: 'Komoditas Rempah dan Jalur Dagang', description: 'Mapping rempah dan rute dagang abad 15', weight: 70, status: 'IN_PROGRESS', ai: 0, deadline: new Date(now.getTime() + 4 * day), evidenceType: 'GOOGLE_DOCS' },
-      { gi: 3, title: 'Dampak Dagang terhadap Masyarakat Pesisir', description: 'Analisis sosial-ekonomi', weight: 30, status: 'TODO', ai: 1, deadline: new Date(now.getTime() + 4 * day), evidenceType: 'HANDWRITTEN_PHOTO' },
+      { gi: 0, title: 'Studi Pustaka Negarakretagama', description: 'Rangkum biografi Kertanegara dari kakawin pupuh 13-16', weight: 60, status: 'IN_PROGRESS', ai: 0, deadline: new Date(now.getTime() + 3 * day), evidenceType: 'GOOGLE_DOCS', progress: 35 },
+      { gi: 0, title: 'Peta Wilayah Kekuasaan Maritim', description: 'Visualisasi jalur ekspedisi laut Majapahit', weight: 40, status: 'TODO', ai: 1, deadline: new Date(now.getTime() + 5 * day), evidenceType: 'SLIDE', progress: 0 },
+      { gi: 1, title: 'Riset Prasasti Kedukan Bukit', description: 'Transkripsi isi prasasti dan rute dapunta hyang', weight: 55, status: 'DONE', ai: 0, deadline: new Date(now.getTime() - 1 * day), evidenceType: 'GOOGLE_DOCS', doneAt: new Date(now.getTime() - 1 * day), progress: 100 },
+      { gi: 1, title: 'Peta Jalur Niaga Selat Malaka', description: 'Peta grafis bandar perdagangan laut', weight: 45, status: 'IN_PROGRESS', ai: 1, deadline: new Date(now.getTime() + 2 * day), evidenceType: 'SLIDE', progress: 50 },
+      { gi: 2, title: 'Sejarah Berdirinya Mataram Islam', description: 'Kronologi dan sumber primer', weight: 50, status: 'TODO', ai: 0, deadline: new Date(now.getTime() + 6 * day), evidenceType: 'GOOGLE_DOCS', progress: 0 },
+      { gi: 2, title: 'Analisis Sistem Pemerintahan Mataram', description: 'Struktur kerajaan dan bukti', weight: 50, status: 'TODO', ai: 1, deadline: new Date(now.getTime() + 6 * day), evidenceType: 'WEB_LINK', progress: 0 },
+      { gi: 3, title: 'Komoditas Rempah dan Jalur Dagang', description: 'Mapping rempah dan rute dagang abad 15', weight: 70, status: 'IN_PROGRESS', ai: 0, deadline: new Date(now.getTime() + 4 * day), evidenceType: 'GOOGLE_DOCS', progress: 60 },
+      { gi: 3, title: 'Dampak Dagang terhadap Masyarakat Pesisir', description: 'Analisis sosial-ekonomi', weight: 30, status: 'TODO', ai: 1, deadline: new Date(now.getTime() + 4 * day), evidenceType: 'HANDWRITTEN_PHOTO', progress: 0 },
     ];
 
     for (const t of taskDefs) {
@@ -178,6 +178,7 @@ async function main() {
           evidenceUrl: t.status === 'DONE' ? 'https://docs.google.com/document/d/demo-migrated' : null,
           createdAt: new Date(now.getTime() - 2 * day),
           doneAt: t.doneAt ?? null,
+          progress: t.progress,
         },
       });
     }
