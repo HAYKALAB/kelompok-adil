@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { TambahTugasModal, type TugasBaru } from '../components/TambahTugasModal';
 import { LaporRahasiaModal} from '../components/LaporanRahasiaModal';
+import AIFacilitatorChat from "./AIFacilitatorChat";
 
 const MASCOT_URL =
   'https://lh3.googleusercontent.com/aida/AEtjO1W5eZPrRliobZqL7wjMSsv9q12K9-2ZiW7u3Vggyi3NHg1EiT2-_FIyJFaiy7GVBpetGWXcV91c2HzchqV-9RucCrkr4Atyps34eet5RVzN_pDDGpsYtm3tF78FON0KtYUyftgwSVYa5r9yLYnw8-wjWY9jUJ4magzvYQhjlvzq7w-SyC0yUcdugwx-dcuLYo7kV4hrTUVcM3VWZVbaIiTL4iFe0rFglynUz9Uen5hZWA';
@@ -488,10 +489,7 @@ const simpanTugas = (data: TugasBaru) => {
           )}
 
           {tab === 'ai' && (
-            <div className="bg-surface-container-low p-space-lg rounded-xl text-center text-on-surface-variant">
-              {/* TODO: layar "AI Fasilitator Bersama" (API Gemini) */}
-              AI Fasilitator (Gemini) akan tampil di sini.
-            </div>
+            <AIFacilitatorChat />
           )}
 
           {/* Beri semangat */}
