@@ -8,8 +8,19 @@ export interface GenerateOptions {
   responseSchema?: any;
 }
 
+export interface LlmTextResult {
+  text: string;
+  source: 'ai' | 'fallback';
+}
+
+export interface LlmJsonResult<T> {
+  data: T;
+  source: 'ai' | 'fallback';
+}
+
 export class LlmClient {
   private static aiInstance: GoogleGenAI | null = null;
+  private static lastPromptSent: string | undefined = undefined;
 
   private static getClient(): GoogleGenAI | null {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -30,108 +41,177 @@ export class LlmClient {
     return process.env.AI_MODEL || 'gemini-2.5-flash';
   }
 
-  /**
-   * Eksekusi pemanggilan Gemini dengan timeout 20 detik + 1x retry
-   */
-  private static async executeWithRetry<T>(fn: () => Promise<T>): Promise<T> {
-    const timeoutMs = 20000;
+  public static getTimeoutMs(): number {
+    const envVal = Number(process.env.AI_TIMEOUT_MS);
+    return !isNaN(envVal) && envVal > 0 ? envVal : 10000;
+  }
 
-    const runWithTimeout = () =>
-      Promise.race([
-        fn(),
-        new Promise<T>((_, reject) =>
-          setTimeout(() => reject(new Error('LLM_TIMEOUT: Waktu tunggu AI melebihi 20 detik')), timeoutMs)
-        ),
-      ]);
+  // Rekaman prompt hanya disimpan dan dapat diakses saat NODE_ENV === 'test'
+  public static getLastPrompt(): string | undefined {
+    if (process.env.NODE_ENV !== 'test') {
+      return undefined;
+    }
+    return this.lastPromptSent;
+  }
+
+  // Deteksi error sementara (transient) yang layak di-retry
+  private static isTransientError(err: any): boolean {
+    if (!err) return false;
+    const msg = String(err.message || '').toLowerCase();
+    const status = err.status || err.statusCode || err.code;
+
+    // Timeout atau pembatalan request
+    if (msg.includes('timeout') || msg.includes('aborted') || err.name === 'AbortError') {
+      return true;
+    }
+    // Rate limit 429
+    if (status === 429 || msg.includes('429') || msg.includes('rate limit') || msg.includes('resource exhausted')) {
+      return true;
+    }
+    // Server error 5xx
+    if (typeof status === 'number' && status >= 500 && status < 600) {
+      return true;
+    }
+    if (msg.includes('500') || msg.includes('502') || msg.includes('503') || msg.includes('504') || msg.includes('unavailable')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  // Eksekusi pemanggilan Gemini dengan timeout configurable dan 1x retry jika transient
+  private static async executeWithRetry<T>(fn: (signal?: AbortSignal) => Promise<T>): Promise<T> {
+    const timeoutMs = this.getTimeoutMs();
+
+    const runWithTimeout = async () => {
+      const controller = new AbortController();
+      let timer: NodeJS.Timeout | undefined;
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          controller.abort();
+          reject(new Error(`LLM_TIMEOUT: Waktu tunggu AI melebihi ${timeoutMs}ms`));
+        }, timeoutMs);
+      });
+
+      try {
+        return await Promise.race([fn(controller.signal), timeoutPromise]);
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    };
 
     try {
       return await runWithTimeout();
     } catch (err: any) {
-      console.warn('⚠️ Gagal memanggil LLM pada percobaan pertama, mencoba ulang (1x retry)...', err.message);
-      try {
-        return await runWithTimeout();
-      } catch (retryErr: any) {
-        console.error('❌ LLM Unavailable setelah retry:', retryErr.message);
-        const error: any = new Error('AI_UNAVAILABLE: Layanan AI sedang sibuk atau tidak dapat diakses.');
-        error.code = 'AI_UNAVAILABLE';
-        throw error;
+      if (this.isTransientError(err)) {
+        console.warn('Terjadi transient error pada LLM, mencoba ulang sekali dalam 500ms:', err.message);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        try {
+          return await runWithTimeout();
+        } catch (retryErr: any) {
+          console.error('Layanan LLM tetap gagal setelah retry:', retryErr.message);
+          const error: any = new Error('AI_UNAVAILABLE: Layanan AI sedang sibuk atau tidak dapat diakses.');
+          error.code = 'AI_UNAVAILABLE';
+          throw error;
+        }
       }
+      throw err;
     }
   }
 
-  /**
-   * Hasilkan teks bebas
-   */
   public static async generateText(
     userPrompt: string,
     options?: GenerateOptions,
-    mockFallback?: string
-  ): Promise<string> {
+    mockFallback: string = ''
+  ): Promise<LlmTextResult> {
+    if (process.env.NODE_ENV === 'test') {
+      this.lastPromptSent = userPrompt;
+    }
+
     if (this.isMockMode()) {
-      return (
-        mockFallback ||
-        'Hai rekan tim! Ini saran otomatis dari AI Asisten Rukun: mari kita bagi peran dan pastikan setiap anggota mengunggah bukti kerja di papan Kanban!'
-      );
+      return { text: mockFallback, source: 'fallback' };
     }
 
     const ai = this.getClient();
     if (!ai) {
-      return mockFallback || 'Layanan AI offline (Mock mode aktif).';
+      return { text: mockFallback, source: 'fallback' };
     }
 
-    return this.executeWithRetry(async () => {
-      const response = await ai.models.generateContent({
-        model: this.getModel(),
-        contents: userPrompt,
-        config: {
-          systemInstruction: options?.systemInstruction,
-          temperature: options?.temperature ?? 0.7,
-        },
+    try {
+      const responseText = await this.executeWithRetry(async (signal) => {
+        const response = await ai.models.generateContent({
+          model: this.getModel(),
+          contents: userPrompt,
+          config: {
+            systemInstruction: options?.systemInstruction,
+            temperature: options?.temperature ?? 0.7,
+          },
+        });
+
+        return response.text?.trim() || '';
       });
 
-      return response.text?.trim() || '';
-    });
+      return { text: responseText, source: 'ai' };
+    } catch (err: any) {
+      console.warn('Pemanggilan generateText gagal, beralih ke fallback deterministik:', err.message);
+      return { text: mockFallback, source: 'fallback' };
+    }
   }
 
-  /**
-   * Hasilkan respon terstruktur JSON dengan validasi schema
-   */
   public static async generateJSON<T>(
     userPrompt: string,
     options?: GenerateOptions,
     mockFallback?: T
-  ): Promise<T> {
+  ): Promise<LlmJsonResult<T>> {
+    if (process.env.NODE_ENV === 'test') {
+      this.lastPromptSent = userPrompt;
+    }
+
     if (this.isMockMode()) {
-      if (mockFallback !== undefined) return mockFallback;
-      throw new Error('AI_MOCK_ERROR: Tidak ada data fallback untuk mock mode.');
+      if (mockFallback !== undefined) {
+        return { data: mockFallback, source: 'fallback' };
+      }
+      throw new Error('AI_MOCK_ERROR: Tidak ada data fallback untuk mode mock.');
     }
 
     const ai = this.getClient();
     if (!ai) {
-      if (mockFallback !== undefined) return mockFallback;
+      if (mockFallback !== undefined) {
+        return { data: mockFallback, source: 'fallback' };
+      }
       throw new Error('AI_UNAVAILABLE: Tidak ada API key.');
     }
 
-    return this.executeWithRetry(async () => {
-      const response = await ai.models.generateContent({
-        model: this.getModel(),
-        contents: userPrompt,
-        config: {
-          systemInstruction: options?.systemInstruction,
-          temperature: options?.temperature ?? 0.3,
-          responseMimeType: 'application/json',
-          responseSchema: options?.responseSchema,
-        },
+    try {
+      const parsed = await this.executeWithRetry(async (signal) => {
+        const response = await ai.models.generateContent({
+          model: this.getModel(),
+          contents: userPrompt,
+          config: {
+            systemInstruction: options?.systemInstruction,
+            temperature: options?.temperature ?? 0.3,
+            responseMimeType: 'application/json',
+            responseSchema: options?.responseSchema,
+          },
+        });
+
+        const text = response.text?.trim() || '{}';
+        try {
+          return JSON.parse(text) as T;
+        } catch {
+          const cleaned = text.replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
+          return JSON.parse(cleaned) as T;
+        }
       });
 
-      const text = response.text?.trim() || '{}';
-      try {
-        return JSON.parse(text) as T;
-      } catch (parseErr) {
-        // Coba bersihkan markdown fence ```json ... ``` jika LLM menyelipkan format blok
-        const cleaned = text.replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
-        return JSON.parse(cleaned) as T;
+      return { data: parsed, source: 'ai' };
+    } catch (err: any) {
+      if (mockFallback !== undefined) {
+        console.warn('Pemanggilan generateJSON gagal atau output tidak valid, beralih ke fallback deterministik:', err.message);
+        return { data: mockFallback, source: 'fallback' };
       }
-    });
+      throw err;
+    }
   }
 }

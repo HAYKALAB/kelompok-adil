@@ -1,6 +1,8 @@
+import { z } from 'zod';
 import { repo, TaskData } from '../deps/repository.stub.js';
 import { LlmClient } from '../modules/ai/llm.client.js';
 import { SPLIT_ROLES_SYSTEM_PROMPT } from '../modules/ai/prompts/split_roles.prompt.js';
+import { stripDataTags } from '../lib/sanitize.js';
 
 export interface SplitRolesRequest {
   groupId: string;
@@ -24,7 +26,29 @@ export interface SplitRolesResponse {
   persona: string;
   assignments: AssignmentItem[];
   rationale: string;
+  source: 'ai' | 'fallback';
 }
+
+const SplitRolesOutputSchema = z.object({
+  persona: z.string().optional().default('✦ Gotong Royong'),
+  assignments: z
+    .array(
+      z.object({
+        memberId: z.string(),
+        memberName: z.string().optional(),
+        title: z.string().max(200),
+        description: z.string().max(500).optional().default(''),
+        weightPercent: z.coerce.number().min(0).max(100),
+        evidenceType: z
+          .enum(['google_docs', 'slide', 'handwritten_photo', 'web_link'])
+          .optional()
+          .default('google_docs'),
+        suggestedDeadline: z.string().optional(),
+      })
+    )
+    .min(1),
+  rationale: z.string().max(500).optional().default(''),
+});
 
 export class SuggestionService {
   /**
@@ -41,7 +65,10 @@ export class SuggestionService {
     const memberList = group.members;
     const defaultDeadline = deadline || new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString();
 
-    // Mock fallback realistis untuk Kelompok Majapahit / umum
+    // Hapus tag <data> dan batasi panjang input
+    const sanitizedTopic = stripDataTags(topic || '').slice(0, 150);
+    const sanitizedNotes = stripDataTags(notes || '').slice(0, 300);
+
     const fallbackAssignments: AssignmentItem[] = memberList.map((m, idx) => {
       const titles = [
         'Riset Dokumen & Analisis Latar Belakang',
@@ -55,42 +82,43 @@ export class SuggestionService {
         memberId: m.id,
         memberName: m.name,
         title: titles[idx % titles.length] || `Kajian Bagian ${idx + 1}`,
-        description: `Mengerjakan riset terstruktur topik: ${topic}`,
+        description: `Mengerjakan riset terstruktur topik: ${sanitizedTopic}`,
         weightPercent: Math.round(100 / memberList.length),
         evidenceType: evidenceTypes[idx % evidenceTypes.length],
         suggestedDeadline: defaultDeadline,
       };
     });
 
-    // Pastikan fallback persis 100%
     const fallbackSum = fallbackAssignments.reduce((acc, a) => acc + a.weightPercent, 0);
     if (fallbackSum !== 100 && fallbackAssignments.length > 0) {
       fallbackAssignments[fallbackAssignments.length - 1].weightPercent += 100 - fallbackSum;
     }
 
     const mockFallback = {
-      persona: '✦ Gotong Royong',
+      persona: '✦ Sistem Gotong Royong',
       assignments: fallbackAssignments,
-      rationale: `Beban kerja dibagi rata secara berimbang kepada ${memberList.length} anggota kelompok dengan luaran bukti nyata terverifikasi.`,
+      rationale: `Pembagian peran otomatis oleh sistem: beban kerja dibagi rata secara berimbang (${Math.round(
+        100 / memberList.length
+      )}% per anggota) untuk ${memberList.length} anggota kelompok.`,
+      source: 'fallback' as const,
     };
 
     const promptContext = `
 Daftar Anggota Kelompok (${memberList.length} orang):
 ${memberList.map((m) => `- ID: ${m.id}, Nama: ${m.name}`).join('\n')}
 
-Topik Penugasan: "${topic}"
+<data>
+Topik Penugasan Siswa: "${sanitizedTopic}"
 Target Deadline: ${defaultDeadline}
-Catatan Tambahan: ${notes || 'Tidak ada'}
+Catatan Tambahan Siswa: "${sanitizedNotes || 'Tidak ada'}"
+</data>
 `;
 
-    let generated: {
-      persona?: string;
-      assignments: AssignmentItem[];
-      rationale?: string;
-    };
+    let rawGenerated: any = mockFallback;
+    let rawSource: 'ai' | 'fallback' = 'fallback';
 
     try {
-      generated = await LlmClient.generateJSON<any>(
+      const llmResult = await LlmClient.generateJSON<any>(
         promptContext,
         {
           systemInstruction: SPLIT_ROLES_SYSTEM_PROMPT,
@@ -98,22 +126,31 @@ Catatan Tambahan: ${notes || 'Tidak ada'}
         },
         mockFallback
       );
+      rawGenerated = llmResult.data;
+      rawSource = llmResult.source;
     } catch {
-      generated = mockFallback;
+      rawGenerated = mockFallback;
+      rawSource = 'fallback';
+    }
+
+    const parsed = SplitRolesOutputSchema.safeParse(rawGenerated);
+    const isAiValid = rawSource === 'ai' && parsed.success;
+    const generated = isAiValid ? parsed.data : mockFallback;
+    if (!parsed.success && rawSource === 'ai') {
+      console.warn('Output Gemini split-roles tidak valid menurut Zod, memakai fallback:', parsed.error.issues);
     }
 
     // --- VALIDASI DETERMINISTIK KODE ---
-    let assignments = generated.assignments || [];
+    const rawAssignments = [...generated.assignments];
 
-    // 1. Pastikan setiap anggota ada minimal 1 tugas
-    const assignedMemberIds = new Set(assignments.map((a) => a.memberId));
+    const assignedMemberIds = new Set(rawAssignments.map((a) => a.memberId));
     for (const member of memberList) {
       if (!assignedMemberIds.has(member.id)) {
-        assignments.push({
+        rawAssignments.push({
           memberId: member.id,
           memberName: member.name,
           title: `Penyusunan Materi Pendukung (${member.name})`,
-          description: `Riset komparasi dan dokumentasi pendukung topik: ${topic}`,
+          description: `Riset komparasi dan dokumentasi pendukung topik: ${sanitizedTopic}`,
           weightPercent: 20,
           evidenceType: 'google_docs',
           suggestedDeadline: defaultDeadline,
@@ -121,38 +158,38 @@ Catatan Tambahan: ${notes || 'Tidak ada'}
       }
     }
 
-    // 2. Normalisasi total weightPercent agar TEPAT 100%
-    let totalWeight = assignments.reduce((sum, item) => sum + (Number(item.weightPercent) || 0), 0);
+    let totalWeight = rawAssignments.reduce((sum, item) => sum + (Number(item.weightPercent) || 0), 0);
     if (totalWeight <= 0) totalWeight = 100;
 
     let runningTotal = 0;
-    assignments = assignments.map((item, idx) => {
+    const assignments: AssignmentItem[] = rawAssignments.map((item, idx) => {
       let normalized = Math.round(((Number(item.weightPercent) || 25) / totalWeight) * 100);
-      if (idx === assignments.length - 1) {
-        // Elemen terakhir menyesuaikan sisa agar mutlak 100%
+      if (idx === rawAssignments.length - 1) {
         normalized = Math.max(5, 100 - runningTotal);
       } else {
         runningTotal += normalized;
       }
 
-      // Pastikan evidenceType valid
       const validEv: AssignmentItem['evidenceType'][] = ['google_docs', 'slide', 'handwritten_photo', 'web_link'];
-      const evType = validEv.includes(item.evidenceType) ? item.evidenceType : 'google_docs';
+      const evType = validEv.includes(item.evidenceType as any) ? (item.evidenceType as any) : 'google_docs';
+      const mName = item.memberName || memberList.find((m) => m.id === item.memberId)?.name || 'Anggota';
 
       return {
-        ...item,
+        memberId: item.memberId,
+        memberName: mName,
+        title: item.title,
+        description: item.description || '',
         weightPercent: normalized,
         evidenceType: evType,
         suggestedDeadline: item.suggestedDeadline || defaultDeadline,
       };
     });
 
-    // 3. Simpan usulan ke database stub AI
     const savedSuggestion = await repo.saveAiSuggestion({
       groupId,
       type: 'role_split',
       payload: {
-        topic,
+        topic: sanitizedTopic,
         assignments,
         rationale: generated.rationale || mockFallback.rationale,
       },
@@ -161,31 +198,30 @@ Catatan Tambahan: ${notes || 'Tidak ada'}
 
     return {
       suggestionId: savedSuggestion.id,
-      persona: generated.persona || '✦ Gotong Royong',
+      persona: generated.persona || mockFallback.persona,
       assignments,
       rationale: generated.rationale || mockFallback.rationale,
+      source: isAiValid ? 'ai' : 'fallback',
     };
   }
 
   /**
-   * Menerapkan usulan peran ke Kanban otomatis (createTasks)
+   * Terapkan usulan peran ke papan Kanban kelompok secara otomatis
    */
-  public static async applySuggestion(suggestionId: string): Promise<{ appliedCount: number; createdTasks: TaskData[] }> {
-    const suggestion = await repo.getAiSuggestion(suggestionId);
-    if (!suggestion) {
-      throw new Error(`Saran dengan ID ${suggestionId} tidak ditemukan`);
+  public static async applySuggestion(suggestionId: string): Promise<{ appliedCount: number; tasks: TaskData[] }> {
+    const sug = await repo.getAiSuggestion(suggestionId);
+    if (!sug || sug.status !== 'pending') {
+      throw new Error('Usulan tidak ditemukan atau sudah diproses');
     }
 
-    if (suggestion.status === 'applied') {
-      throw new Error('Saran ini sudah pernah diterapkan ke Kanban');
+    const { assignments, topic } = sug.payload;
+    if (!assignments || !Array.isArray(assignments)) {
+      throw new Error('Payload usulan tidak valid');
     }
 
-    const { groupId, payload } = suggestion;
-    const assignments: AssignmentItem[] = payload.assignments || [];
-
-    const tasksToCreate = assignments.map((a) => ({
+    const newTasks = assignments.map((a: AssignmentItem) => ({
       title: a.title,
-      description: a.description,
+      description: `[Topik: ${topic}] ${a.description}`,
       assigneeId: a.memberId,
       status: 'todo' as const,
       weight: a.weightPercent,
@@ -193,35 +229,19 @@ Catatan Tambahan: ${notes || 'Tidak ada'}
       evidenceType: a.evidenceType,
     }));
 
-    const created = await repo.createTasks(groupId, tasksToCreate);
-
-    // Update status suggestion
-    await repo.updateAiSuggestionStatus(suggestionId, 'applied');
-
-    // Tulis notifikasi transparan di chat kelompok
-    await repo.saveAiMessage({
-      groupId,
-      senderType: 'ai',
-      senderName: 'AI Asisten Rukun',
-      action: 'split_roles',
-      content: `🚀 Kabar baik! Usulan pembagian tugas telah berhasil diterapkan ke Papan Kanban Gotong Royong (${created.length} tugas baru). Selamat berkolaborasi!`,
-      structuredPayload: {
-        appliedSuggestionId: suggestionId,
-        createdTaskIds: created.map((t) => t.id),
-      },
-    });
+    const created = await repo.applySuggestionTasks(suggestionId, sug.groupId, newTasks);
 
     return {
       appliedCount: created.length,
-      createdTasks: created,
+      tasks: created,
     };
   }
 
   /**
-   * Menolak/mengabaikan usulan
+   * Batalkan usulan peran
    */
   public static async dismissSuggestion(suggestionId: string): Promise<boolean> {
-    const updated = await repo.updateAiSuggestionStatus(suggestionId, 'dismissed');
-    return Boolean(updated);
+    const sug = await repo.updateAiSuggestionStatus(suggestionId, 'dismissed');
+    return Boolean(sug);
   }
 }

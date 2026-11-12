@@ -40,7 +40,8 @@ export class GroupBalanceService {
     };
 
     const prompt = buildShufflerPrompt(participants, targetGroups);
-    return LlmClient.generateJSON<GroupShuffleResult>(prompt, { temperature: 0.5 }, mockFallback);
+    const result = await LlmClient.generateJSON<GroupShuffleResult>(prompt, { temperature: 0.5 }, mockFallback);
+    return result.data;
   }
 
   /**
@@ -55,6 +56,7 @@ export class GroupBalanceService {
     };
 
     const prompt = buildFairnessAnalysisPrompt(reports);
-    return LlmClient.generateJSON<FairnessAnalysisResult>(prompt, { temperature: 0.3 }, mockFallback);
+    const result = await LlmClient.generateJSON<FairnessAnalysisResult>(prompt, { temperature: 0.3 }, mockFallback);
+    return result.data;
   }
 }

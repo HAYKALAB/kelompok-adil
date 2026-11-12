@@ -1,6 +1,8 @@
+import { z } from 'zod';
 import { repo } from '../deps/repository.stub.js';
 import { LlmClient } from '../modules/ai/llm.client.js';
 import { VALIDATION_SYSTEM_PROMPT } from '../modules/ai/prompts/validation.prompt.js';
+import { stripDataTags } from '../lib/sanitize.js';
 
 export interface ValidationResponse {
   taskId: string;
@@ -8,6 +10,7 @@ export interface ValidationResponse {
   score: number;
   feedback: string;
   missing: string[];
+  source: 'ai' | 'fallback';
 }
 
 export interface CompletenessResponse {
@@ -19,6 +22,13 @@ export interface CompletenessResponse {
   readinessLevel: 'siap_presentasi' | 'hampir_siap' | 'butuh_perhatian';
   missingChapters: string[];
 }
+
+const ValidationOutputSchema = z.object({
+  status: z.enum(['valid', 'incomplete', 'suspicious']),
+  score: z.coerce.number().min(0).max(100),
+  feedback: z.string().max(500),
+  missing: z.array(z.string().max(200)).default([]),
+});
 
 export class ValidationService {
   /**
@@ -33,10 +43,11 @@ export class ValidationService {
       throw new Error(`Tugas dengan ID ${taskId} tidak ditemukan`);
     }
 
-    const targetEvidence = evidenceTextOrUrl || task.evidenceUrl;
+    const rawEvidence = evidenceTextOrUrl || task.evidenceUrl || '';
+    const targetEvidence = stripDataTags(rawEvidence).slice(0, 500);
 
     // Jika bukti sama sekali belum ada
-    if (!targetEvidence || targetEvidence.trim().length === 0) {
+    if (!targetEvidence || targetEvidence.length === 0) {
       await repo.updateTask(taskId, {
         evidenceStatus: 'incomplete',
         evidenceFeedback: 'Belum ada bukti dokumen atau tautan yang diunggah.',
@@ -48,27 +59,35 @@ export class ValidationService {
         score: 0,
         feedback: 'Bukti pengerjaan belum diunggah. Mohon cantumkan tautan Google Docs, slide Canva, atau foto hasil kerja.',
         missing: ['Tautan atau dokumen bukti kerja'],
+        source: 'fallback',
       };
     }
 
     const mockValidationFallback: ValidationResponse = {
       taskId,
       status: 'valid',
-      score: 92,
-      feedback: 'Tautan bukti sesuai dengan luaran tugas. Dokumen memuat narasi analisis terstruktur dan referensi memadai.',
+      score: 80,
+      feedback: 'Analisis AI belum tersedia. Sistem mencatat tautan bukti telah diserahkan, mohon verifikasi dokumen oleh Guru.',
       missing: [],
+      source: 'fallback',
     };
 
     const promptContext = `
 Tugas: "${task.title}"
 Deskripsi Target: "${task.description || '-'}"
 Format Bukti Wajib: ${task.evidenceType || 'google_docs'}
-Bukti Yang Diserahkan: "${targetEvidence}"
+
+<data>
+Bukti Yang Diserahkan Siswa:
+"${targetEvidence}"
+</data>
 `;
 
-    let generated: any;
+    let rawGenerated: any = mockValidationFallback;
+    let rawSource: 'ai' | 'fallback' = 'fallback';
+
     try {
-      generated = await LlmClient.generateJSON<any>(
+      const llmResult = await LlmClient.generateJSON<any>(
         promptContext,
         {
           systemInstruction: VALIDATION_SYSTEM_PROMPT,
@@ -76,14 +95,25 @@ Bukti Yang Diserahkan: "${targetEvidence}"
         },
         mockValidationFallback
       );
+      rawGenerated = llmResult.data;
+      rawSource = llmResult.source;
     } catch {
-      generated = mockValidationFallback;
+      rawGenerated = mockValidationFallback;
+      rawSource = 'fallback';
     }
 
-    const status = generated.status || 'valid';
-    const score = Number(generated.score) || 85;
-    const feedback = generated.feedback || mockValidationFallback.feedback;
-    const missing = Array.isArray(generated.missing) ? generated.missing : [];
+    const parsed = ValidationOutputSchema.safeParse(rawGenerated);
+    const isAiValid = rawSource === 'ai' && parsed.success;
+    const generated = isAiValid ? parsed.data : mockValidationFallback;
+
+    if (!parsed.success && rawSource === 'ai') {
+      console.warn('Output Gemini validateTask tidak sesuai Zod, memakai fallback:', parsed.error.issues);
+    }
+
+    const status = generated.status;
+    const score = Number(generated.score);
+    const feedback = generated.feedback;
+    const missing = generated.missing;
 
     // Perbarui status tugas di repo
     await repo.updateTask(taskId, {
@@ -98,6 +128,7 @@ Bukti Yang Diserahkan: "${targetEvidence}"
       score,
       feedback,
       missing,
+      source: isAiValid ? 'ai' : 'fallback',
     };
   }
 
@@ -130,7 +161,6 @@ Bukti Yang Diserahkan: "${targetEvidence}"
         ? 'Luar biasa! Seluruh bab penting dan bukti dokumen telah siap untuk dipresentasikan di depan kelas.'
         : `Masih ada ${missingChapters.length} bagian tugas yang perlu diselesaikan bukti dan pembahasannya.`;
 
-    // Tulis juga catatan ke ai_messages
     await repo.saveAiMessage({
       groupId,
       senderType: 'ai',

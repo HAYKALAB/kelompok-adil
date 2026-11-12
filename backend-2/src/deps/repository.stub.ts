@@ -1,114 +1,35 @@
 /**
- * Interface & In-Memory Stub Repository untuk data dari Backend 1.
- * Bertindak sebagai buffer agar Backend 2 tidak mengutak-atik tabel core Backend 1.
+ * In-Memory Stub Repository untuk data dari Backend 1.
+ * Mengimplementasikan kontrak IRepository dan memilih instance berdasarkan REPO_MODE.
  */
 
-export interface RoomData {
-  id: string;
-  name: string;
-  subject: string;
-  class: string;
-  deadline: string;
-  aiEnabled: boolean;
-  teacherId: string;
-}
-
-export interface MemberData {
-  id: string;
-  name: string;
-}
-
-export interface GroupData {
-  id: string;
-  roomId: string;
-  name: string;
-  members: MemberData[];
-}
-
-export interface TaskData {
-  id: string;
-  groupId: string;
-  title: string;
-  description?: string;
-  assigneeId?: string;
-  status: 'todo' | 'in_progress' | 'done';
-  weight: number; // 1-100 persen
-  deadline?: string;
-  evidenceType?: 'google_docs' | 'slide' | 'handwritten_photo' | 'web_link';
-  evidenceUrl?: string;
-  evidenceStatus?: 'valid' | 'incomplete' | 'suspicious' | 'pending';
-  evidenceFeedback?: string;
-  createdAt: string;
-  doneAt?: string;
-}
-
-export interface ActivityData {
-  id: string;
-  groupId: string;
-  memberId: string;
-  type: 'document' | 'comment' | 'log' | 'upload';
-  description?: string;
-  at: string;
-}
-
-export interface TeacherData {
-  id: string;
-  name: string;
-  email: string;
-}
-
-// Entitas milik modul AI
-export interface AiMessage {
-  id: string;
-  groupId: string;
-  senderType: 'member' | 'ai';
-  senderId?: string;
-  senderName: string;
-  action: 'chat' | 'ideas' | 'split_roles' | 'check_completeness' | 'nudge';
-  content: string;
-  structuredPayload?: any;
-  createdAt: string;
-}
-
-export interface AiSuggestion {
-  id: string;
-  groupId: string;
-  type: 'role_split' | 'assignee';
-  payload: any;
-  status: 'pending' | 'applied' | 'dismissed';
-  createdAt: string;
-}
-
-export interface AiFlag {
-  id: string;
-  groupId: string;
-  memberId: string;
-  kind: 'ghosting' | 'low_contribution';
-  detail: any;
-  resolvedAt?: string;
-  createdAt: string;
-}
-
-export interface AiContributionSnapshot {
-  groupId: string;
-  memberId: string;
-  percentage: number;
-  breakdown: {
-    documents: number;
-    comments: number;
-    logs: number;
-    tasksDone: number;
-  };
-  computedAt: string;
-}
+export * from './repository.interface.js';
+import {
+  IRepository,
+  RoomData,
+  MemberData,
+  GroupData,
+  TaskData,
+  ActivityData,
+  TeacherData,
+  AiMessage,
+  AiSuggestion,
+  AiFlag,
+  AiContributionSnapshot,
+  PeerReport,
+  DatabaseServiceUnavailableError,
+  NotImplementedError,
+} from './repository.interface.js';
+import { RepositoryDb } from './repository.db.js';
 
 // In-Memory Database Store
-class RepositoryStub {
+export class RepositoryStub implements IRepository {
   private rooms: Map<string, RoomData> = new Map();
   private groups: Map<string, GroupData> = new Map();
   private tasks: Map<string, TaskData> = new Map();
   private activities: ActivityData[] = [];
   private teachers: Map<string, TeacherData> = new Map();
+  private peerReports: PeerReport[] = [];
 
   // Tabel AI
   private aiMessages: AiMessage[] = [];
@@ -152,7 +73,6 @@ class RepositoryStub {
       ],
     });
 
-    // Tasks Group 1 (Dafano beban tinggi 41%, Salsa 22%, Bima 24%, Nadya 13%)
     const now = new Date();
     const twoDaysAgo = new Date(now.getTime() - 48 * 3600 * 1000).toISOString();
     const oneDayAgo = new Date(now.getTime() - 24 * 3600 * 1000).toISOString();
@@ -294,15 +214,13 @@ class RepositoryStub {
         weight: 20,
         deadline: twoDaysAgo,
         evidenceType: 'google_docs',
-        // Belum mengunggah bukti sama sekali!
         createdAt: fourDaysAgo,
       },
     ];
 
     g2Tasks.forEach((t) => this.tasks.set(t.id, t));
 
-    // Activities Group 2 (Sesuai rasio kalkulasi deterministik: Intan 42%, Fajar 38%, Dani 15%, Rafi 5%)
-    // Intan: 2 docs (10) + 4 comments (2) + task 30 = 42
+    // Activities Group 2
     for (let i = 0; i < 2; i++) {
       this.activities.push({ id: `act-intan-doc-${i}`, groupId: 'group-2', memberId: 'm-intan', type: 'document', at: oneDayAgo });
     }
@@ -310,7 +228,6 @@ class RepositoryStub {
       this.activities.push({ id: `act-intan-com-${i}`, groupId: 'group-2', memberId: 'm-intan', type: 'comment', at: oneDayAgo });
     }
 
-    // Fajar: 2 docs (10) + 6 comments (3) + task 25 = 38
     for (let i = 0; i < 2; i++) {
       this.activities.push({ id: `act-fajar-doc-${i}`, groupId: 'group-2', memberId: 'm-fajar', type: 'document', at: oneDayAgo });
     }
@@ -318,7 +235,6 @@ class RepositoryStub {
       this.activities.push({ id: `act-fajar-com-${i}`, groupId: 'group-2', memberId: 'm-fajar', type: 'comment', at: oneDayAgo });
     }
 
-    // Dani: 2 docs (10) + 1 log (2) + 6 comments (3) = 15
     for (let i = 0; i < 2; i++) {
       this.activities.push({ id: `act-dani-doc-${i}`, groupId: 'group-2', memberId: 'm-dani', type: 'document', at: twoDaysAgo });
     }
@@ -327,7 +243,6 @@ class RepositoryStub {
       this.activities.push({ id: `act-dani-com-${i}`, groupId: 'group-2', memberId: 'm-dani', type: 'comment', at: twoDaysAgo });
     }
 
-    // Rafi: 1 log (2) + 6 comments (3) = 5 (terakhir aktif 80 jam lalu)
     this.activities.push({
       id: 'act-rafi-1',
       groupId: 'group-2',
@@ -339,6 +254,30 @@ class RepositoryStub {
     for (let i = 0; i < 6; i++) {
       this.activities.push({ id: `act-rafi-com-${i}`, groupId: 'group-2', memberId: 'm-rafi', type: 'comment', at: fourDaysAgo });
     }
+
+    // Seed Peer Reports (Laporan Rahasia Masuk untuk Room 2)
+    this.peerReports.push({
+      id: 'rep-sri-1',
+      roomId: 'room-2',
+      groupId: 'group-2',
+      reporterId: 'm-intan',
+      reportedMemberId: 'm-rafi',
+      reportedMemberName: 'Rafi Ahmad',
+      rating: 1,
+      feedback: 'Tidak merespon chat kelompok & belum mengerjakan bab bagiannya sejak Selasa. Kami kesulitan menyusun kesimpulan materi.',
+      createdAt: new Date(now.getTime() - 12 * 3600 * 1000).toISOString(),
+    });
+    this.peerReports.push({
+      id: 'rep-sri-2',
+      roomId: 'room-2',
+      groupId: 'group-2',
+      reporterId: 'm-fajar',
+      reportedMemberId: 'm-rafi',
+      reportedMemberName: 'Rafi Ahmad',
+      rating: 2,
+      feedback: 'Belum ada bukti dokumen atau catatan riset yang diunggah ke tugasnya.',
+      createdAt: new Date(now.getTime() - 8 * 3600 * 1000).toISOString(),
+    });
   }
 
   // --- API Method Contracts ---
@@ -407,12 +346,34 @@ class RepositoryStub {
     return Array.from(this.groups.values()).filter((g) => g.roomId === roomId);
   }
 
+  // --- Peer Reports Methods ---
+
+  public async savePeerReport(report: Omit<PeerReport, 'id' | 'createdAt'>): Promise<PeerReport> {
+    const saved: PeerReport = {
+      ...report,
+      id: `rep-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      createdAt: new Date().toISOString(),
+    };
+    this.peerReports.push(saved);
+    return saved;
+  }
+
+  public async getPeerReportsByRoom(roomId: string): Promise<PeerReport[]> {
+    return this.peerReports.filter((r) => r.roomId === roomId);
+  }
+
+  public async getPeerReportsByGroup(groupId: string): Promise<PeerReport[]> {
+    return this.peerReports.filter((r) => r.groupId === groupId);
+  }
+
   // --- AI Storage Methods ---
 
   public async saveAiMessage(msg: Omit<AiMessage, 'id' | 'createdAt'>): Promise<AiMessage> {
     const saved: AiMessage = {
       ...msg,
       id: `ai-msg-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      payload: msg.payload || msg.structuredPayload,
+      structuredPayload: msg.structuredPayload || msg.payload,
       createdAt: new Date().toISOString(),
     };
     this.aiMessages.push(saved);
@@ -449,6 +410,20 @@ class RepositoryStub {
     return sug;
   }
 
+  public async applySuggestionTasks(
+    suggestionId: string,
+    groupId: string,
+    newTasks: Omit<TaskData, 'id' | 'groupId' | 'createdAt'>[]
+  ): Promise<TaskData[]> {
+    const sug = this.aiSuggestions.get(suggestionId);
+    if (!sug || sug.status !== 'pending') {
+      throw new Error('Usulan tidak ditemukan atau sudah diproses');
+    }
+    const created = await this.createTasks(groupId, newTasks);
+    sug.status = 'applied';
+    return created;
+  }
+
   public async saveAiFlag(flag: Omit<AiFlag, 'id' | 'createdAt'>): Promise<AiFlag> {
     const saved: AiFlag = {
       ...flag,
@@ -473,4 +448,33 @@ class RepositoryStub {
   }
 }
 
-export const repo = new RepositoryStub();
+// Instance singleton stub & database
+const stubInstance = new RepositoryStub();
+const dbInstance = new RepositoryDb();
+
+/**
+ * Factory untuk memilih implementasi repository berdasarkan variabel environment REPO_MODE.
+ * Default: 'stub'.
+ * Jika REPO_MODE=db, mendelegasikan seluruh operasi ke RepositoryDb (PostgreSQL pg.Pool).
+ */
+function createRepository(): IRepository {
+  return new Proxy(stubInstance as unknown as IRepository, {
+    get(_target, prop) {
+      const mode = (process.env.REPO_MODE || 'stub').toLowerCase().trim();
+      const activeRepo: any = mode === 'db' ? dbInstance : stubInstance;
+      const value = Reflect.get(activeRepo, prop, activeRepo);
+      return typeof value === 'function' ? value.bind(activeRepo) : value;
+    },
+  });
+}
+
+export { DatabaseServiceUnavailableError, NotImplementedError };
+export const repo: IRepository = createRepository();
+
+/**
+ * Khusus environment test: mengarahkan RepositoryDb memakai dummy pool saat REPO_MODE=db diuji.
+ */
+export function setDbPoolOverrideForTest(pool: Parameters<RepositoryDb['setPoolOverrideForTest']>[0]): void {
+  if (process.env.NODE_ENV !== 'test') return;
+  dbInstance.setPoolOverrideForTest(pool);
+}

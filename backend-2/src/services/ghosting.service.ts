@@ -1,6 +1,6 @@
+import { z } from 'zod';
 import { repo } from '../deps/repository.stub.js';
 import { ContributionConfig } from '../config/contribution.config.js';
-import { ContributionService } from './contribution.service.js';
 import { LlmClient } from '../modules/ai/llm.client.js';
 import { SUMMARY_SYSTEM_PROMPT } from '../modules/ai/prompts/summary.prompt.js';
 import { NUDGE_SYSTEM_PROMPT } from '../modules/ai/prompts/nudge.prompt.js';
@@ -8,27 +8,59 @@ import { NUDGE_SYSTEM_PROMPT } from '../modules/ai/prompts/nudge.prompt.js';
 export interface GhostingAlertItem {
   groupId: string;
   groupName: string;
-  memberId: string;
-  memberName: string;
-  kind: 'ghosting' | 'low_contribution';
+  taskId: string;
+  taskTitle: string;
+  assigneeId?: string;
+  assigneeName?: string;
+  deadline: string;
+  hoursOverdue: number;
+  status: string;
   message: string;
-  hoursInactive: number;
-  contributionPercent: number;
 }
 
 export interface TeacherSummaryResponse {
   summary: string;
-  totalPrompts: number;
+  totalTasks: number;
+  completedTasks: number;
+  pendingTasks: number;
+  nearestDeadline: string | null;
   highlights: string[];
   generatedAt: string;
+  source: 'ai' | 'fallback';
 }
+
+const TeacherSummaryOutputSchema = z.object({
+  summary: z.string().max(1000),
+  highlights: z.array(z.string().max(300)).default([]),
+});
 
 export class GhostingService {
   private static summaryCache: Map<string, { data: TeacherSummaryResponse; expiry: number }> = new Map();
 
+  // Pelacakan pengiriman pengingat ramah per tugas (taskId -> timestamp pengiriman) guna mencegah pengingat ganda
+  private static sentTaskNudges: Map<string, number> = new Map();
+
   /**
-   * Deteksi ghosting di seluruh room untuk dashboard guru
-   * Syarat: kontribusi < 10% DAN inaktif > 72 jam
+   * Reset pelacak pengingat ramah (berguna untuk testing)
+   */
+  public static resetNudgeTracker(): void {
+    GhostingService.sentTaskNudges.clear();
+  }
+
+  /**
+   * Peringatan kendala tugas untuk dashboard guru (Aturan Baru Berbasis Tenggat)
+   * 
+   * KAPAN DAN DI MANA PENGINGAT DIKIRIM:
+   * - Pengingat ramah otomatis dikirim ke ruang obrolan terbuka kelompok (tabel group_messages)
+   *   dengan action 'deadline_nudge' dan payload { taskId, sentAt } ketika tugas Kanban kelompok
+   *   belum selesai dan sisa waktu menuju tenggat < warnHours (default 48 jam).
+   * - PENCEGAHAN EFEK SAMPING BERULANG:
+   *   Setiap tugas memiliki batas pengiriman maksimal satu pengingat per interval (default 24 jam via GHOSTING_NUDGE_INTERVAL_HOURS).
+   *   Pengecekan memakai cache in-memory DAN riwayat group_messages yang terpersisten (tahan restart).
+   * - ALERT GURU:
+   *   HANYA muncul jika deadline SUDAH LEWAT dan tugas BELUM SELESAI, dengan bahasa netral ("perlu perhatian").
+   * - TUGAS TANPA DEADLINE:
+   *   TIDAK PERNAH memicu alert ke guru.
    */
   public static async scanRoomAlerts(roomId: string): Promise<GhostingAlertItem[]> {
     const room = await repo.getRoom(roomId);
@@ -36,7 +68,6 @@ export class GhostingService {
       throw new Error(`Room dengan ID ${roomId} tidak ditemukan`);
     }
 
-    // Hanya berjalan jika guru mengaktifkan toggle AI di room
     if (!room.aiEnabled) {
       return [];
     }
@@ -44,42 +75,113 @@ export class GhostingService {
     const groups = await repo.getGroupsByRoom(roomId);
     const alerts: GhostingAlertItem[] = [];
     const nowTime = Date.now();
+    const warnHours = ContributionConfig.ghosting.warnHoursThreshold;
+    const nudgeIntervalMs = ContributionConfig.ghosting.nudgeIntervalHours * 3600 * 1000;
 
     for (const group of groups) {
-      const contribution = await ContributionService.calculateGroupContribution(group.id);
+      const memberMap = new Map<string, string>();
+      group.members.forEach((m) => memberMap.set(m.id, m.name));
 
-      for (const m of contribution.members) {
-        // Cek durasi inaktif dalam jam
-        let hoursInactive = 999;
-        if (m.lastActiveAt) {
-          const lastActiveTime = new Date(m.lastActiveAt).getTime();
-          hoursInactive = Math.max(0, Math.floor((nowTime - lastActiveTime) / (3600 * 1000)));
+      const tasks = await repo.getTasks(group.id);
+      let recentDeadlineNudges: Map<string, number> | null = null;
+
+      for (const t of tasks) {
+        // 1. Tugas tanpa deadline TIDAK PERNAH memicu alert ke guru
+        if (!t.deadline || t.deadline.trim() === '') {
+          continue;
         }
 
-        const isLowContribution = m.percentage < ContributionConfig.ghosting.minContributionPercent;
-        const isGhosting = isLowContribution && hoursInactive >= ContributionConfig.ghosting.inactiveHoursThreshold;
+        // 2. Tugas yang sudah selesai tidak memicu alert
+        if (t.status === 'done' || t.evidenceStatus === 'valid') {
+          continue;
+        }
 
-        if (isGhosting) {
+        const deadlineTime = new Date(t.deadline).getTime();
+        if (isNaN(deadlineTime)) {
+          continue;
+        }
+
+        const diffHours = (deadlineTime - nowTime) / (3600 * 1000);
+
+        // Kasus 1: Deadline sudah lewat dan tugas belum selesai -> Picu alert ke guru dengan bahasa netral
+        if (diffHours < 0) {
+          const hoursOverdue = Math.max(1, Math.floor((nowTime - deadlineTime) / (3600 * 1000)));
+          const assigneeName = t.assigneeId ? memberMap.get(t.assigneeId) : undefined;
+
           const alertItem: GhostingAlertItem = {
             groupId: group.id,
             groupName: group.name,
-            memberId: m.memberId,
-            memberName: m.name,
-            kind: 'ghosting',
-            message: `Kontribusi di bawah ${ContributionConfig.ghosting.minContributionPercent}% (${m.percentage}%) dan tidak mengunggah bukti selama ${hoursInactive} jam. Risiko ketidakadilan pembagian nilai.`,
-            hoursInactive,
-            contributionPercent: m.percentage,
+            taskId: t.id,
+            taskTitle: t.title,
+            assigneeId: t.assigneeId,
+            assigneeName,
+            deadline: t.deadline,
+            hoursOverdue,
+            status: t.status,
+            message: `Tugas "${t.title}" telah melewati tenggat waktu (${hoursOverdue} jam lalu) dan belum selesai. Perlu perhatian dan konfirmasi berkala.`,
           };
 
           alerts.push(alertItem);
 
-          // Simpan flag di repo AI
           await repo.saveAiFlag({
             groupId: group.id,
-            memberId: m.memberId,
+            memberId: t.assigneeId || 'unassigned',
             kind: 'ghosting',
             detail: alertItem,
           });
+        }
+        // Kasus 2: Deadline kurang dari N jam (default 48 jam) dan belum selesai -> Kirim pengingat ramah ke grup (tanpa menyebut nama siapa pun)
+        else if (diffHours < warnHours) {
+          // 1. Cek pelacak in-memory terlebih dahulu
+          let lastSentTime = GhostingService.sentTaskNudges.get(t.id);
+
+          // 2. Cek catatan pengingat yang tersimpan di group_messages agar tahan restart server
+          if (!lastSentTime || nowTime - lastSentTime >= nudgeIntervalMs) {
+            if (recentDeadlineNudges === null) {
+              recentDeadlineNudges = new Map();
+              const sinceIso = new Date(nowTime - nudgeIntervalMs).toISOString();
+              const recentMsgs = await repo.getAiMessages(group.id, sinceIso, 100);
+              for (const m of recentMsgs) {
+                const msgPayload = m.payload ?? m.structuredPayload;
+                if (m.action === 'deadline_nudge' && msgPayload?.taskId) {
+                  const msgTime = new Date(m.createdAt).getTime();
+                  const prev = recentDeadlineNudges.get(msgPayload.taskId) ?? 0;
+                  if (msgTime > prev) {
+                    recentDeadlineNudges.set(msgPayload.taskId, msgTime);
+                  }
+                }
+              }
+            }
+            const persistedTime = recentDeadlineNudges.get(t.id);
+            if (persistedTime && (!lastSentTime || persistedTime > lastSentTime)) {
+              lastSentTime = persistedTime;
+              GhostingService.sentTaskNudges.set(t.id, persistedTime);
+            }
+          }
+
+          if (lastSentTime && nowTime - lastSentTime < nudgeIntervalMs) {
+            // Sudah dikirim baru-baru ini, lewati agar tidak menimbulkan spam pengingat duplikat
+            continue;
+          }
+
+          const remainingHours = Math.max(1, Math.ceil(diffHours));
+          await repo.saveAiMessage({
+            groupId: group.id,
+            senderType: 'ai',
+            senderName: 'AI Asisten Rukun',
+            action: 'deadline_nudge',
+            content: `Halo rekan-rekan ${group.name}! 👋 Pengingat ramah: tugas "${t.title}" memiliki batas tenggat dalam waktu kurang dari ${remainingHours} jam. Yuk saling bantu dan koordinasikan di papan Kanban agar selesai tepat waktu! ✨`,
+            payload: {
+              taskId: t.id,
+              sentAt: new Date(nowTime).toISOString(),
+            },
+          });
+
+          // Catat bahwa pengingat telah dikirim untuk tugas ini
+          GhostingService.sentTaskNudges.set(t.id, nowTime);
+          if (recentDeadlineNudges) {
+            recentDeadlineNudges.set(t.id, nowTime);
+          }
         }
       }
     }
@@ -88,10 +190,9 @@ export class GhostingService {
   }
 
   /**
-   * Menghasilkan ringkasan riwayat interaksi AI untuk guru
+   * Menghasilkan ringkasan progres tugas untuk guru (Privasi Terjaga: Tanpa Membaca Obrolan Siswa)
    */
   public static async getTeacherSummary(groupId: string): Promise<TeacherSummaryResponse> {
-    // Cek cache 10 menit
     const cached = this.summaryCache.get(groupId);
     if (cached && cached.expiry > Date.now()) {
       return cached.data;
@@ -102,33 +203,65 @@ export class GhostingService {
       throw new Error(`Group dengan ID ${groupId} tidak ditemukan`);
     }
 
-    const messages = await repo.getAiMessages(groupId);
+    // Hanya membaca data tugas (tanpa membaca atau mengirim pesan chat siswa)
     const tasks = await repo.getTasks(groupId);
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter((t) => t.status === 'done' || t.evidenceStatus === 'valid').length;
+    const pendingTasks = totalTasks - completedTasks;
+    const tasksWithEvidence = tasks.filter((t) => Boolean(t.evidenceUrl)).length;
 
+    // Hitung deadline terdekat dari tugas yang belum selesai
+    const pendingWithDeadlines = tasks
+      .filter((t) => t.status !== 'done' && t.evidenceStatus !== 'valid' && Boolean(t.deadline))
+      .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
+
+    const nearestDeadline = pendingWithDeadlines[0]?.deadline || null;
+
+    // Fallback faktual berbasis data tugas murni
     const mockSummaryFallback: TeacherSummaryResponse = {
-      summary: `AI merekomendasikan pembagian tugas pada tahap awal, namun hingga saat ini terdapat tugas yang belum memiliki bukti verifikasi dokumen pendukung. Secara umum dinamika diskusi berlangsung aktif.`,
-      totalPrompts: messages.length || 42,
+      summary: `Ringkasan progres tugas: terdapat ${totalTasks} tugas terdaftar (${completedTasks} selesai, ${pendingTasks} belum selesai). ${
+        nearestDeadline
+          ? `Tenggat tugas terdekat adalah ${new Date(nearestDeadline).toLocaleDateString('id-ID')}.`
+          : 'Belum ada tenggat waktu terdekat.'
+      }`,
+      totalTasks,
+      completedTasks,
+      pendingTasks,
+      nearestDeadline,
       highlights: [
-        `Terdapat ${tasks.length} tugas terdaftar di Kanban kelompok`,
-        `Interaksi tanya jawab dengan AI Asisten Kelompok berjalan ${messages.length} kali`,
-        `Perlu tindak lanjut untuk siswa yang memiliki tugas dengan deadline terdekat`,
+        `Total tugas terdaftar: ${totalTasks} (${completedTasks} selesai verifikasi)`,
+        `Tugas yang telah mengunggah bukti: ${tasksWithEvidence} dari ${totalTasks}`,
+        nearestDeadline
+          ? `Tenggat terdekat: ${new Date(nearestDeadline).toLocaleDateString('id-ID')}`
+          : 'Tidak ada tenggat waktu aktif yang mendesak',
       ],
       generatedAt: new Date().toISOString(),
+      source: 'fallback',
     };
 
     const promptContext = `
 Kelompok: ${group.name}
-Total Pesan Chat: ${messages.length}
-Daftar Tugas:
-${tasks.map((t) => `- ${t.title} [Status: ${t.status}, Assignee: ${t.assigneeId}]`).join('\n')}
+Total Tugas: ${totalTasks}
+Tugas Selesai: ${completedTasks}
+Tugas Belum Selesai: ${pendingTasks}
+Tenggat Terdekat: ${nearestDeadline || 'Tidak ada'}
 
-Cuplikan Diskusi Terakhir:
-${messages.slice(-10).map((m) => `${m.senderName}: "${m.content}"`).join('\n')}
+<data>
+Daftar Tugas dan Status Bukti:
+${tasks
+  .map(
+    (t) =>
+      `- "${t.title}": Status=${t.status}, Bukti=${t.evidenceType || 'dokumen'} (${t.evidenceStatus || 'belum ada bukti'}), Tenggat=${t.deadline || 'tidak ada'}`
+  )
+  .join('\n')}
+</data>
 `;
 
-    let generated: any;
+    let rawGenerated: any = mockSummaryFallback;
+    let rawSource: 'ai' | 'fallback' = 'fallback';
+
     try {
-      generated = await LlmClient.generateJSON<any>(
+      const llmResult = await LlmClient.generateJSON<any>(
         promptContext,
         {
           systemInstruction: SUMMARY_SYSTEM_PROMPT,
@@ -136,18 +269,32 @@ ${messages.slice(-10).map((m) => `${m.senderName}: "${m.content}"`).join('\n')}
         },
         mockSummaryFallback
       );
+      rawGenerated = llmResult.data;
+      rawSource = llmResult.source;
     } catch {
-      generated = mockSummaryFallback;
+      rawGenerated = mockSummaryFallback;
+      rawSource = 'fallback';
+    }
+
+    const parsed = TeacherSummaryOutputSchema.safeParse(rawGenerated);
+    const isAiValid = rawSource === 'ai' && parsed.success;
+    const generated = isAiValid ? parsed.data : mockSummaryFallback;
+
+    if (!parsed.success && rawSource === 'ai') {
+      console.warn('Output Gemini teacherSummary tidak sesuai Zod, memakai fallback:', parsed.error.issues);
     }
 
     const result: TeacherSummaryResponse = {
-      summary: generated.summary || mockSummaryFallback.summary,
-      totalPrompts: messages.length || generated.totalPrompts || 42,
-      highlights: Array.isArray(generated.highlights) ? generated.highlights : mockSummaryFallback.highlights,
+      summary: generated.summary,
+      totalTasks,
+      completedTasks,
+      pendingTasks,
+      nearestDeadline,
+      highlights: generated.highlights.length > 0 ? generated.highlights : mockSummaryFallback.highlights,
       generatedAt: new Date().toISOString(),
+      source: isAiValid ? 'ai' : 'fallback',
     };
 
-    // Cache selama 10 menit
     this.summaryCache.set(groupId, {
       data: result,
       expiry: Date.now() + 10 * 60 * 1000,
@@ -157,42 +304,35 @@ ${messages.slice(-10).map((m) => `${m.senderName}: "${m.content}"`).join('\n')}
   }
 
   /**
-   * Mengambil transkrip lengkap chat kelompok untuk guru
+   * Mengirimkan nudge ramah ke kelompok (tanpa menyudutkan individu)
    */
-  public static async getGroupTranscript(groupId: string) {
-    return repo.getAiMessages(groupId, undefined, 200);
-  }
-
-  /**
-   * Mengirimkan nudge ramah ke murid pasif di chat kelompok
-   */
-  public static async sendFriendlyNudge(groupId: string): Promise<{ sentMessageId: string; message: string }> {
+  public static async sendFriendlyNudge(groupId: string): Promise<{ sentMessageId: string; message: string; source: 'ai' | 'fallback' }> {
     const group = await repo.getGroup(groupId);
     if (!group) {
       throw new Error(`Group dengan ID ${groupId} tidak ditemukan`);
     }
 
-    const mockNudgeFallback = {
-      message: 'Hai teman-teman! Yuk kita cek lagi progres tugas untuk subtema masing-masing. Ada bagian materi yang butuh kita diskusikan bareng biar makin lancar? Semangat ya! 🚀',
-    };
+    const tasks = await repo.getTasks(groupId);
+    const pendingCount = tasks.filter((t) => t.status !== 'done').length;
 
-    let generated: any;
-    try {
-      generated = await LlmClient.generateJSON<any>(
-        `Kelompok: ${group.name}`,
-        {
-          systemInstruction: NUDGE_SYSTEM_PROMPT,
-          temperature: 0.5,
-        },
-        mockNudgeFallback
-      );
-    } catch {
-      generated = mockNudgeFallback;
-    }
+    const fallbackNudge = `Halo rekan-rekan ${group.name}! 👋 Pengingat ramah: terdapat ${pendingCount} tugas di papan Kanban yang masih berjalan. Mari saling bantu dan koordinasikan bila ada kendala materi ya! ✨`;
 
-    const messageText = generated.message || mockNudgeFallback.message;
+    const promptContext = `
+Kelompok: ${group.name}
+Total Tugas Belum Selesai: ${pendingCount}
+Buatkan sapaan ramah, hangat, dan memotivasi seluruh anggota kelompok tanpa menyebut nama individu secara negatif.
+`;
 
-    const saved = await repo.saveAiMessage({
+    const { text: messageText, source } = await LlmClient.generateText(
+      promptContext,
+      {
+        systemInstruction: NUDGE_SYSTEM_PROMPT,
+        temperature: 0.6,
+      },
+      fallbackNudge
+    );
+
+    const savedMsg = await repo.saveAiMessage({
       groupId,
       senderType: 'ai',
       senderName: 'AI Asisten Rukun',
@@ -201,8 +341,9 @@ ${messages.slice(-10).map((m) => `${m.senderName}: "${m.content}"`).join('\n')}
     });
 
     return {
-      sentMessageId: saved.id,
+      sentMessageId: savedMsg.id,
       message: messageText,
+      source,
     };
   }
 }

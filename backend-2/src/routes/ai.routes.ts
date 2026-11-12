@@ -1,14 +1,14 @@
 import { Router } from 'express';
 import { AiController } from '../controllers/ai.controller.js';
-import { requireTeacher } from '../middleware/auth.middleware.js';
+import { requireTeacher, requireGroupStudentMember } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
 // --- 1. CHAT & FASILITATOR BERSAMA KELOMPOK (Fitur A & B) ---
-// Obrolan AI fasilitator, ide topik, dan tanya jawab kelompok
-router.post('/groups/:groupId/chat', AiController.chat);
-// Riwayat chat kelompok (transparan untuk semua anggota)
-router.get('/groups/:groupId/messages', AiController.getMessages);
+// Obrolan AI fasilitator, ide topik, dan tanya jawab kelompok (Khusus siswa anggota kelompok)
+router.post('/groups/:groupId/chat', requireGroupStudentMember, AiController.chat);
+// Riwayat chat kelompok (Hanya untuk siswa anggota kelompok; guru & siswa luar ditolak 403)
+router.get('/groups/:groupId/messages', requireGroupStudentMember, AiController.getMessages);
 
 // --- 2. PEMBAGIAN PERAN ADIL (Fitur C) ---
 // Usulan pembagian peran adil (total 100% dan wajib format bukti)
@@ -32,16 +32,16 @@ router.post('/groups/:groupId/check-completeness', AiController.checkCompletenes
 // Hitung persentase kontribusi dan status keseimbangan tim secara deterministik
 router.get('/groups/:groupId/contributions', AiController.getContributions);
 
-// --- 6. AREA GURU: DETEKSI GHOSTING & RINGKASAN (Fitur H & I) ---
-// Peringatan otomatis deteksi ghosting (hanya untuk role Guru)
+// --- 6. AREA GURU: DETEKSI KENDALA TENGGAT, RINGKASAN TUGAS & ANALISIS KEADILAN ---
+// Peringatan otomatis tugas melewati tenggat (hanya untuk role Guru)
 router.get('/rooms/:roomId/alerts', requireTeacher, AiController.getRoomAlerts);
-// Ringkasan catatan otomatis AI untuk guru (hanya untuk role Guru)
+// Ringkasan progres tugas untuk guru berbasis data Kanban murni (hanya untuk role Guru)
 router.get('/groups/:groupId/teacher-summary', requireTeacher, AiController.getTeacherSummary);
-// Transkrip lengkap riwayat obrolan AI kelompok (hanya untuk role Guru)
-router.get('/groups/:groupId/transcript', requireTeacher, AiController.getTranscript);
+// Analisis keadilan kelas berbasis laporan rahasia peer-review (hanya untuk role Guru)
+router.post('/rooms/:roomId/analyze-fairness', requireTeacher, AiController.analyzeFairness);
 
 // --- 7. PENGINGAT RAMAH / NUDGE (Fitur J) ---
-// Kirim pengingat hangat di chat kelompok untuk anggota yang pasif
+// Kirim pengingat hangat di chat kelompok untuk anggota
 router.post('/groups/:groupId/nudge', AiController.sendNudge);
 
 export default router;

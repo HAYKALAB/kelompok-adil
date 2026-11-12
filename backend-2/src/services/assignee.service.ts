@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { repo } from '../deps/repository.stub.js';
 import { ContributionService } from './contribution.service.js';
 import { LlmClient } from '../modules/ai/llm.client.js';
@@ -28,7 +29,20 @@ export interface RecommendAssigneeResponse {
     message: string;
   }>;
   message: string;
+  source: 'ai' | 'fallback';
 }
+
+const AssigneeOutputSchema = z.object({
+  estimatedWeight: z.object({
+    level: z.enum(['ringan', 'sedang', 'berat']),
+    rangePercent: z.tuple([
+      z.coerce.number().min(0).max(100),
+      z.coerce.number().min(0).max(100),
+    ]),
+    reason: z.string().max(500),
+  }),
+  narrativeMessage: z.string().max(500).optional(),
+});
 
 export class AssigneeService {
   /**
@@ -41,6 +55,10 @@ export class AssigneeService {
     if (!group) {
       throw new Error(`Group dengan ID ${groupId} tidak ditemukan`);
     }
+
+    // Batasi panjang input (anti-injection & anti-bloat)
+    const sanitizedTitle = (title || '').slice(0, 150).trim();
+    const sanitizedDesc = (description || '').slice(0, 300).trim();
 
     // 1. Hitung beban terkini tiap anggota secara deterministik
     const contributionData = await ContributionService.calculateGroupContribution(groupId);
@@ -65,12 +83,11 @@ export class AssigneeService {
           memberId: m.memberId,
           name: m.name,
           currentLoadPercent: m.assignedLoadPercent,
-          starred: idx === 0, // Beban terendah mendapat bintang rekomendasi utama
+          starred: idx === 0,
         });
       }
     });
 
-    // Jika semua anggota di atas 35% (misal anggota sedikit), tetap sediakan rekomendasi
     if (recommendations.length === 0 && sortedMembers.length > 0) {
       recommendations.push({
         memberId: sortedMembers[0].memberId,
@@ -85,24 +102,29 @@ export class AssigneeService {
       estimatedWeight: {
         level: 'sedang' as const,
         rangePercent: [20, 25] as [number, number],
-        reason: 'Tugas ini mencakup perancangan materi visual yang membutuhkan konsentrasi dan waktu pengerjaan menengah.',
+        reason: 'Estimasi AI belum tersedia. Sistem menetapkan bobot standar menengah (20-25%) berdasarkan rata-rata beban tugas kelompok.',
       },
-      narrativeMessage: `Beban tim saat ini ${contributionData.balanceStatus}. Rekomendasi tugas ini ke ${
+      narrativeMessage: `Estimasi AI belum tersedia. Berdasarkan data beban tim (${contributionData.balanceStatus}), tugas dialokasikan ke ${
         recommendations[0]?.name || 'anggota tim'
-      } (${recommendations[0]?.currentLoadPercent || 25}%) agar beban tim seimbang merata!`,
+      } (${recommendations[0]?.currentLoadPercent || 0}%) agar beban tim tetap berimbang.`,
     };
 
     const promptContext = `
-Judul Tugas Baru: "${title}"
-Deskripsi: "${description}"
 Status Beban Tim Saat Ini:
 ${sortedMembers.map((m) => `- ${m.name}: ${m.assignedLoadPercent}%`).join('\n')}
 Rekomendasi Utama: ${recommendations[0]?.name || 'Belum ada'}
+
+<data>
+Judul Tugas Baru dari Siswa: "${sanitizedTitle}"
+Deskripsi Tugas: "${sanitizedDesc || 'Tidak ada deskripsi'}"
+</data>
 `;
 
-    let generated: any;
+    let rawGenerated: any = mockWeightFallback;
+    let rawSource: 'ai' | 'fallback' = 'fallback';
+
     try {
-      generated = await LlmClient.generateJSON<any>(
+      const llmResult = await LlmClient.generateJSON<any>(
         promptContext,
         {
           systemInstruction: ASSIGNEE_RECOMMENDATION_SYSTEM_PROMPT,
@@ -110,20 +132,32 @@ Rekomendasi Utama: ${recommendations[0]?.name || 'Belum ada'}
         },
         mockWeightFallback
       );
+      rawGenerated = llmResult.data;
+      rawSource = llmResult.source;
     } catch {
-      generated = mockWeightFallback;
+      rawGenerated = mockWeightFallback;
+      rawSource = 'fallback';
     }
 
-    const estimatedWeight = generated.estimatedWeight || mockWeightFallback.estimatedWeight;
+    const parsed = AssigneeOutputSchema.safeParse(rawGenerated);
+    const isAiValid = rawSource === 'ai' && parsed.success;
+    const generated = isAiValid ? parsed.data : mockWeightFallback;
+    if (!parsed.success && rawSource === 'ai') {
+      console.warn('Output Gemini recommendAssignee tidak sesuai Zod, memakai fallback:', parsed.error.issues);
+    }
+
+    const estimatedWeight = generated.estimatedWeight;
     const message =
-      generated.narrativeMessage ||
-      `Beban tim saat ini ${contributionData.balanceStatus}. Rekomendasi tugas ini ke ${recommendations[0]?.name} (${recommendations[0]?.currentLoadPercent}%) agar beban tim tetap berimbang!`;
+      isAiValid && generated.narrativeMessage
+        ? generated.narrativeMessage
+        : mockWeightFallback.narrativeMessage;
 
     return {
       estimatedWeight,
       recommendations,
       warnings,
       message,
+      source: isAiValid ? 'ai' : 'fallback',
     };
   }
 }

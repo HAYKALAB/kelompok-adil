@@ -1,7 +1,9 @@
+import { z } from 'zod';
 import { repo } from '../deps/repository.stub.js';
 import { LlmClient } from '../modules/ai/llm.client.js';
 import { BASE_SYSTEM_PROMPT } from '../modules/ai/prompts/base.prompt.js';
 import { IDEAS_SYSTEM_PROMPT } from '../modules/ai/prompts/ideas.prompt.js';
+import { stripDataTags } from '../lib/sanitize.js';
 
 export interface ChatRequestParams {
   groupId: string;
@@ -17,7 +19,24 @@ export interface ChatResponseData {
   text: string;
   structured?: any;
   createdAt: string;
+  source: 'ai' | 'fallback';
 }
+
+const IdeasOutputSchema = z.object({
+  persona: z.string().optional().default('✦ Ringkasan Adil'),
+  text: z.string().max(1000).optional().default(''),
+  structured: z.object({
+    ideas: z
+      .array(
+        z.object({
+          title: z.string().max(200),
+          angle: z.string().max(500),
+          difficulty: z.enum(['ringan', 'sedang', 'berat']).optional().default('sedang'),
+        })
+      )
+      .min(1),
+  }),
+});
 
 export class ChatService {
   /**
@@ -35,6 +54,9 @@ export class ChatService {
     const tasks = await repo.getTasks(groupId);
     const recentMessages = await repo.getAiMessages(groupId, undefined, 15);
 
+    // Hapus tag <data> / </data> dan batasi panjang input
+    const sanitizedMessage = stripDataTags(message || '').slice(0, 500);
+
     // 1. Simpan pesan murid ke riwayat transparan kelompok
     await repo.saveAiMessage({
       groupId,
@@ -42,7 +64,7 @@ export class ChatService {
       senderId: senderId || 'unknown-student',
       senderName,
       action,
-      content: message,
+      content: sanitizedMessage,
     });
 
     // 2. Susun konteks untuk LLM
@@ -64,18 +86,20 @@ Anggota: ${membersSummary}
 Daftar Tugas Saat Ini:
 ${tasksSummary}
 
+<data>
 Riwayat Chat Terakhir:
 ${chatHistorySummary || '(Belum ada percakapan)'}
 
-Pesan Terbaru dari ${senderName}:
-"${message}"
+Pesan Siswa (${senderName}):
+"${sanitizedMessage}"
+</data>
 `;
 
     // 3. Tangani berdasarkan Action
     if (action === 'ideas') {
       const mockIdeasFallback = {
         persona: '✦ Ringkasan Adil',
-        text: `Hai Tim ${group.name}! Ini 3 sudut pandang unik yang jarang dibahas dan dinilai berbobot oleh guru:`,
+        text: `Rekomendasi ide topik standar silabus: silakan diskusikan 3 sudut pandang materi berikut:`,
         structured: {
           ideas: [
             {
@@ -97,38 +121,59 @@ Pesan Terbaru dari ${senderName}:
         },
       };
 
-      const result = await LlmClient.generateJSON<any>(
-        promptContext,
-        {
-          systemInstruction: IDEAS_SYSTEM_PROMPT,
-          temperature: 0.7,
-        },
-        mockIdeasFallback
-      );
+      let rawResult: any = mockIdeasFallback;
+      let rawSource: 'ai' | 'fallback' = 'fallback';
 
-      // Simpan balasan AI
+      try {
+        const llmResult = await LlmClient.generateJSON<any>(
+          promptContext,
+          {
+            systemInstruction: IDEAS_SYSTEM_PROMPT,
+            temperature: 0.7,
+          },
+          mockIdeasFallback
+        );
+        rawResult = llmResult.data;
+        rawSource = llmResult.source;
+      } catch {
+        rawResult = mockIdeasFallback;
+        rawSource = 'fallback';
+      }
+
+      const parsed = IdeasOutputSchema.safeParse(rawResult);
+      const isAiValid = rawSource === 'ai' && parsed.success;
+      const result = isAiValid ? parsed.data : mockIdeasFallback;
+
+      if (!parsed.success && rawSource === 'ai') {
+        console.warn('Output Gemini ideas tidak sesuai Zod, memakai fallback:', parsed.error.issues);
+      }
+
+      const text = result.text || mockIdeasFallback.text;
+      const structured = result.structured || mockIdeasFallback.structured;
+
       const savedAiMsg = await repo.saveAiMessage({
         groupId,
         senderType: 'ai',
         senderName: 'AI Asisten Rukun',
         action: 'ideas',
-        content: result.text || mockIdeasFallback.text,
-        structuredPayload: result.structured || mockIdeasFallback.structured,
+        content: text,
+        structuredPayload: structured,
       });
 
       return {
         messageId: savedAiMsg.id,
         persona: result.persona || '✦ Ringkasan Adil',
-        text: result.text || mockIdeasFallback.text,
-        structured: result.structured || mockIdeasFallback.structured,
+        text,
+        structured,
         createdAt: savedAiMsg.createdAt,
+        source: isAiValid ? 'ai' : 'fallback',
       };
     }
 
     // Default Action: 'chat'
-    const mockChatFallback = `Hai ${senderName} dan rekan-rekan ${group.name}! 👋 Senang bisa mendampingi diskusi kalian. Untuk topik ${room?.name || 'ini'}, kalian bisa mulai dengan menyepakati target luaran presentasi dan membagi peran agar pengerjaannya berimbang ya!`;
+    const mockChatFallback = `Hai ${senderName} dan rekan-rekan ${group.name}! 👋 Respon otomatis sistem: silakan sepakati pembagian tugas di papan Kanban untuk topik ${room?.name || 'ini'} agar beban kerja tim terbagi merata ya!`;
 
-    const generatedText = await LlmClient.generateText(
+    const { text: generatedText, source } = await LlmClient.generateText(
       promptContext,
       {
         systemInstruction: BASE_SYSTEM_PROMPT,
@@ -150,6 +195,7 @@ Pesan Terbaru dari ${senderName}:
       persona: '✦ Ringkasan Adil',
       text: generatedText,
       createdAt: savedAiMsg.createdAt,
+      source,
     };
   }
 
