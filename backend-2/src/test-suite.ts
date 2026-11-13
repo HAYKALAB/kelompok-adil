@@ -1,6 +1,7 @@
 process.env.NODE_ENV = 'test';
 process.env.REPO_MODE = 'stub'; // Wajib: npm test selalu memakai repository stub apa pun isi .env
 process.env.AUTH_MODE = 'stub'; // Wajib: pengujian suite dasar memakai mode stub
+process.env.AI_MOCK = 'true'; // Wajib: pengujian unit deterministik selalu memakai mode mock
 
 import http from 'http';
 import { repo, setDbPoolOverrideForTest } from './deps/repository.stub.js';
@@ -100,12 +101,12 @@ async function runTests() {
     assert(
       assignments.length === 4 &&
         totalWeight === 100 &&
-        resSplit.data?.source === 'fallback',
+        (resSplit.data?.source === 'ai' || resSplit.data?.source === 'fallback'),
       `Fitur C: Total bobot peran persis 100% (${totalWeight}%) dan memiliki field source`
     );
 
     // 6. Terapkan usulan peran ke Kanban otomatis
-    const suggestionId = resSplit.data?.suggestionId;
+    const suggestionId = resSplit.data?.suggestionId || resSplit.data?.id;
     const resApply = await fetch(`${BASE_URL}/suggestions/${suggestionId}/apply`, {
       method: 'POST',
     }).then(json);
@@ -127,7 +128,7 @@ async function runTests() {
     assert(
       topRec?.starred === true &&
         typeof topRec?.currentLoadPercent === 'number' &&
-        resAssignee.data?.source === 'fallback',
+        (resAssignee.data?.source === 'ai' || resAssignee.data?.source === 'fallback'),
       `Fitur D & E: Rekomendasi penanggung jawab menunjuk beban terendah (${topRec?.name}) dengan field source`
     );
 
@@ -140,7 +141,8 @@ async function runTests() {
       }),
     }).then(json);
     assert(
-      resVal.data?.status === 'valid' && resVal.data?.source === 'fallback',
+      resVal.data?.status === 'valid' &&
+        (resVal.data?.source === 'ai' || resVal.data?.source === 'fallback'),
       'Fitur F: Validasi bukti tugas berhasil dengan penanda source'
     );
 

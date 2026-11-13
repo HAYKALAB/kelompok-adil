@@ -285,6 +285,21 @@ export default function AIFacilitatorChat({ groupId, onTasksUpdated }: Props) {
         </div>
       )}
 
+      {/* Quick Action: Bagi Peran Adil Otomatis */}
+      <div className="px-3 py-1.5 bg-secondary-container/30 border-t-2 border-[#0f1b34] flex items-center justify-between gap-2">
+        <span className="text-[11px] text-on-surface font-medium truncate flex items-center gap-1">
+          <span>⚖️</span> Ingin tugas &amp; bobot 100% masuk otomatis ke Kanban?
+        </span>
+        <button
+          type="button"
+          onClick={handleMintaBagiPeran}
+          disabled={splitLoading || !groupId}
+          className="px-2.5 py-1 rounded-lg bg-primary text-on-primary text-[11px] font-bold border border-[#0f1b34] shadow-[1px_1px_0px_#0f1b34] hover:bg-primary/90 transition-all shrink-0 active:scale-95 disabled:opacity-50"
+        >
+          {splitLoading ? "Menganalisis..." : "Bagi Peran & Bobot Otomatis"}
+        </button>
+      </div>
+
       {/* Input */}
       <form onSubmit={handleSend} className="p-3 border-t-2 border-[#0f1b34] flex gap-2 bg-gray-50">
         <input

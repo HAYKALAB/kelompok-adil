@@ -459,10 +459,30 @@ export interface RoleSplitSuggestion {
   }>;
 }
 
-export async function requestRoleSplit(groupId: string): Promise<RoleSplitSuggestion> {
-  return apiFetch<RoleSplitSuggestion>(`/api/ai/groups/${encodeURIComponent(groupId)}/split-roles`, {
+export async function requestRoleSplit(groupId: string, topic?: string): Promise<RoleSplitSuggestion> {
+  const data = await apiFetch<any>(`/api/ai/groups/${encodeURIComponent(groupId)}/split-roles`, {
     method: 'POST',
+    body: { topic: topic || 'Proyek Kolaborasi Kelompok' },
   });
+
+  const rawAssignments = data?.roles || data?.assignments || [];
+  const mappedRoles = rawAssignments.map((a: any) => ({
+    title: a.title,
+    description: a.description || '',
+    targetPercent: Number(a.targetPercent || a.weightPercent || 25),
+    deliverableFormat: a.deliverableFormat || a.evidenceType || 'Google Docs',
+    suggestedMemberName: a.suggestedMemberName || a.memberName || 'Anggota',
+    assigneeId: a.assigneeId || a.memberId || null,
+  }));
+
+  return {
+    id: data?.id || data?.suggestionId || '',
+    groupId: data?.groupId || groupId,
+    status: data?.status || 'PENDING',
+    suggestedAt: data?.suggestedAt || new Date().toISOString(),
+    source: data?.source,
+    roles: mappedRoles,
+  };
 }
 
 export async function applySuggestion(suggestionId: string): Promise<{ applied: boolean }> {

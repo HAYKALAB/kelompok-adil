@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { repo } from '../deps/repository.stub.js';
 import { ChatService } from '../services/chat.service.js';
 import { SuggestionService } from '../services/suggestion.service.js';
 import { AssigneeService } from '../services/assignee.service.js';
@@ -85,21 +86,34 @@ export class AiController {
   static async splitRoles(req: Request, res: Response): Promise<void> {
     try {
       const groupId = getParam(req.params.groupId);
-      const { topic, deadline, notes } = req.body;
+      const { topic, deadline, notes } = req.body || {};
 
-      if (!topic || typeof topic !== 'string' || topic.trim() === '') {
-        sendError(res, 400, 'VALIDATION_ERROR', 'Topik penugasan wajib diisi.');
-        return;
+      let resolvedTopic = topic;
+      if (!resolvedTopic || typeof resolvedTopic !== 'string' || resolvedTopic.trim() === '') {
+        const group = await repo.getGroup(groupId);
+        const room = group ? await repo.getRoom(group.roomId) : null;
+        resolvedTopic = room?.name || room?.subject || 'Proyek Kolaborasi Kelompok';
       }
 
       const result = await SuggestionService.splitRoles({
         groupId,
-        topic,
+        topic: resolvedTopic,
         deadline,
         notes,
       });
 
-      sendData(res, result);
+      sendData(res, {
+        ...result,
+        id: result.suggestionId,
+        roles: result.assignments.map((a) => ({
+          title: a.title,
+          description: a.description,
+          targetPercent: a.weightPercent,
+          deliverableFormat: a.evidenceType,
+          suggestedMemberName: a.memberName,
+          assigneeId: a.memberId,
+        })),
+      });
     } catch (err: any) {
       console.error('Gagal split roles:', err.message);
       handleControllerError(res, err, 'Gagal menyusun usulan pembagian peran adil.');
