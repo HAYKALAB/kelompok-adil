@@ -10,7 +10,7 @@
 
 ---
 
-## 👥 Informasi Tim & Karya
+##  Informasi Tim & Karya
 
 - **Judul Karya**: Kelompok Adil
 - **Kategori**: Web Application (Subtema: *Smart & Fun Education*)
@@ -52,7 +52,7 @@ Metode pembelajaran berbasis proyek kelompok (*Project-Based Learning*) merupaka
 
 ---
 
-## 🚀 Daftar Fitur Utama yang Berfungsi di Branch `main`
+##  Daftar Fitur Utama yang Berfungsi di Branch `main`
 
 Seluruh fitur di bawah telah teruji operasional secara *end-to-end* pada branch `main`:
 
@@ -72,7 +72,7 @@ Seluruh fitur di bawah telah teruji operasional secara *end-to-end* pada branch 
 
 ---
 
-## 🤖 Dokumentasi Penggunaan AI (Sesuai Ketentuan Guidebook Hal. 18)
+##  Dokumentasi Penggunaan AI (Sesuai Ketentuan Guidebook Hal. 18)
 
 Sesuai ketentuan resmi kompetisi LOGICODIX 2026, penggunaan kecerdasan buatan diungkapkan secara transparan:
 
@@ -212,7 +212,7 @@ sequenceDiagram
 
 ---
 
-## 🎨 Desain & Pengalaman Pengguna (UI/UX — Bobot 15%)
+##  Desain & Pengalaman Pengguna (UI/UX — Bobot 15%)
 
 Platform menerapkan bahasa desain **Soft Neo-Brutalism for Smart & Fun Education**:
 
@@ -234,7 +234,7 @@ Platform menerapkan bahasa desain **Soft Neo-Brutalism for Smart & Fun Education
 
 ---
 
-## 🌱 Prinsip Khusus: Green IT, Etika & Privasi Data (Bobot 10%)
+##  Prinsip Khusus: Green IT, Etika & Privasi Data (Bobot 10%)
 
 1. **Perlindungan Ruang Aman Siswa (*Data Privacy by Design*)**:
    - **Isolasi Obrolan**: Guru diblokir permanen (HTTP 403 Forbidden) saat mencoba mengakses obrolan tim siswa. Siswa berhak memiliki ruang diskusi yang leluasa tanpa rasa diawasi secara berlebihan.
@@ -252,7 +252,7 @@ Platform menerapkan bahasa desain **Soft Neo-Brutalism for Smart & Fun Education
 
 ---
 
-## 🔑 Akun & Kredensial Pengujian Demo
+##  Akun & Kredensial Pengujian Demo
 
 Data uji coba telah disiapkan secara otomatis di basis data:
 
@@ -271,7 +271,7 @@ Data uji coba telah disiapkan secara otomatis di basis data:
 
 ---
 
-## 💻 Panduan Instalasi & Menjalankan Lokal (*Reproducible Setup*)
+##  Panduan Instalasi & Menjalankan Lokal (*Reproducible Setup*)
 
 ### Prasyarat
 - Node.js versi 20+ atau 24+
@@ -333,7 +333,7 @@ Aplikasi dapat langsung diakses di peramban:
 
 ---
 
-## 🧪 Pengujian Otomatis (Automated Testing)
+##  Pengujian Otomatis (Automated Testing)
 
 Platform dilengkapi pengujian otomatis komprehensif:
 
@@ -353,7 +353,7 @@ npm --prefix frontend run build
 
 ---
 
-## ⚖️ Keterbatasan Jujur Sistem (Transparent Disclosures)
+##  Keterbatasan Jujur Sistem (Transparent Disclosures)
 
 Sesuai etika kompetisi dan integritas akademik:
 1. **Penyimpanan Obrolan**: Obrolan tim disimpan pada basis data server semata-mata untuk kontinuitas tugas proyek antaranggota kelompok. Guru dibatasi secara tegas (HTTP 403) dari mengakses pesan percakapan ini.
@@ -363,7 +363,7 @@ Sesuai etika kompetisi dan integritas akademik:
 
 ---
 
-## 📜 Lisensi & Atribusi Pihak Ketiga
+##  Lisensi & Atribusi Pihak Ketiga
 
 Karya ini dikembangkan secara orisinal oleh Tim **Kelompok Adil** dari **SMKN 2 Kota Bekasi** untuk **LOGICODIX Hackathon Competition 2026**.
 
