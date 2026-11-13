@@ -38,7 +38,7 @@ export class LlmClient {
   }
 
   public static getModel(): string {
-    return process.env.AI_MODEL || 'gemini-3.8-flash';
+    return process.env.AI_MODEL || 'gemini-3.5-flash-lite';
   }
 
   public static getTimeoutMs(): number {
