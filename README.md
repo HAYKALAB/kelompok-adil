@@ -1,4 +1,4 @@
-# Kelompok Adil ✦
+# Kelompok Adil 
 
 > **Platform Kolaborasi Cerdas & Transparansi Kerja Kelompok Berbasis Multi-Tier AI Fasilitator**  
 > *Kompetisi LOGICODIX Hackathon 2026 — Subtema: Smart & Fun Education (Kategori: Web Application)*
