@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import mascotSvg from '../assets/mascot.svg';
 
-const MASCOT_URL =
-  'https://lh3.googleusercontent.com/aida/AEtjO1W5eZPrRliobZqL7wjMSsv9q12K9-2ZiW7u3Vggyi3NHg1EiT2-_FIyJFaiy7GVBpetGWXcV91c2HzchqV-9RucCrkr4Atyps34eet5RVzN_pDDGpsYtm3tF78FON0KtYUyftgwSVYa5r9yLYnw8-wjWY9jUJ4magzvYQhjlvzq7w-SyC0yUcdugwx-dcuLYo7kV4hrTUVcM3VWZVbaIiTL4iFe0rFglynUz9Uen5hZWA';
+const MASCOT_URL = mascotSvg;
 
 const PROFILE_URL =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuBQvUo5z0d6mAjuLrgnEA0AJhBD9bdpQPXIOOX7YFJrOL_R1LLKJ67tmEBTnXTaGis3CL0wOSSywfK0miUOeLQ4ct4AqaUp5UId8awG19LWC2Ea7QZcofI511-K82QYzM0qNAc-mJlsQfDeqZNCobihGmDx5bzTq-4seXtA0KeMEzP786L6V1XVSAFLyPloV99MOYWDkY0TZW9Dcq1H6havM_Lc-NU44jPo1gRhp4KY';

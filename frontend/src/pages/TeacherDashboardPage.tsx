@@ -18,8 +18,9 @@ import {
   type TeacherAiSummary,
 } from '../lib/api';
 
-const MASCOT_URL =
-  'https://lh3.googleusercontent.com/aida/AEtjO1W5eZPrRliobZqL7wjMSsv9q12K9-2ZiW7u3Vggyi3NHg1EiT2-_FIyJFaiy7GVBpetGWXcV91c2HzchqV-9RucCrkr4Atyps34eet5RVzN_pDDGpsYtm3tF78FON0KtYUyftgwSVYa5r9yLYnw8-wjWY9jUJ4magzvYQhjlvzq7w-SyC0yUcdugwx-dcuLYo7kV4hrTUVcM3VWZVbaIiTL4iFe0rFglynUz9Uen5hZWA';
+import mascotSvg from '../assets/mascot.svg';
+
+const MASCOT_URL = mascotSvg;
 
 export function TeacherDashboardPage() {
   const navigate = useNavigate();
