@@ -1,108 +1,167 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  getSession,
+  clearSession,
+  getRoomDetail,
+  fetchRoomProgress,
+  fetchRoomPeerReports,
+  fetchRoomAlerts,
+  analyzeRoomFairness,
+  fetchTeacherSummary,
+  splitRoomGroupsAuto,
+  type RoomDetailTeacher,
+  type RoomProgressData,
+  type TeacherPeerReport,
+  type GhostingAlertItem,
+  type FairnessAnalysisResult,
+  type TeacherAiSummary,
+} from '../lib/api';
 
 const MASCOT_URL =
   'https://lh3.googleusercontent.com/aida/AEtjO1W5eZPrRliobZqL7wjMSsv9q12K9-2ZiW7u3Vggyi3NHg1EiT2-_FIyJFaiy7GVBpetGWXcV91c2HzchqV-9RucCrkr4Atyps34eet5RVzN_pDDGpsYtm3tF78FON0KtYUyftgwSVYa5r9yLYnw8-wjWY9jUJ4magzvYQhjlvzq7w-SyC0yUcdugwx-dcuLYo7kV4hrTUVcM3VWZVbaIiTL4iFe0rFglynUz9Uen5hZWA';
 
-type Fase = 'penilaian' | 'diskusi' | 'lobi';
-
-interface Room {
-  id: number;
-  kelas: string;
-  kelasClass: string;
-  pin: string;
-  judul: string;
-  fase: Fase;
-  faseLabel: string;
-  laporan: number;
-  kelompokAktif: number;
-  progres: number; // 0-100
-  info: string;
-}
-
-// TODO: ganti dengan data dari backend (GET room milik guru)
-const INITIAL_ROOMS: Room[] = [
-  {
-    id: 1,
-    kelas: 'XI IPA 2',
-    kelasClass: 'bg-secondary-fixed text-on-secondary-fixed',
-    pin: '749201',
-    judul: 'Turnamen Sejarah Nusantara',
-    fase: 'penilaian',
-    faseLabel: 'Fase Penilaian Teman',
-    laporan: 1,
-    kelompokAktif: 4,
-    progres: 50,
-    info: 'Selesai dlm 45 mnt',
-  },
-  {
-    id: 2,
-    kelas: 'XI IPA 1',
-    kelasClass: 'bg-tertiary-fixed text-on-tertiary-fixed',
-    pin: '583190',
-    judul: 'Riset Biologi Sel Tumbuhan',
-    fase: 'diskusi',
-    faseLabel: 'Fase Diskusi Ahli',
-    laporan: 0,
-    kelompokAktif: 6,
-    progres: 75,
-    info: 'Rubrik terdistribusi adil',
-  },
-  {
-    id: 3,
-    kelas: 'XI IPS 3',
-    kelasClass: 'bg-secondary-fixed-dim text-on-secondary-fixed',
-    pin: '910244',
-    judul: 'Debat Bahasa Indonesia: Etika AI',
-    fase: 'lobi',
-    faseLabel: 'Lobi Terbuka',
-    laporan: 0,
-    kelompokAktif: 2,
-    progres: 15,
-    info: 'Lobi sedang dibuka',
-  },
-];
-
-// TODO: ganti dengan rangkuman dari AI Gemini
-const REKAP = [
-  {
-    nama: 'Kelompok Sriwijaya (XI IPA 2)',
-    label: 'Sangat Adil ✦',
-    adil: true,
-    anggota: [
-      { n: 'Budi', p: 25, bar: 'bg-tertiary' },
-      { n: 'Siti', p: 25, bar: 'bg-tertiary-container' },
-      { n: 'Fajar', p: 25, bar: 'bg-secondary-container' },
-      { n: 'Dewi', p: 25, bar: 'bg-primary-container' },
-    ],
-  },
-  {
-    nama: 'Kelompok Majapahit (XI IPA 2)',
-    label: 'Perlu Dibenahi Bareng',
-    adil: false,
-    anggota: [
-      { n: 'Rian (60% - Terlalu Berat)', p: 60, bar: 'bg-primary-container' },
-      { n: 'Dina (20%)', p: 20, bar: 'bg-secondary-container' },
-      { n: 'Bagas (0% - Belum submit)', p: 20, bar: 'bg-surface-variant' },
-    ],
-  },
-];
-const NAV = [
-  { label: 'Kelas', icon: 'dashboard', path: '/guru' },
-  { label: 'Pantau', icon: 'monitoring', path: '/guru' },
-  { label: 'Kelompok', icon: 'groups', path: '/ruang-kerja' },
-  { label: 'Lobi', icon: 'meeting_room', path: '/guru' },
-];
-
 export function TeacherDashboardPage() {
   const navigate = useNavigate();
-  const [rooms, setRooms] = useState<Room[]>(INITIAL_ROOMS);
+  const params = useParams<{ pin?: string }>();
+  const session = getSession();
+
+  const [currentPin, setCurrentPin] = useState<string>(params.pin || session?.pin || '123456');
+  const [inputPin, setInputPin] = useState<string>('');
+
+  const [loading, setLoading] = useState<boolean>(true);
+  const [slowServer, setSlowServer] = useState<boolean>(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Data utama Room & Monitoring
+  const [roomData, setRoomData] = useState<RoomDetailTeacher | null>(null);
+  const [progressData, setProgressData] = useState<RoomProgressData | null>(null);
+  const [reports, setReports] = useState<TeacherPeerReport[]>([]);
+  const [alerts, setAlerts] = useState<GhostingAlertItem[]>([]);
+
+  // AI Insights
+  const [fairnessAnalysis, setFairnessAnalysis] = useState<FairnessAnalysisResult | null>(null);
+  const [loadingFairness, setLoadingFairness] = useState<boolean>(false);
+
+  // Group Summary Modal
+  const [selectedGroupSummary, setSelectedGroupSummary] = useState<{
+    groupName: string;
+    summary: TeacherAiSummary | null;
+  } | null>(null);
+  const [loadingGroupSummary, setLoadingGroupSummary] = useState<boolean>(false);
+
+  // Modal Rekap & Laporan
   const [rekapOpen, setRekapOpen] = useState(false);
+  const [laporanOpen, setLaporanOpen] = useState(false);
   const [disalin, setDisalin] = useState<string | null>(null);
 
-  const totalRoom = rooms.length;
-  const totalKelompok = 12; // TODO: hitung dari backend
-  const totalLaporan = rooms.reduce((n, r) => n + r.laporan, 0);
+  // Auto Split State
+  const [splitCount, setSplitCount] = useState<number>(2);
+  const [splitting, setSplitting] = useState<boolean>(false);
+
+  // Load Room Data
+  const loadDashboard = async (pinToLoad: string) => {
+    setLoading(true);
+    setErrorMsg(null);
+    setSlowServer(false);
+
+    const slowTimer = setTimeout(() => setSlowServer(true), 4000);
+
+    try {
+      const detailRes = await getRoomDetail(pinToLoad);
+      clearTimeout(slowTimer);
+      setSlowServer(false);
+
+      if (!('participants' in detailRes)) {
+        throw new Error('Hanya guru yang memiliki akses dashboard pemantauan kelas.');
+      }
+
+      setRoomData(detailRes);
+
+      const roomId = detailRes.room.id;
+
+      // Ambil progress, reports, alerts secara paralel
+      const [progResult, repResult, alertResult] = await Promise.allSettled([
+        fetchRoomProgress(roomId),
+        fetchRoomPeerReports(roomId),
+        fetchRoomAlerts(roomId),
+      ]);
+
+      if (progResult.status === 'fulfilled') {
+        setProgressData(progResult.value);
+      }
+      if (repResult.status === 'fulfilled') {
+        setReports(repResult.value);
+      }
+      if (alertResult.status === 'fulfilled') {
+        setAlerts(alertResult.value.alerts || []);
+      }
+    } catch (err: any) {
+      clearTimeout(slowTimer);
+      setSlowServer(false);
+      console.error('Gagal memuat dashboard guru:', err);
+      setErrorMsg(err.message || 'Gagal memuat data kelas.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentPin) {
+      loadDashboard(currentPin);
+    } else {
+      setLoading(false);
+    }
+  }, [currentPin]);
+
+  // Request Analisis Keadilan AI
+  const handleAnalyzeFairness = async () => {
+    if (!roomData) return;
+    setLoadingFairness(true);
+    try {
+      const res = await analyzeRoomFairness(roomData.room.id);
+      setFairnessAnalysis(res);
+      setRekapOpen(true);
+    } catch (err: any) {
+      console.error('Gagal menganalisis keadilan:', err);
+      setErrorMsg(err.message || 'Gagal menjalankan analisis keadilan AI.');
+    } finally {
+      setLoadingFairness(false);
+    }
+  };
+
+  // Inspect Group AI Summary
+  const handleOpenGroupSummary = async (groupId: string, groupName: string) => {
+    setSelectedGroupSummary({ groupName, summary: null });
+    setLoadingGroupSummary(true);
+    try {
+      const summary = await fetchTeacherSummary(groupId);
+      setSelectedGroupSummary({ groupName, summary });
+    } catch (err: any) {
+      console.error('Gagal memuat ringkasan kelompok:', err);
+      setErrorMsg(err.message || 'Gagal memuat ringkasan AI untuk kelompok ini.');
+    } finally {
+      setLoadingGroupSummary(false);
+    }
+  };
+
+  // Auto Split Groups
+  const handleAutoSplit = async () => {
+    if (!currentPin) return;
+    setSplitting(true);
+    setErrorMsg(null);
+    try {
+      await splitRoomGroupsAuto(currentPin, splitCount);
+      setSuccessMsg(`Berhasil membagi kelompok secara adil (${splitCount} kelompok)!`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+      await loadDashboard(currentPin);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Gagal membagi kelompok otomatis.');
+    } finally {
+      setSplitting(false);
+    }
+  };
 
   const salinPin = async (pin: string) => {
     try {
@@ -110,41 +169,34 @@ export function TeacherDashboardPage() {
       setDisalin(pin);
       setTimeout(() => setDisalin(null), 1500);
     } catch {
-      /* clipboard bisa ditolak browser */
+      /* ignore */
     }
   };
 
-  const mulaiRoom = (id: number) => {
-    // TODO: PATCH status room ke backend
-    setRooms((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? { ...r, fase: 'diskusi', faseLabel: 'Fase Diskusi Ahli', info: 'Room sudah berjalan' }
-          : r,
-      ),
-    );
+  const handleLogout = () => {
+    clearSession();
+    navigate('/');
   };
 
-  const buatRoom = () => {
-    // TODO: arahkan ke halaman guru buat room
-  };
+  // Perhitungan statistik
+  const totalSiswa = roomData?.participants?.length || 0;
+  const totalKelompok = roomData?.groups?.length || progressData?.groups?.length || 0;
+  const totalLaporan = reports.length;
 
-  const pantauSiswa = (_id: number) => {
-    // TODO: arahkan ke halaman pantau kontribusi
-  };
-
-  const bukaRoom = (_id: number) => {
-    navigate('/ruang-kerja');
-  };
-
-  const unduhRekap = () => {
-    // TODO: unduh rekap Excel dari backend
-  };
+  // Rata-rata progres kelas
+  const groupProgressList = progressData?.groups || [];
+  const rataRataProgres =
+    groupProgressList.length > 0
+      ? Math.round(
+          groupProgressList.reduce((acc, g) => acc + (g.progressPercent || 0), 0) /
+            groupProgressList.length
+        )
+      : 0;
 
   return (
     <div className="bg-surface font-body-md text-body-md text-on-surface antialiased min-h-screen flex flex-col selection:bg-secondary-container selection:text-on-secondary-container">
       {/* Header */}
-      <header className="fixed top-0 inset-x-0 z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(15,27,52,0.05)]">
+      <header className="fixed top-0 inset-x-0 z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(15,27,52,0.05)] border-b border-outline-variant/30">
         <div className="h-16 px-margin max-w-5xl mx-auto flex items-center justify-between gap-space-sm">
           <div className="flex items-center gap-space-sm">
             <img alt="Kelompok Adil Mascot Logo" className="h-8 w-auto object-contain" src={MASCOT_URL} />
@@ -154,446 +206,694 @@ export function TeacherDashboardPage() {
                   Kelompok Adil
                 </span>
                 <span className="font-label-sticker text-label-sticker bg-secondary-container text-on-secondary-container px-1.5 py-0.5 rounded -rotate-2 leading-none">
-                  ✦ Rukun
+                  ✦ Guru
                 </span>
               </div>
               <span className="font-body-sm text-body-sm text-on-surface-variant font-medium leading-none mt-0.5">
-                Teacher Dashboard
+                Teacher Dashboard &amp; Monitoring
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-space-sm">
+
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              aria-label="Pemberitahuan"
-              className="w-11 h-11 rounded-full flex items-center justify-center bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors active:scale-95"
+              onClick={() => loadDashboard(currentPin)}
+              title="Segarkan data kelas"
+              className="p-2 rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors active:scale-95"
             >
-              <span className="material-symbols-outlined text-[20px]">notifications</span>
+              <span className={`material-symbols-outlined text-[20px] ${loading ? 'animate-spin' : ''}`}>
+                refresh
+              </span>
             </button>
-            <div className="relative flex items-center justify-center">
-              <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-label-md text-label-md">
-                BR
-              </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-tertiary-container rounded-full ring-2 ring-surface" />
-            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Keluar akun"
+              className="px-3 py-1.5 rounded-xl bg-error-container text-on-error-container font-label-md text-label-md font-bold hover:bg-error-container/80 transition-colors"
+            >
+              Keluar
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col relative w-full pt-16 pb-24">
+      <main className="flex-1 flex flex-col relative w-full pt-20 pb-20">
         <div className="flex flex-col w-full max-w-5xl mx-auto px-margin py-space-md gap-space-md">
-          {/* Sapaan */}
-          <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-md">
-            <div className="flex items-center justify-between gap-space-sm">
-              <div className="flex flex-col min-w-0 pr-2">
-                <div className="inline-flex items-center gap-1.5 self-start px-2 py-0.5 mb-1.5 rounded-full bg-secondary-container text-on-secondary-container">
-                  <span className="material-symbols-outlined text-[14px]">school</span>
-                  <span className="font-label-sticker text-label-sticker">SMAN 1 Teladan</span>
-                </div>
-                <h1 className="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface tracking-tight flex items-center gap-1">
-                  Halo, Bu Rina
-                  <span className="inline-block animate-bounce origin-bottom-right">👋</span>
-                </h1>
-                <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-                  Kelola room turnamen &amp; pantau kelompok aktif.
-                </p>
+          {/* Cold start alert */}
+          {slowServer && (
+            <div className="bg-secondary-container/80 border-2 border-secondary text-on-secondary-container p-3 rounded-xl flex items-center gap-2 text-body-sm animate-pulse">
+              <span className="material-symbols-outlined text-[20px]">cloud_sync</span>
+              <span>Server sedang disiapkan dari mode cold start. Tunggu beberapa detik...</span>
+            </div>
+          )}
+
+          {/* Error & Success Toasts */}
+          {errorMsg && (
+            <div className="bg-error-container border border-error text-on-error-container p-3 rounded-xl flex items-center justify-between text-body-sm">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[20px]">error</span>
+                <span>{errorMsg}</span>
               </div>
-              <div className="relative shrink-0">
-                <div className="w-16 h-16 rounded-full bg-surface-container-high p-1 shadow-sm flex items-center justify-center">
-                  <div className="w-full h-full rounded-full bg-primary-container text-on-primary flex items-center justify-center font-headline-sm text-headline-sm">
-                    BR
-                  </div>
-                </div>
-                <span className="absolute bottom-0 right-0 w-4 h-4 bg-tertiary-container rounded-full ring-2 ring-surface-container-lowest flex items-center justify-center text-[10px] text-on-tertiary font-bold">
-                  ✓
+              <button type="button" onClick={() => setErrorMsg(null)} className="font-bold">
+                ✕
+              </button>
+            </div>
+          )}
+          {successMsg && (
+            <div className="bg-tertiary-container border border-tertiary text-on-tertiary p-3 rounded-xl flex items-center justify-between text-body-sm">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[20px]">check_circle</span>
+                <span>{successMsg}</span>
+              </div>
+              <button type="button" onClick={() => setSuccessMsg(null)} className="font-bold">
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* Sapaan & Detail Kelas Aktif */}
+          <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-md border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col min-w-0">
+              <div className="inline-flex items-center gap-1.5 self-start px-2 py-0.5 mb-1.5 rounded-full bg-secondary-container text-on-secondary-container">
+                <span className="material-symbols-outlined text-[14px]">school</span>
+                <span className="font-label-sticker text-label-sticker">
+                  {roomData?.room.className || 'Kelas Belajar'}
                 </span>
+              </div>
+              <h1 className="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface tracking-tight">
+                {roomData?.room.title || 'Panel Guru'}
+              </h1>
+              <p className="font-body-md text-body-md text-on-surface-variant mt-0.5">
+                Mata Pelajaran: <strong>{roomData?.room.subject || 'Umum'}</strong> • Status:{' '}
+                <span className="font-bold uppercase text-tertiary">
+                  {roomData?.room.status || 'Aktif'}
+                </span>
+              </p>
+            </div>
+
+            {/* PIN Card & Ganti PIN */}
+            <div className="flex flex-wrap items-center gap-2 bg-surface-container-low p-2.5 rounded-xl border border-outline-variant/40">
+              <div className="flex flex-col">
+                <span className="text-[11px] font-bold text-on-surface-variant">PIN KELAS</span>
+                <span className="font-mono text-title-md font-bold text-primary tracking-widest">
+                  {roomData?.room.pin || currentPin}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => salinPin(roomData?.room.pin || currentPin)}
+                className="px-2.5 py-1.5 bg-surface-container text-on-surface rounded-lg font-label-sticker text-label-sticker font-bold hover:bg-surface-container-high transition-colors flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-[14px]">
+                  {disalin ? 'check' : 'content_copy'}
+                </span>
+                <span>{disalin ? 'Tersalin' : 'Salin'}</span>
+              </button>
+
+              <div className="h-6 w-[1px] bg-outline-variant/60 mx-1 hidden sm:block" />
+
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={inputPin}
+                  onChange={(e) => setInputPin(e.target.value.replace(/\D/g, ''))}
+                  placeholder="PIN lain"
+                  className="w-20 px-2 py-1 text-xs font-mono font-bold rounded-lg border border-outline-variant bg-surface"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (inputPin.length === 6) {
+                      setCurrentPin(inputPin);
+                      setInputPin('');
+                    }
+                  }}
+                  className="px-2 py-1 bg-primary text-on-primary rounded-lg text-xs font-bold"
+                >
+                  Buka
+                </button>
               </div>
             </div>
           </div>
-          {/* Statistik */}
-          <div className="grid grid-cols-3 gap-2.5">
-            <div className="bg-surface-container-lowest p-3 rounded-xl shadow-sm flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="w-7 h-7 rounded-lg bg-tertiary-container/20 text-tertiary flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[16px]">meeting_room</span>
-                </div>
-                <span className="w-2 h-2 rounded-full bg-tertiary" />
+
+          {/* Statistik Kelas */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-surface-container-lowest p-3.5 rounded-xl shadow-sm border border-outline-variant/30 flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-on-surface-variant text-xs font-bold">TOTAL SISWA</span>
+                <span className="material-symbols-outlined text-primary text-[18px]">person</span>
               </div>
-              <div>
-                <span className="font-headline-sm text-headline-sm text-on-surface block leading-none">
-                  {totalRoom}
-                </span>
-                <span className="font-label-md text-label-md text-tertiary font-bold mt-1 block">
-                  Room Aktif
-                </span>
-              </div>
+              <span className="font-headline-md text-headline-md text-on-surface font-bold">
+                {totalSiswa}
+              </span>
+              <span className="text-[11px] text-on-surface-variant mt-1">Terdaftar di kelas</span>
             </div>
 
-            <div className="bg-surface-container-lowest p-3 rounded-xl shadow-sm flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="w-7 h-7 rounded-lg bg-secondary-container/30 text-secondary flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[16px]">diversity_3</span>
-                </div>
-                <span className="w-2 h-2 rounded-full bg-secondary" />
+            <div className="bg-surface-container-lowest p-3.5 rounded-xl shadow-sm border border-outline-variant/30 flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-on-surface-variant text-xs font-bold">KELOMPOK</span>
+                <span className="material-symbols-outlined text-secondary text-[18px]">diversity_3</span>
               </div>
-              <div>
-                <span className="font-headline-sm text-headline-sm text-on-surface block leading-none">
-                  {totalKelompok}
-                </span>
-                <span className="font-label-md text-label-md text-secondary font-bold mt-1 block">
-                  Kelompok
-                </span>
-              </div>
+              <span className="font-headline-md text-headline-md text-on-surface font-bold">
+                {totalKelompok}
+              </span>
+              <span className="text-[11px] text-on-surface-variant mt-1">Kelompok aktif</span>
             </div>
 
-            <div className="bg-error-container/40 p-3 rounded-xl shadow-sm flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="w-7 h-7 rounded-lg bg-error text-on-error flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[16px]">notifications_active</span>
-                </div>
+            <div className="bg-surface-container-lowest p-3.5 rounded-xl shadow-sm border border-outline-variant/30 flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-on-surface-variant text-xs font-bold">PROGRES RATA-RATA</span>
+                <span className="material-symbols-outlined text-tertiary text-[18px]">trending_up</span>
+              </div>
+              <span className="font-headline-md text-headline-md text-tertiary font-bold">
+                {rataRataProgres}%
+              </span>
+              <span className="text-[11px] text-on-surface-variant mt-1">Penyelesaian tugas</span>
+            </div>
+
+            <div
+              onClick={() => setLaporanOpen(true)}
+              className="bg-error-container/30 hover:bg-error-container/50 cursor-pointer transition-colors p-3.5 rounded-xl shadow-sm border border-error/30 flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-error font-bold text-xs">LAPORAN RAHASIA</span>
+                <span className="material-symbols-outlined text-error text-[18px]">report</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-headline-md text-headline-md text-on-error-container font-bold">
+                  {totalLaporan}
+                </span>
                 {totalLaporan > 0 && (
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-error" />
+                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-error text-on-error font-bold animate-pulse">
+                    Baru
                   </span>
                 )}
               </div>
+              <span className="text-[11px] text-error font-medium mt-1">Klik untuk audit evaluasi</span>
+            </div>
+          </div>
+
+          {/* AI Banner & Tindakan Cerdas */}
+          <div className="bg-gradient-to-r from-secondary-container/40 via-surface-container-lowest to-tertiary-container/40 p-4 rounded-xl shadow-sm border-2 border-secondary flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-secondary text-on-secondary flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[24px]">auto_awesome</span>
+              </div>
               <div>
-                <span className="font-headline-sm text-headline-sm text-on-error-container block leading-none">
-                  {totalLaporan}
-                </span>
-                <span className="font-label-md text-label-md text-error font-bold mt-1 block">
-                  Laporan 🚨
-                </span>
+                <h3 className="font-title-md text-title-md text-on-surface font-bold">
+                  Audit Keadilan &amp; Telemetri AI Gemini
+                </h3>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">
+                  Deteksi ketimpangan beban kerja kelompok, potensi ghosting, dan analisis peer review secara anonim.
+                </p>
               </div>
             </div>
-          </div>
-
-          {/* Aksi utama */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md">
-            <button
-              type="button"
-              onClick={() => setRekapOpen(true)}
-              className="w-full text-left bg-surface-container-highest text-on-surface rounded-xl p-space-md shadow-md transition-all active:translate-y-0.5 active:shadow-sm flex items-center justify-between gap-space-sm group"
-            >
-              <div className="flex items-center gap-space-sm min-w-0">
-                <div className="w-11 h-11 rounded-xl bg-tertiary-container text-on-tertiary flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                  <span className="material-symbols-outlined text-[24px]">visibility</span>
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="font-title-md text-title-md text-on-surface leading-snug truncate">
-                    Hasil Kerja Siswa
-                  </span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant truncate">
-                    Rekap transparansi seluruh {totalKelompok} kelompok
-                  </span>
-                </div>
-              </div>
-              <div className="shrink-0 w-8 h-8 rounded-full bg-surface-container-lowest flex items-center justify-center text-on-surface shadow-sm">
-                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-              </div>
-            </button>
 
             <button
               type="button"
-              onClick={buatRoom}
-              className="w-full bg-surface-container-lowest/80 hover:bg-surface-container-lowest rounded-xl p-4 shadow-sm flex items-center justify-center gap-2 transition-all active:scale-[0.99] text-on-surface"
+              disabled={loadingFairness}
+              onClick={handleAnalyzeFairness}
+              className="px-4 py-2.5 rounded-xl bg-primary text-on-primary font-label-lg text-label-lg font-bold shadow-md hover:bg-primary/90 active:scale-95 transition-all shrink-0 flex items-center justify-center gap-1.5"
             >
-              <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center">
-                <span className="material-symbols-outlined text-[20px]">add</span>
-              </div>
-              <span className="font-title-md text-title-md font-bold text-on-surface">
-                + Buat Room Turnamen Baru
+              <span className={`material-symbols-outlined text-[18px] ${loadingFairness ? 'animate-spin' : ''}`}>
+                {loadingFairness ? 'refresh' : 'psychology'}
               </span>
+              <span>{loadingFairness ? 'Menganalisis...' : 'Analisis Keadilan AI'}</span>
             </button>
           </div>
 
-          {/* Header daftar */}
-          <div className="flex items-center justify-between pt-1">
-            <div className="flex items-center gap-2">
-              <h2 className="font-headline-sm text-headline-sm text-on-surface tracking-tight">
-                Room Berjalan Saat Ini
-              </h2>
-              <span className="font-label-sticker text-label-sticker bg-surface-container-high text-on-surface px-2 py-0.5 rounded-full">
-                {totalRoom} Sesi
-              </span>
-            </div>
-            <button
-              type="button"
-              className="font-label-md text-label-md text-primary font-bold hover:underline flex items-center gap-0.5"
-            >
-              Filter
-              <span className="material-symbols-outlined text-[16px]">tune</span>
-            </button>
-          </div>
-
-          {/* Daftar room */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-space-md items-start">
-            {rooms.map((r) => {
-              const lobi = r.fase === 'lobi';
-              const adaLaporan = r.laporan > 0;
-              return (
-                <div
-                  key={r.id}
-                  className="bg-surface-container-lowest rounded-xl shadow-md overflow-hidden flex flex-col"
-                >
+          {/* Peringatan Keterlambatan / Ghosting dari AI */}
+          {alerts.length > 0 && (
+            <div className="bg-surface-container-lowest rounded-xl p-4 shadow-sm border-l-4 border-error flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-error font-bold text-title-sm">
+                <span className="material-symbols-outlined text-[20px]">warning</span>
+                <span>Peringatan Tenggat &amp; Risiko Ghosting ({alerts.length} tugas)</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1">
+                {alerts.map((al, idx) => (
                   <div
-                    className={`p-space-md flex flex-col gap-2 ${
-                      adaLaporan ? 'bg-surface-container-high/60' : 'bg-surface-container-low'
-                    }`}
+                    key={`${al.taskId}-${idx}`}
+                    className="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/40 flex flex-col text-body-sm"
                   >
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span
-                          className={`font-label-sticker text-label-sticker px-2 py-0.5 rounded-md font-bold ${r.kelasClass}`}
-                        >
-                            {r.kelas}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => salinPin(r.pin)}
-                          title="Salin PIN"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-container text-on-surface font-label-sticker text-label-sticker font-mono active:bg-surface-container-highest"
-                        >
-                          <span>PIN: {r.pin}</span>
-                          <span className="material-symbols-outlined text-[14px] text-on-surface-variant">
-                            {disalin === r.pin ? 'check' : 'content_copy'}
+                    <div className="flex items-center justify-between font-bold">
+                      <span className="text-on-surface">{al.groupName}</span>
+                      <span className="text-error text-xs font-mono">
+                        Terlambat {Math.round(al.hoursOverdue)} jam
+                      </span>
+                    </div>
+                    <span className="text-on-surface-variant font-medium mt-0.5">{al.taskTitle}</span>
+                    <span className="text-xs text-on-surface-variant mt-1">
+                      PIC: <strong>{al.assigneeName || 'Belum ditentukan'}</strong> • Status: {al.status}
+                    </span>
+                    <p className="text-xs text-error mt-1 italic">{al.message}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Pembagian Kelompok Otomatis (Jika belum ada kelompok atau ingin bagi ulang) */}
+          {(!roomData?.groups || roomData.groups.length === 0) && (
+            <div className="bg-surface-container-lowest p-4 rounded-xl shadow-md border-2 border-primary/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-title-md text-title-md text-on-surface font-bold flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-primary text-[20px]">group_add</span>
+                  <span>Belum Ada Kelompok Terbentuk</span>
+                </h3>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">
+                  Ada {totalSiswa} siswa terdaftar di ruang lobi. Bagi siswa ke dalam kelompok secara merata dan otomatis.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-bold text-on-surface-variant">Jumlah Kelompok:</label>
+                <select
+                  value={splitCount}
+                  onChange={(e) => setSplitCount(Number(e.target.value))}
+                  className="px-2.5 py-1.5 rounded-lg border border-outline bg-surface font-bold text-sm"
+                >
+                  <option value={2}>2 Kelompok</option>
+                  <option value={3}>3 Kelompok</option>
+                  <option value={4}>4 Kelompok</option>
+                  <option value={5}>5 Kelompok</option>
+                </select>
+                <button
+                  type="button"
+                  disabled={splitting || totalSiswa === 0}
+                  onClick={handleAutoSplit}
+                  className="px-3 py-1.5 rounded-lg bg-primary text-on-primary font-bold text-xs hover:bg-primary/90 active:scale-95 disabled:opacity-50"
+                >
+                  {splitting ? 'Membagi...' : 'Bagi Otomatis'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Monitor Progres Per Kelompok */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-headline-sm text-headline-sm text-on-surface font-bold tracking-tight flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[22px]">monitoring</span>
+                <span>Monitor Kelompok &amp; Transparansi Tugas</span>
+              </h2>
+              <span className="text-xs text-on-surface-variant font-medium">
+                (Guru memantau tugas murni tanpa membaca obrolan pribadi siswa)
+              </span>
+            </div>
+
+            {groupProgressList.length === 0 ? (
+              <div className="p-8 text-center bg-surface-container-lowest rounded-xl border border-outline-variant/40 text-on-surface-variant">
+                <span className="material-symbols-outlined text-[36px] text-on-surface-variant/50 mb-2">
+                  group_off
+                </span>
+                <p className="font-bold">Belum ada kelompok yang terdata untuk dimonitor.</p>
+                <p className="text-xs mt-1">Bagi kelompok di atas atau minta siswa bergabung ke kelas.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+                {groupProgressList.map((grp) => {
+                  const tasks = grp.statusCounts || { todo: 0, inProgress: 0, done: 0 };
+                  const totalTasks = tasks.todo + tasks.inProgress + tasks.done;
+                  const pct = Math.round(grp.progressPercent || 0);
+
+                  return (
+                    <div
+                      key={grp.groupId}
+                      className="bg-surface-container-lowest rounded-xl shadow-md border border-outline-variant/40 p-4 flex flex-col justify-between gap-3"
+                    >
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-title-md text-title-md text-on-surface font-bold">
+                            {grp.name}
                           </span>
-                        </button>
+                          <span className="px-2 py-0.5 rounded-full font-label-sticker text-label-sticker font-bold bg-secondary-container text-on-secondary-container">
+                            {pct}% Selesai
+                          </span>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="w-full h-2.5 rounded-full bg-surface-container overflow-hidden flex">
+                          <div
+                            className="h-full bg-tertiary transition-all duration-300"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+
+                        {/* Rincian Status Kanban */}
+                        <div className="flex items-center justify-between text-xs text-on-surface-variant font-medium pt-1">
+                          <span>
+                            Total: <strong>{totalTasks} tugas</strong>
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <span className="text-on-surface-variant">Todo: {tasks.todo}</span>
+                            <span className="text-primary font-bold">Jalan: {tasks.inProgress}</span>
+                            <span className="text-tertiary font-bold">Selesai: {tasks.done}</span>
+                          </span>
+                        </div>
                       </div>
 
-                      {adaLaporan ? (
-                        <span className="inline-flex items-center gap-1 font-label-sticker text-label-sticker px-2 py-0.5 rounded-md bg-error-container text-on-error-container animate-pulse">
-                          <span className="w-1.5 h-1.5 rounded-full bg-error" />
-                          {r.laporan} Laporan Masuk
+                      {/* Anggota & Kontribusi Tugas */}
+                      <div className="border-t border-outline-variant/30 pt-2 flex flex-col gap-1.5">
+                        <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                          Distribusi Tugas Anggota:
                         </span>
-                      ) : lobi ? (
-                        <span className="inline-flex items-center gap-1 font-label-sticker text-label-sticker px-2 py-0.5 rounded-md bg-surface-container-high text-on-surface-variant">
-                          <span className="material-symbols-outlined text-[14px]">schedule</span>
-                          Baru Dibuat
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 font-label-sticker text-label-sticker px-2 py-0.5 rounded-md bg-surface-container-highest text-tertiary font-bold">
-                          <span className="material-symbols-outlined text-[14px]">verified</span>
-                          Aman • Semua Aktif
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="font-headline-sm text-headline-sm text-on-surface">{r.judul}</h3>
-                  </div>
+                        <div className="flex flex-col gap-1">
+                          {grp.members?.map((m) => (
+                            <div
+                              key={m.participantId}
+                              className="flex items-center justify-between text-xs bg-surface-container-low px-2 py-1 rounded"
+                            >
+                              <span className="font-medium text-on-surface truncate">{m.name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-on-surface-variant text-[11px]">
+                                  {m.taskCount} tugas
+                                </span>
+                                <span className="font-bold font-mono text-tertiary">
+                                  {m.progressPercent !== null ? `${Math.round(m.progressPercent)}%` : '-'}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
 
-                  {/* Garis tiket */}
-                  <div className="relative flex items-center h-4 bg-surface-container-lowest">
-                    <div className="absolute -left-2 w-4 h-4 rounded-full bg-surface" />
-                    <div className="w-full mx-4 h-[1px] bg-outline-variant/50" />
-                    <div className="absolute -right-2 w-4 h-4 rounded-full bg-surface" />
-                  </div>
-
-                  <div className="p-space-md pt-2 flex flex-col gap-space-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="font-body-sm text-body-sm text-on-surface-variant">
-                        {lobi
-                          ? `${r.kelompokAktif} Kelompok Terdaftar`
-                          : `${r.kelompokAktif} Kelompok Aktif Berjalan`}
-                      </span>
-                      <span
-                        className={`font-label-md text-label-md font-bold ${
-                          lobi ? 'text-on-surface-variant' : 'text-tertiary'
-                        }`}
-                      >
-                        {lobi ? 'Menunggu Siswa' : `${r.progres}% Progres`}
-                      </span>
+                      {/* Tombol Ringkasan AI Kelompok */}
+                      <div className="border-t border-outline-variant/30 pt-2 flex items-center justify-end">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenGroupSummary(grp.groupId, grp.name)}
+                          className="px-3 py-1.5 rounded-lg bg-surface-container text-on-surface text-xs font-bold hover:bg-surface-container-high transition-colors flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-[15px] text-secondary">
+                            auto_awesome
+                          </span>
+                          <span>Ringkasan AI Kelompok</span>
+                        </button>
+                      </div>
                     </div>
-
-                    <div className="w-full h-3 rounded-full bg-surface-container overflow-hidden flex shadow-inner">
-                      <div
-                        className={`h-full transition-all ${
-                          lobi ? 'bg-secondary-container' : 'bg-tertiary-container'
-                        }`}
-                        style={{ width: `${r.progres}%` }}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 text-body-sm text-on-surface-variant pt-1">
-                      <span className="flex items-center gap-1 font-body-sm text-body-sm">
-                        <span className="material-symbols-outlined text-[16px] text-tertiary">
-                          {lobi ? 'hourglass_empty' : 'check_circle'}
-                        </span>
-                        {r.info}
-                      </span>
-                      <span className="font-label-sticker text-label-sticker text-on-primary-container bg-primary-fixed px-2 py-0.5 rounded whitespace-nowrap">
-                        {r.faseLabel}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-space-sm pt-2">
-                      {lobi ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => salinPin(r.pin)}
-                            className="w-full py-2.5 px-3 rounded-xl bg-surface-container text-on-surface font-label-lg text-label-lg font-bold hover:bg-surface-container-high active:scale-95 transition-all text-center"
-                          >
-                            {disalin === r.pin ? 'PIN Tersalin ✓' : 'Bagikan PIN'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => mulaiRoom(r.id)}
-                            className="w-full py-2.5 px-3 rounded-xl bg-primary-container text-on-primary font-label-lg text-label-lg font-bold shadow-sm active:scale-95 transition-all flex items-center justify-center gap-1"
-                          >
-                            <span>Mulai Room</span>
-                            <span className="material-symbols-outlined text-[18px]">play_arrow</span>
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => bukaRoom(r.id)}
-                            className="w-full py-2.5 px-3 rounded-xl bg-surface-container text-on-surface font-label-lg text-label-lg font-bold hover:bg-surface-container-high active:scale-95 transition-all text-center"
-                          >
-                            Buka Room
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => pantauSiswa(r.id)}
-                            className={`w-full py-2.5 px-3 rounded-xl font-label-lg text-label-lg font-bold shadow-sm active:scale-95 transition-all flex items-center justify-center gap-1 ${
-                              adaLaporan
-                                ? 'bg-primary-container text-on-primary'
-                                : 'bg-tertiary-container text-on-tertiary'
-                            }`}
-                          >
-                            <span>Pantau Siswa</span>
-                            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </main>
-      {/* Navigasi bawah */}
-      <nav className="fixed bottom-0 inset-x-0 z-40 bg-surface/95 backdrop-blur-xl shadow-[0_-4px_16px_rgba(15,27,52,0.06)]">
-        <div className="flex items-center justify-around h-16 px-space-sm max-w-5xl mx-auto">
-          {NAV.map((n, i) => {
-            const aktif = i === 0;
-            return (
-              <button
-                key={n.label}
-                type="button"
-                onClick={() => navigate(n.path)}
-                aria-current={aktif ? 'page' : undefined}
-                className={`flex flex-col items-center justify-center min-w-[56px] h-12 rounded-xl transition-all ${
-                  aktif
-                    ? 'bg-surface-container-high text-primary font-bold shadow-[2px_2px_0px_#0f1b34]'
-                    : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[22px]">{n.icon}</span>
-                <span className="font-label-md text-label-md mt-0.5">{n.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
 
-      {/* Modal rekap */}
+      {/* Modal Analisis Keadilan AI (Rekap Open) */}
       {rekapOpen && (
         <div
-          className="fixed inset-0 z-50 bg-on-surface/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-margin"
+          className="fixed inset-0 z-50 bg-on-surface/40 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setRekapOpen(false)}
         >
           <div
-            className="w-full max-w-lg bg-surface-container-lowest rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden max-h-[85vh] flex flex-col"
+            className="w-full max-w-xl bg-surface-container-lowest rounded-2xl shadow-2xl border-2 border-outline overflow-hidden max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-space-md bg-surface-container-high/70 flex items-center justify-between">
+            <div className="p-4 bg-surface-container-high flex items-center justify-between border-b border-outline-variant">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-tertiary-container text-on-tertiary flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[18px]">analytics</span>
-                </div>
+                <span className="material-symbols-outlined text-secondary text-[24px]">psychology</span>
                 <div>
-                  <h4 className="font-headline-sm text-headline-sm text-on-surface">Rekap Kerja Siswa</h4>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">
-                    Laporan keadilan kerja semua kelompok aktif
+                  <h4 className="font-headline-sm text-headline-sm text-on-surface font-bold">
+                    Analisis Keadilan Kelas (Gemini AI)
+                  </h4>
+                  <p className="text-xs text-on-surface-variant">
+                    Evaluasi laporan rahasia peer review tanpa membocorkan identitas siswa
                   </p>
                 </div>
               </div>
               <button
                 type="button"
-                aria-label="Tutup"
                 onClick={() => setRekapOpen(false)}
-                className="w-9 h-9 rounded-full bg-surface-container hover:bg-surface-container-highest flex items-center justify-center text-on-surface active:scale-90 transition-transform"
+                className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center font-bold"
               >
-                <span className="material-symbols-outlined text-[20px]">close</span>
+                ✕
               </button>
             </div>
 
-            <div className="p-space-md overflow-y-auto flex flex-col gap-space-md">
-              {/* TODO: isi dengan rangkuman dari API Gemini */}
-              <div className="bg-secondary-container/30 rounded-xl p-3.5 shadow-sm flex flex-col gap-1">
-                <div className="flex items-center gap-1.5 text-on-secondary-container font-label-sticker text-label-sticker">
-                  <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
-                  <span>Rangkuman Cerdas Sistem</span>
-                </div>
-                <p className="font-body-md text-body-md text-on-surface">
-                  92% siswa berkontribusi seimbang hari ini. Terdapat 1 anomali pembagian tugas di{' '}
-                  <strong>Kelompok Majapahit (XI IPA 2)</strong> yang membutuhkan penyesuaian peran.
-                </p>
-              </div>
+            <div className="p-4 overflow-y-auto flex flex-col gap-4 text-body-sm">
+              {fairnessAnalysis ? (
+                <>
+                  {/* Fallback source notice */}
+                  {fairnessAnalysis.source === 'fallback' && (
+                    <div className="p-2 rounded-lg bg-secondary-container/50 text-on-secondary-container text-xs font-bold flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px]">info</span>
+                      <span>hasil otomatis, AI sedang tidak tersedia</span>
+                    </div>
+                  )}
 
-              <div className="flex flex-col gap-space-sm">
-                <span className="font-title-md text-title-md text-on-surface block">
-                  Keseimbangan Beban Tugas
-                </span>
-                {REKAP.map((k) => (
-                  <div key={k.nama} className="p-3 rounded-xl bg-surface-container-low flex flex-col gap-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-label-lg text-label-lg text-on-surface">{k.nama}</span>
-                      <span
-                        className={`font-label-sticker text-label-sticker px-2 py-0.5 rounded whitespace-nowrap ${
-                          k.adil
-                            ? 'text-tertiary bg-tertiary-fixed'
-                            : 'text-error bg-error-container'
-                        }`}
-                      >
-                        {k.label}
-                      </span>
+                  {/* Skor Keadilan */}
+                  <div className="bg-surface-container-low p-4 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-on-surface-variant">SKOR KEADILAN KELAS</span>
+                      <h2 className="text-3xl font-extrabold text-primary">
+                        {fairnessAnalysis.fairnessScore} / 100
+                      </h2>
                     </div>
-                    <div className="w-full h-2 rounded-full bg-surface-container overflow-hidden flex">
-                      {k.anggota.map((a) => (
-                        <div key={a.n} className={`h-full ${a.bar}`} style={{ width: `${a.p}%` }} />
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap justify-between gap-x-3 font-body-sm text-body-sm text-on-surface-variant">
-                      {k.anggota.map((a) => (
-                        <span key={a.n}>{a.n.includes('(') ? a.n : `${a.n} (${a.p}%)`}</span>
-                      ))}
+                    <div className="text-right text-xs text-on-surface-variant">
+                      <span>Total Evaluasi Masuk:</span>
+                      <p className="font-bold text-on-surface text-sm">
+                        {fairnessAnalysis.totalReports} Laporan Rahasia
+                      </p>
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  {/* Ringkasan AI */}
+                  <div className="flex flex-col gap-1">
+                    <span className="font-bold text-on-surface text-sm">Rangkuman Suasana Tim:</span>
+                    <p className="bg-surface-container-lowest p-3 rounded-xl border border-outline-variant text-on-surface leading-relaxed">
+                      {fairnessAnalysis.summary}
+                    </p>
+                  </div>
+
+                  {/* Saran untuk Guru */}
+                  {fairnessAnalysis.teacherAdvice && (
+                    <div className="flex flex-col gap-1">
+                      <span className="font-bold text-tertiary text-sm flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[16px]">lightbulb</span>
+                        <span>Saran Fasilitasi untuk Guru:</span>
+                      </span>
+                      <p className="bg-tertiary-container/30 p-3 rounded-xl border border-tertiary/40 text-on-surface leading-relaxed">
+                        {fairnessAnalysis.teacherAdvice}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Alerts */}
+                  {fairnessAnalysis.alerts && fairnessAnalysis.alerts.length > 0 && (
+                    <div className="flex flex-col gap-1">
+                      <span className="font-bold text-error text-sm">Catatan Khusus yang Perlu Diperhatikan:</span>
+                      <ul className="list-disc list-inside space-y-1 text-xs text-on-surface-variant bg-error-container/20 p-3 rounded-xl border border-error/30">
+                        {fairnessAnalysis.alerts.map((al, i) => (
+                          <li key={i}>{al}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="py-8 text-center text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[36px] animate-spin text-secondary mb-2">
+                    psychology
+                  </span>
+                  <p>Sedang menjalankan analisis keadilan kelas...</p>
+                </div>
+              )}
             </div>
 
-            <div className="p-space-md bg-surface-container-lowest flex items-center justify-end gap-space-sm shadow-inner">
+            <div className="p-3 bg-surface-container-low border-t border-outline-variant flex justify-end">
               <button
                 type="button"
                 onClick={() => setRekapOpen(false)}
-                className="px-4 py-2 rounded-xl bg-surface-container text-on-surface font-label-lg text-label-lg font-bold"
+                className="px-4 py-2 rounded-xl bg-surface-container text-on-surface font-bold text-xs"
               >
                 Tutup
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Laporan Rahasia Siswa (Audit Khusus Guru) */}
+      {laporanOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-on-surface/40 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setLaporanOpen(false)}
+        >
+          <div
+            className="w-full max-w-2xl bg-surface-container-lowest rounded-2xl shadow-2xl border-2 border-outline overflow-hidden max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 bg-surface-container-high flex items-center justify-between border-b border-outline-variant">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-error text-[24px]">lock</span>
+                <div>
+                  <h4 className="font-headline-sm text-headline-sm text-on-surface font-bold">
+                    Audit Laporan Rahasia Siswa ({reports.length})
+                  </h4>
+                  <p className="text-xs text-on-surface-variant">
+                    Hanya dapat diakses oleh Guru. Identitas pelapor dirahasiakan dari sesama siswa.
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
-                onClick={unduhRekap}
-                className="px-4 py-2 rounded-xl bg-primary-container text-on-primary font-label-lg text-label-lg font-bold flex items-center gap-1 shadow-sm"
+                onClick={() => setLaporanOpen(false)}
+                className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center font-bold"
               >
-                <span className="material-symbols-outlined text-[16px]">download</span>
-                <span>Unduh Rekap Excel</span>
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto flex flex-col gap-3">
+              {reports.length === 0 ? (
+                <div className="py-12 text-center text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[36px] text-tertiary mb-2">
+                    verified_user
+                  </span>
+                  <p className="font-bold text-on-surface">Belum ada laporan rahasia yang masuk.</p>
+                  <p className="text-xs text-on-surface-variant mt-1">
+                    Hubungan kerja antarsiswa terindikasi kondusif.
+                  </p>
+                </div>
+              ) : (
+                reports.map((rep) => (
+                  <div
+                    key={rep.id}
+                    className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant flex flex-col gap-1.5 text-body-sm"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-on-surface">
+                          {rep.reporterName} ➔ {rep.reportedName}
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-secondary-container text-on-secondary-container">
+                          Rating: {rep.rating}/5 ⭐
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-on-surface-variant font-mono">
+                        {new Date(rep.createdAt).toLocaleDateString('id-ID')}
+                      </span>
+                    </div>
+                    <p className="text-xs bg-surface-container-lowest p-2 rounded border border-outline-variant/40 text-on-surface italic">
+                      "{rep.feedback}"
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="p-3 bg-surface-container-low border-t border-outline-variant flex justify-end">
+              <button
+                type="button"
+                onClick={() => setLaporanOpen(false)}
+                className="px-4 py-2 rounded-xl bg-surface-container text-on-surface font-bold text-xs"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ringkasan AI Kelompok Tertentu */}
+      {selectedGroupSummary && (
+        <div
+          className="fixed inset-0 z-50 bg-on-surface/40 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setSelectedGroupSummary(null)}
+        >
+          <div
+            className="w-full max-w-md bg-surface-container-lowest rounded-2xl shadow-2xl border-2 border-outline overflow-hidden max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 bg-surface-container-high flex items-center justify-between border-b border-outline-variant">
+              <div>
+                <h4 className="font-headline-sm text-headline-sm text-on-surface font-bold">
+                  Ringkasan AI: {selectedGroupSummary.groupName}
+                </h4>
+                <p className="text-xs text-on-surface-variant">Dihasilkan murni dari data tugas Kanban</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedGroupSummary(null)}
+                className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto flex flex-col gap-3 text-body-sm">
+              {loadingGroupSummary ? (
+                <div className="py-8 text-center text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[32px] animate-spin text-primary mb-2">
+                    sync
+                  </span>
+                  <p>Memuat telemetri ringkasan tugas kelompok...</p>
+                </div>
+              ) : selectedGroupSummary.summary ? (
+                <>
+                  {selectedGroupSummary.summary.source === 'fallback' && (
+                    <div className="p-2 rounded-lg bg-secondary-container/50 text-on-secondary-container text-xs font-bold flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px]">info</span>
+                      <span>hasil otomatis, AI sedang tidak tersedia</span>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-bold text-on-surface-variant uppercase">
+                      Ringkasan Aktivitas:
+                    </span>
+                    <p className="p-3 rounded-xl bg-surface-container-low border border-outline-variant text-on-surface leading-relaxed text-xs">
+                      {selectedGroupSummary.summary.summary}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                    <div className="bg-surface-container-low p-2 rounded-lg">
+                      <span className="text-on-surface-variant block">Total</span>
+                      <strong className="text-sm">{selectedGroupSummary.summary.totalTasks}</strong>
+                    </div>
+                    <div className="bg-surface-container-low p-2 rounded-lg">
+                      <span className="text-tertiary block">Selesai</span>
+                      <strong className="text-sm text-tertiary">
+                        {selectedGroupSummary.summary.completedTasks}
+                      </strong>
+                    </div>
+                    <div className="bg-surface-container-low p-2 rounded-lg">
+                      <span className="text-primary block">Tunda</span>
+                      <strong className="text-sm text-primary">
+                        {selectedGroupSummary.summary.pendingTasks}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {selectedGroupSummary.summary.highlights &&
+                    selectedGroupSummary.summary.highlights.length > 0 && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs font-bold text-on-surface-variant uppercase">
+                          Sorotan Utama:
+                        </span>
+                        <ul className="list-disc list-inside space-y-1 text-xs text-on-surface bg-surface-container-low p-2.5 rounded-lg border border-outline-variant">
+                          {selectedGroupSummary.summary.highlights.map((h, i) => (
+                            <li key={i}>{h}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                </>
+              ) : (
+                <p className="text-center text-on-surface-variant py-4">Data tidak tersedia.</p>
+              )}
+            </div>
+
+            <div className="p-3 bg-surface-container-low border-t border-outline-variant flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedGroupSummary(null)}
+                className="px-4 py-2 rounded-xl bg-surface-container text-on-surface font-bold text-xs"
+              >
+                Tutup
               </button>
             </div>
           </div>

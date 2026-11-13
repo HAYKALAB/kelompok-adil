@@ -471,27 +471,51 @@ export async function dismissSuggestion(suggestionId: string): Promise<{ dismiss
 }
 
 export interface TeacherAiSummary {
-  groupId: string;
   summary: string;
-  recommendations: string[];
+  totalTasks: number;
+  completedTasks: number;
+  pendingTasks: number;
+  nearestDeadline: string | null;
+  highlights: string[];
   generatedAt: string;
-  source?: string;
+  source?: 'ai' | 'fallback';
 }
 
 export async function fetchTeacherSummary(groupId: string): Promise<TeacherAiSummary> {
   return apiFetch<TeacherAiSummary>(`/api/ai/groups/${encodeURIComponent(groupId)}/teacher-summary`);
 }
 
-export interface RoomAlert {
-  type: string;
+export interface GhostingAlertItem {
+  groupId: string;
+  groupName: string;
+  taskId: string;
+  taskTitle: string;
+  assigneeId?: string;
+  assigneeName?: string;
+  deadline: string;
+  hoursOverdue: number;
+  status: string;
   message: string;
-  groupId?: string;
-  groupName?: string;
-  severity: 'low' | 'medium' | 'high';
 }
 
-export async function fetchRoomAlerts(roomId: string): Promise<RoomAlert[]> {
-  return apiFetch<RoomAlert[]>(`/api/ai/rooms/${encodeURIComponent(roomId)}/alerts`);
+export async function fetchRoomAlerts(roomId: string): Promise<{ alerts: GhostingAlertItem[] }> {
+  return apiFetch<{ alerts: GhostingAlertItem[] }>(`/api/ai/rooms/${encodeURIComponent(roomId)}/alerts`);
+}
+
+export interface FairnessAnalysisResult {
+  fairnessScore: number;
+  summary: string;
+  alerts: string[];
+  teacherAdvice: string;
+  totalReports: number;
+  generatedAt: string;
+  source: 'ai' | 'fallback';
+}
+
+export async function analyzeRoomFairness(roomId: string): Promise<FairnessAnalysisResult> {
+  return apiFetch<FairnessAnalysisResult>(`/api/ai/rooms/${encodeURIComponent(roomId)}/analyze-fairness`, {
+    method: 'POST',
+  });
 }
 
 export async function splitRoomGroupsAuto(pin: string, count?: number): Promise<any> {
