@@ -201,30 +201,48 @@ export default function AIFacilitatorChat({ groupId, onTasksUpdated }: Props) {
 
       {/* Messages */}
       <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3 bg-surface">
-        {messages.map((m) => {
-          const isStudent = m.sender === "student";
-          return (
-            <div key={m.id} className={`flex flex-col ${isStudent ? "items-end" : "items-start"}`}>
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="text-[10px] font-bold text-gray-500">
-                  {isStudent ? "Kamu" : "✦ AI Fasilitator"}
-                </span>
-                {m.source === "fallback" && (
-                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
-                    hasil otomatis, AI sedang tidak tersedia
+        {!groupId ? (
+          <div className="my-auto text-center p-6 flex flex-col items-center gap-2 text-on-surface-variant">
+            <span className="text-3xl">⏳</span>
+            <p className="font-bold text-sm text-on-surface">Menunggu Pembagian Kelompok</p>
+            <p className="text-xs max-w-sm">
+              AI Fasilitator akan aktif mendampingi diskusimu setelah guru membagikan kelompok tugas di kelas ini.
+            </p>
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="my-auto text-center p-6 flex flex-col items-center gap-2 text-on-surface-variant">
+            <span className="text-3xl">💡</span>
+            <p className="font-bold text-sm text-on-surface">Mulai Diskusi dengan AI Fasilitator</p>
+            <p className="text-xs max-w-sm">
+              Tanyakan ide topik, sudut pandang materi, atau klik <strong>"Usul Bagi Peran Adil"</strong> di kanan atas untuk membagi beban kerja tugas secara adil 100%.
+            </p>
+          </div>
+        ) : (
+          messages.map((m) => {
+            const isStudent = m.sender === "student";
+            return (
+              <div key={m.id} className={`flex flex-col ${isStudent ? "items-end" : "items-start"}`}>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="text-[10px] font-bold text-gray-500">
+                    {isStudent ? "Kamu" : "✦ AI Fasilitator"}
                   </span>
-                )}
+                  {m.source === "fallback" && (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
+                      hasil otomatis, AI sedang tidak tersedia
+                    </span>
+                  )}
+                </div>
+                <div
+                  className={`p-3 rounded-2xl border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] text-xs max-w-sm md:max-w-md whitespace-pre-wrap leading-relaxed ${
+                    isStudent ? "bg-primary-container text-on-primary" : "bg-white text-gray-900"
+                  }`}
+                >
+                  {m.text}
+                </div>
               </div>
-              <div
-                className={`p-3 rounded-2xl border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] text-xs max-w-sm md:max-w-md whitespace-pre-wrap leading-relaxed ${
-                  isStudent ? "bg-primary-container text-on-primary" : "bg-white text-gray-900"
-                }`}
-              >
-                {m.text}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
         {loading && (
           <div className="flex items-center gap-2 text-xs text-gray-500 italic">
             <span className="animate-spin">✦</span> AI sedang merumuskan ide...

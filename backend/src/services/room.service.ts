@@ -48,17 +48,41 @@ export async function createRoom(
 
 export async function splitRoomGroups(teacherId: string, pin: string, count?: number) {
   const prisma = getPrisma();
-  const targetCount = count ?? 4;
 
   const room = await prisma.room.findUnique({ where: { pin } });
   if (!room) {
     throw new AppError(404, 'ROOM_NOT_FOUND', 'Room tidak ditemukan.');
   }
-  if (room.teacherId !== teacherId) {
+
+  // Cek otorisasi: User ID pemilik room ATAU RoomParticipant dengan role TEACHER di room ini
+  const isDirectOwner = room.teacherId === teacherId;
+  const isParticipantTeacher = await prisma.roomParticipant.findFirst({
+    where: {
+      id: teacherId,
+      roomId: room.id,
+      role: 'TEACHER',
+    },
+  });
+
+  if (!isDirectOwner && !isParticipantTeacher) {
     throw new AppError(403, 'FORBIDDEN', 'Hanya guru pemilik kelas yang bisa membagi kelompok.');
   }
 
   const roomId = room.id;
+
+  // Ambil peserta siswa (role STUDENT)
+  const participants = await prisma.roomParticipant.findMany({
+    where: { roomId, role: 'STUDENT' },
+    select: { id: true, name: true },
+  });
+
+  if (participants.length === 0) {
+    throw new AppError(400, 'NO_STUDENTS', 'Belum ada siswa yang bergabung di kelas ini. Bagikan PIN kelas ke siswa terlebih dahulu.');
+  }
+
+  const requestedCount = count ?? 4;
+  // Sesuaikan targetCount jika jumlah siswa lebih sedikit dari kelompok yang diminta
+  const targetCount = Math.max(1, Math.min(requestedCount, participants.length));
 
   // 1. Clear existing participant group assignments
   await prisma.roomParticipant.updateMany({
@@ -83,13 +107,7 @@ export async function splitRoomGroups(teacherId: string, pin: string, count?: nu
     );
   }
 
-  // 4. Get student participants (role STUDENT), shuffle randomly
-  const participants = await prisma.roomParticipant.findMany({
-    where: { roomId, role: 'STUDENT' },
-    select: { id: true, name: true },
-  });
-
-  // Fisher-Yates shuffle
+  // 4. Fisher-Yates shuffle participants
   for (let i = participants.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [participants[i], participants[j]] = [participants[j], participants[i]];

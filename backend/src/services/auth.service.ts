@@ -13,6 +13,14 @@ export async function joinRoomAsStudent(pin: string, name: string) {
     where: { roomId_name: { roomId: room.id, name } },
   });
 
+  // Jika siswa sudah pernah masuk ke room ini, izinkan login ulang (resume sesi)
+  if (existing && existing.role === 'STUDENT') {
+    return {
+      participant: existing,
+      token: signSession({ id: existing.id, role: existing.role }),
+    };
+  }
+
   if (existing) {
     throw new AppError(409, 'NAME_ALREADY_USED', 'Nama sudah dipakai peserta lain.');
   }

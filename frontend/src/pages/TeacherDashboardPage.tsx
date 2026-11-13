@@ -179,8 +179,9 @@ export function TeacherDashboardPage() {
     navigate('/');
   };
 
-  // Perhitungan statistik
-  const totalSiswa = roomData?.participants?.length || 0;
+  // Perhitungan statistik (hanya siswa, bukan guru)
+  const studentParticipants = roomData?.participants?.filter((p) => p.role === 'STUDENT') || [];
+  const totalSiswa = studentParticipants.length;
   const totalKelompok = roomData?.groups?.length || progressData?.groups?.length || 0;
   const totalLaporan = reports.length;
 
