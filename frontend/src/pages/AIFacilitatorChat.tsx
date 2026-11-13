@@ -51,13 +51,14 @@ export default function AIFacilitatorChat({ groupId, onTasksUpdated }: Props) {
 
     try {
       const res = await chatWithAi(groupId, text);
+      const answer = res.reply || res.text || 'Hai! Silakan diskusikan tugas kelompokmu di sini.';
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           sender: "ai",
-          text: res.reply,
-          source: res.source,
+          text: answer,
+          source: res.source === 'gemini' ? 'gemini' : 'fallback',
         },
       ]);
     } catch (err: any) {

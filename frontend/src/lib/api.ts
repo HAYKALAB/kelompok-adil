@@ -426,14 +426,21 @@ export async function fetchRoomProgress(roomId: string): Promise<RoomProgressDat
 // --- AI Engine (Backend 2) ---
 export interface AiChatResponse {
   reply: string;
-  source?: 'gemini' | 'fallback';
+  text?: string;
+  source?: 'gemini' | 'ai' | 'fallback';
 }
 
 export async function chatWithAi(groupId: string, message: string): Promise<AiChatResponse> {
-  return apiFetch<AiChatResponse>(`/api/ai/groups/${encodeURIComponent(groupId)}/chat`, {
+  const res = await apiFetch<any>(`/api/ai/groups/${encodeURIComponent(groupId)}/chat`, {
     method: 'POST',
     body: { message },
   });
+  const replyText = res?.reply || res?.text || '';
+  return {
+    reply: replyText,
+    text: replyText,
+    source: res?.source === 'ai' || res?.source === 'gemini' ? 'gemini' : 'fallback',
+  };
 }
 
 export interface RoleSplitSuggestion {

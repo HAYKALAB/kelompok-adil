@@ -42,8 +42,9 @@ export class LlmClient {
   }
 
   public static getTimeoutMs(): number {
+    if (process.env.NODE_ENV === 'test') return 2000;
     const envVal = Number(process.env.AI_TIMEOUT_MS);
-    return !isNaN(envVal) && envVal > 0 ? envVal : 10000;
+    return !isNaN(envVal) && envVal > 0 ? envVal : 45000;
   }
 
   // Rekaman prompt hanya disimpan dan dapat diakses saat NODE_ENV === 'test'

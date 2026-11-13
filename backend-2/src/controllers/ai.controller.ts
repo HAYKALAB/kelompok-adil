@@ -61,7 +61,7 @@ export class AiController {
         action,
       });
 
-      sendData(res, result);
+      sendData(res, { ...result, reply: result.text });
     } catch (err: any) {
       console.error('Gagal memproses pesan AI:', err.message);
       handleControllerError(res, err, 'Gagal memproses permintaan chat fasilitator.');
