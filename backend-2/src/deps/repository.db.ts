@@ -314,10 +314,10 @@ export class RepositoryDb implements IRepository {
       return this.pool;
     }
 
-    const connectionString = process.env.BACKEND2_DATABASE_URL?.trim();
+    const connectionString = (process.env.BACKEND2_DATABASE_URL || process.env.DATABASE_URL)?.trim();
     if (!connectionString) {
       throw new DatabaseServiceUnavailableError(
-        'Konfigurasi BACKEND2_DATABASE_URL belum diatur untuk mode database.'
+        'Konfigurasi BACKEND2_DATABASE_URL atau DATABASE_URL belum diatur untuk mode database.'
       );
     }
 
