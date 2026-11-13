@@ -76,7 +76,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     headers.set('Authorization', `Bearer ${session.token}`);
   }
 
-  const timeoutMs = options.timeoutMs ?? 30000;
+  const timeoutMs = options.timeoutMs ?? 35000;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -126,9 +126,9 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
           : response.status === 403
           ? 'Akses ditolak.'
           : response.status === 429
-          ? 'Terlalu banyak permintaan. Mohon tunggu sebentar.'
+          ? 'Terlalu banyak permintaan ke layanan AI/Server. Mohon tunggu beberapa detik.'
           : response.status === 503
-          ? 'Layanan sedang menyiapkan koneksi database atau AI. Coba lagi beberapa saat lagi.'
+          ? 'Layanan sedang menyiapkan koneksi database atau AI (cold start). Silakan coba lagi sebentar lagi.'
           : 'Terjadi kesalahan pada server.');
       const customErr: any = new Error(message);
       customErr.code = err?.code || `HTTP_${response.status}`;
@@ -228,5 +228,274 @@ export async function registerTeacher(name: string): Promise<{ user: any; token:
   return apiFetch<{ user: any; token: string }>('/api/teachers/register', {
     method: 'POST',
     body: { name },
+  });
+}
+
+// --- Detail Room (GET /api/rooms/:pin) ---
+export interface RoomDetailStudent {
+  room: {
+    id: string;
+    title: string;
+    subject?: string;
+    className?: string;
+    deadline?: string;
+    status: string;
+  };
+  participantCount: number;
+  groups: Array<{
+    id: string;
+    groupNumber: number;
+    name: string;
+    members: Array<{ id: string; name: string }>;
+  }>;
+  me: {
+    id: string;
+    name: string;
+    groupId?: string | null;
+  };
+}
+
+export interface RoomDetailTeacher {
+  room: {
+    id: string;
+    pin: string;
+    title: string;
+    subject?: string;
+    className?: string;
+    aiEnabled: boolean;
+    deadline?: string;
+    status: string;
+  };
+  participants: Array<{
+    id: string;
+    name: string;
+    role: string;
+    groupId?: string | null;
+  }>;
+  groups: Array<{
+    id: string;
+    groupNumber: number;
+    name: string;
+    members: Array<{ id: string; name: string }>;
+  }>;
+}
+
+export async function getRoomDetail(pin: string): Promise<RoomDetailStudent | RoomDetailTeacher> {
+  return apiFetch<RoomDetailStudent | RoomDetailTeacher>(`/api/rooms/${encodeURIComponent(pin)}`);
+}
+
+// --- Group Tasks (Tahap 1 & Tahap 3 Backend) ---
+export interface GroupTask {
+  id: string;
+  groupId: string;
+  title: string;
+  description?: string | null;
+  assigneeId?: string | null;
+  status: 'TODO' | 'IN_PROGRESS' | 'DONE';
+  weight: number;
+  progress: number;
+  deadline?: string | null;
+  createdAt: string;
+  doneAt?: string | null;
+}
+
+export async function fetchGroupTasks(groupId: string): Promise<GroupTask[]> {
+  return apiFetch<GroupTask[]>(`/api/groups/${encodeURIComponent(groupId)}/tasks`);
+}
+
+export async function createGroupTask(
+  groupId: string,
+  payload: {
+    title: string;
+    description?: string | null;
+    assigneeId?: string | null;
+    weight?: number;
+    deadline?: string | null;
+  }
+): Promise<GroupTask> {
+  return apiFetch<GroupTask>(`/api/groups/${encodeURIComponent(groupId)}/tasks`, {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export async function updateGroupTaskDetail(
+  taskId: string,
+  payload: {
+    title?: string;
+    description?: string | null;
+    assigneeId?: string | null;
+    weight?: number;
+    deadline?: string | null;
+  }
+): Promise<GroupTask> {
+  return apiFetch<GroupTask>(`/api/tasks/${encodeURIComponent(taskId)}`, {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
+export async function updateGroupTaskProgress(
+  taskId: string,
+  progress: number,
+  note?: string
+): Promise<GroupTask> {
+  return apiFetch<GroupTask>(`/api/tasks/${encodeURIComponent(taskId)}/progress`, {
+    method: 'PATCH',
+    body: { progress, note },
+  });
+}
+
+// --- Peer Reports ---
+export async function submitPeerReport(
+  groupId: string,
+  payload: {
+    reportedId: string;
+    rating: number;
+    feedback: string;
+  }
+): Promise<{ saved: boolean }> {
+  return apiFetch<{ saved: boolean }>(`/api/groups/${encodeURIComponent(groupId)}/reports`, {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export interface TeacherPeerReport {
+  id: string;
+  roomId: string;
+  groupId: string;
+  reporterId: string;
+  reporterName: string;
+  reportedId: string;
+  reportedName: string;
+  rating: number;
+  feedback: string;
+  createdAt: string;
+}
+
+export async function fetchRoomPeerReports(roomId: string): Promise<TeacherPeerReport[]> {
+  return apiFetch<TeacherPeerReport[]>(`/api/rooms/${encodeURIComponent(roomId)}/reports`);
+}
+
+// --- Student Chat Messages (Backend 1) ---
+export interface GroupMessage {
+  id: string;
+  groupId: string;
+  senderName: string;
+  content: string;
+  isAi: boolean;
+  createdAt: string;
+  action?: string | null;
+  payload?: any;
+}
+
+export async function fetchGroupMessages(groupId: string): Promise<GroupMessage[]> {
+  return apiFetch<GroupMessage[]>(`/api/groups/${encodeURIComponent(groupId)}/messages`);
+}
+
+export async function sendGroupMessage(groupId: string, content: string): Promise<GroupMessage> {
+  return apiFetch<GroupMessage>(`/api/groups/${encodeURIComponent(groupId)}/messages`, {
+    method: 'POST',
+    body: { content },
+  });
+}
+
+// --- Progress Monitor Guru (Backend 1) ---
+export interface RoomProgressData {
+  roomId: string;
+  groups: Array<{
+    groupId: string;
+    name: string;
+    progressPercent: number;
+    statusCounts: { todo: number; inProgress: number; done: number };
+    nearestDeadline?: string | null;
+    members: Array<{
+      participantId: string;
+      name: string;
+      taskCount: number;
+      progressPercent: number | null;
+    }>;
+  }>;
+}
+
+export async function fetchRoomProgress(roomId: string): Promise<RoomProgressData> {
+  return apiFetch<RoomProgressData>(`/api/rooms/${encodeURIComponent(roomId)}/progress`);
+}
+
+// --- AI Engine (Backend 2) ---
+export interface AiChatResponse {
+  reply: string;
+  source?: 'gemini' | 'fallback';
+}
+
+export async function chatWithAi(groupId: string, message: string): Promise<AiChatResponse> {
+  return apiFetch<AiChatResponse>(`/api/ai/groups/${encodeURIComponent(groupId)}/chat`, {
+    method: 'POST',
+    body: { message },
+  });
+}
+
+export interface RoleSplitSuggestion {
+  id: string;
+  groupId: string;
+  status: 'PENDING' | 'APPLIED' | 'DISMISSED';
+  suggestedAt: string;
+  source?: string;
+  roles: Array<{
+    title: string;
+    description: string;
+    targetPercent: number;
+    deliverableFormat: string;
+    suggestedMemberName: string;
+    assigneeId?: string | null;
+  }>;
+}
+
+export async function requestRoleSplit(groupId: string): Promise<RoleSplitSuggestion> {
+  return apiFetch<RoleSplitSuggestion>(`/api/ai/groups/${encodeURIComponent(groupId)}/split-roles`, {
+    method: 'POST',
+  });
+}
+
+export async function applySuggestion(suggestionId: string): Promise<{ applied: boolean }> {
+  return apiFetch<{ applied: boolean }>(`/api/ai/suggestions/${encodeURIComponent(suggestionId)}/apply`, {
+    method: 'POST',
+  });
+}
+
+export async function dismissSuggestion(suggestionId: string): Promise<{ dismissed: boolean }> {
+  return apiFetch<{ dismissed: boolean }>(`/api/ai/suggestions/${encodeURIComponent(suggestionId)}/dismiss`, {
+    method: 'POST',
+  });
+}
+
+export interface TeacherAiSummary {
+  groupId: string;
+  summary: string;
+  recommendations: string[];
+  generatedAt: string;
+  source?: string;
+}
+
+export async function fetchTeacherSummary(groupId: string): Promise<TeacherAiSummary> {
+  return apiFetch<TeacherAiSummary>(`/api/ai/groups/${encodeURIComponent(groupId)}/teacher-summary`);
+}
+
+export interface RoomAlert {
+  type: string;
+  message: string;
+  groupId?: string;
+  groupName?: string;
+  severity: 'low' | 'medium' | 'high';
+}
+
+export async function fetchRoomAlerts(roomId: string): Promise<RoomAlert[]> {
+  return apiFetch<RoomAlert[]>(`/api/ai/rooms/${encodeURIComponent(roomId)}/alerts`);
+}
+
+export async function splitRoomGroupsAuto(pin: string, count?: number): Promise<any> {
+  return apiFetch<any>(`/api/rooms/${encodeURIComponent(pin)}/groups/split${count ? `?count=${count}` : ''}`, {
+    method: 'POST',
   });
 }
