@@ -1,6 +1,13 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { createRoom, getRoomDetail, splitRoomGroups as splitGroups } from '../services/room.service.js';
+import {
+  createRoom,
+  getRoomDetail,
+  splitRoomGroups as splitGroups,
+  getRoomLobby,
+  lockStudentGroup,
+  joinStudentGroup,
+} from '../services/room.service.js';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
 
 const createRoomSchema = z.object({
@@ -55,5 +62,47 @@ export async function getRoomDetailHandler(req: Request, res: Response): Promise
 
   const pin = String(req.params.pin);
   const result = await getRoomDetail(user.id, pin);
+  res.status(200).json({ data: result });
+}
+
+export async function getRoomLobbyHandler(req: Request, res: Response): Promise<void> {
+  const authReq = req as AuthenticatedRequest;
+  const user = authReq.user;
+  if (!user) {
+    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token tidak ditemukan.' } });
+    return;
+  }
+  const pin = String(req.params.pin);
+  const result = await getRoomLobby(user.id, pin);
+  res.status(200).json({ data: result });
+}
+
+export async function lockStudentGroupHandler(req: Request, res: Response): Promise<void> {
+  const authReq = req as AuthenticatedRequest;
+  const user = authReq.user;
+  if (!user) {
+    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token tidak ditemukan.' } });
+    return;
+  }
+  const pin = String(req.params.pin);
+  const body = req.body || {};
+  const result = await lockStudentGroup(
+    user.id,
+    pin,
+    String(body.groupName || ''),
+    Array.isArray(body.memberIds) ? body.memberIds : []
+  );
+  res.status(200).json({ data: result });
+}
+
+export async function joinStudentGroupHandler(req: Request, res: Response): Promise<void> {
+  const authReq = req as AuthenticatedRequest;
+  const user = authReq.user;
+  if (!user) {
+    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token tidak ditemukan.' } });
+    return;
+  }
+  const groupId = String(req.params.groupId);
+  const result = await joinStudentGroup(user.id, groupId);
   res.status(200).json({ data: result });
 }

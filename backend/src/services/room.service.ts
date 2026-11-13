@@ -310,3 +310,153 @@ export async function getRoomDetail(
     },
   };
 }
+
+export async function getRoomLobby(participantId: string, pin: string, client?: any) {
+  const prisma = client ?? (getPrisma() as any);
+  const room = await prisma.room.findUnique({
+    where: { pin },
+    select: { id: true, pin: true, title: true, subject: true, className: true, targetGroups: true },
+  });
+  if (!room) {
+    throw new AppError(404, 'ROOM_NOT_FOUND', 'Room tidak ditemukan.');
+  }
+
+  const caller = await prisma.roomParticipant.findUnique({
+    where: { id: participantId },
+  });
+  if (!caller || caller.roomId !== room.id) {
+    throw new AppError(403, 'FORBIDDEN', 'Anda tidak terdaftar di kelas ini.');
+  }
+
+  const groups = await prisma.group.findMany({
+    where: { roomId: room.id },
+    orderBy: { groupNumber: 'asc' },
+    include: {
+      members: {
+        select: { id: true, name: true },
+      },
+    },
+  });
+
+  const students = await prisma.roomParticipant.findMany({
+    where: { roomId: room.id, role: 'STUDENT' },
+    orderBy: { joinedAt: 'asc' },
+    select: {
+      id: true,
+      name: true,
+      groupId: true,
+      group: { select: { id: true, name: true, groupNumber: true } },
+    },
+  });
+
+  return {
+    room,
+    caller: { id: caller.id, name: caller.name, role: caller.role, groupId: caller.groupId },
+    students: students.map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      inGroup: !!s.groupId,
+      groupId: s.groupId,
+      groupName: s.group?.name ?? null,
+    })),
+    groups: groups.map((g: any) => ({
+      id: g.id,
+      groupNumber: g.groupNumber,
+      name: g.name,
+      memberCount: g.members.length,
+      members: g.members,
+    })),
+  };
+}
+
+export async function lockStudentGroup(
+  participantId: string,
+  pin: string,
+  groupName: string,
+  memberIds: string[] = [],
+  client?: any
+) {
+  const prisma = client ?? (getPrisma() as any);
+  const room = await prisma.room.findUnique({ where: { pin } });
+  if (!room) {
+    throw new AppError(404, 'ROOM_NOT_FOUND', 'Room tidak ditemukan.');
+  }
+
+  const caller = await prisma.roomParticipant.findUnique({
+    where: { id: participantId },
+  });
+  if (!caller || caller.roomId !== room.id) {
+    throw new AppError(403, 'FORBIDDEN', 'Anda tidak terdaftar di kelas ini.');
+  }
+
+  const highestGroup = await prisma.group.findFirst({
+    where: { roomId: room.id },
+    orderBy: { groupNumber: 'desc' },
+    select: { groupNumber: true },
+  });
+  const nextGroupNumber = (highestGroup?.groupNumber ?? 0) + 1;
+  const cleanName = groupName.trim() || `Kelompok ${nextGroupNumber}`;
+
+  const newGroup = await prisma.group.create({
+    data: {
+      roomId: room.id,
+      groupNumber: nextGroupNumber,
+      name: cleanName,
+    },
+  });
+
+  const allMemberIds = Array.from(new Set([caller.id, ...memberIds]));
+
+  await prisma.roomParticipant.updateMany({
+    where: {
+      id: { in: allMemberIds },
+      roomId: room.id,
+    },
+    data: {
+      groupId: newGroup.id,
+    },
+  });
+
+  const updatedMembers = await prisma.roomParticipant.findMany({
+    where: { groupId: newGroup.id },
+    select: { id: true, name: true },
+  });
+
+  return {
+    group: {
+      id: newGroup.id,
+      groupNumber: newGroup.groupNumber,
+      name: newGroup.name,
+      members: updatedMembers,
+    },
+  };
+}
+
+export async function joinStudentGroup(participantId: string, groupId: string, client?: any) {
+  const prisma = client ?? (getPrisma() as any);
+  const caller = await prisma.roomParticipant.findUnique({
+    where: { id: participantId },
+  });
+  if (!caller) {
+    throw new AppError(403, 'FORBIDDEN', 'Peserta tidak ditemukan.');
+  }
+
+  const group = await prisma.group.findUnique({
+    where: { id: groupId },
+    include: { members: { select: { id: true } } },
+  });
+  if (!group || group.roomId !== caller.roomId) {
+    throw new AppError(404, 'GROUP_NOT_FOUND', 'Kelompok tidak ditemukan di kelas ini.');
+  }
+
+  await prisma.roomParticipant.update({
+    where: { id: caller.id },
+    data: { groupId: group.id },
+  });
+
+  return {
+    joined: true,
+    groupId: group.id,
+    groupName: group.name,
+  };
+}

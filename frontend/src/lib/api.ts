@@ -523,3 +523,63 @@ export async function splitRoomGroupsAuto(pin: string, count?: number): Promise<
     method: 'POST',
   });
 }
+
+// --- Lobby Pemilihan Kelompok Siswa ---
+export interface RoomLobbyData {
+  room: {
+    id: string;
+    pin: string;
+    title: string;
+    subject?: string;
+    className?: string;
+    targetGroups?: number;
+  };
+  caller: {
+    id: string;
+    name: string;
+    role: string;
+    groupId?: string | null;
+  };
+  students: Array<{
+    id: string;
+    name: string;
+    inGroup: boolean;
+    groupId?: string | null;
+    groupName?: string | null;
+  }>;
+  groups: Array<{
+    id: string;
+    groupNumber: number;
+    name: string;
+    memberCount: number;
+    members: Array<{ id: string; name: string }>;
+  }>;
+}
+
+export async function fetchRoomLobby(pin: string): Promise<RoomLobbyData> {
+  return apiFetch<RoomLobbyData>(`/api/rooms/${encodeURIComponent(pin)}/lobby`);
+}
+
+export async function lockStudentGroup(
+  pin: string,
+  payload: { groupName: string; memberIds: string[] }
+): Promise<{ group: { id: string; name: string; groupNumber: number; members: any[] } }> {
+  return apiFetch<{ group: { id: string; name: string; groupNumber: number; members: any[] } }>(
+    `/api/rooms/${encodeURIComponent(pin)}/groups/lock`,
+    {
+      method: 'POST',
+      body: payload,
+    }
+  );
+}
+
+export async function joinStudentGroup(
+  groupId: string
+): Promise<{ joined: boolean; groupId: string; groupName: string }> {
+  return apiFetch<{ joined: boolean; groupId: string; groupName: string }>(
+    `/api/groups/${encodeURIComponent(groupId)}/join`,
+    {
+      method: 'POST',
+    }
+  );
+}

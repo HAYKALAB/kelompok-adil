@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { TambahTugasModal, type TugasBaru } from '../components/TambahTugasModal';
 import { LaporRahasiaModal, type LaporanRahasia } from '../components/LaporanRahasiaModal';
 import AIFacilitatorChat from './AIFacilitatorChat';
+import { StudentLobbyGroupPicker } from '../components/StudentLobbyGroupPicker';
 import {
   getSession,
   clearSession,
@@ -237,14 +238,16 @@ export function WorkspacePage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setLaporOpen(true)}
-              className="px-3 py-1.5 rounded-xl bg-red-100 text-red-900 border-2 border-red-800 shadow-[2px_2px_0px_#991b1b] text-xs font-bold hover:-translate-y-0.5 active:translate-y-0.5 transition-transform flex items-center gap-1"
-            >
-              <span>🚨</span>
-              <span>Lapor Rahasia</span>
-            </button>
+            {myGroup && (
+              <button
+                type="button"
+                onClick={() => setLaporOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-red-100 text-red-900 border-2 border-red-800 shadow-[2px_2px_0px_#991b1b] text-xs font-bold hover:-translate-y-0.5 active:translate-y-0.5 transition-transform flex items-center gap-1"
+              >
+                <span>🚨</span>
+                <span>Lapor Rahasia</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -278,30 +281,13 @@ export function WorkspacePage() {
           </div>
         )}
 
-        {/* Waiting for group division notice */}
-        {!myGroup && (
-          <div className="p-4 rounded-2xl bg-amber-100 border-2 border-amber-600 text-amber-950 shadow-[4px_4px_0px_#d97706] flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">⏳</span>
-              <div>
-                <p className="font-bold text-sm md:text-base">Kamu Belum Masuk ke Kelompok</p>
-                <p className="text-xs text-amber-800">
-                  Guru kelasmu sedang mengatur pembagian kelompok. Setelah guru menekan tombol <strong>Bagi Otomatis</strong>, klik tombol Segarkan di kanan.
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={loadData}
-              className="px-3 py-1.5 rounded-xl bg-amber-500 text-white font-bold text-xs border border-amber-800 shadow-[2px_2px_0px_#78350f] hover:scale-105 active:scale-95 transition-all shrink-0"
-            >
-              🔄 Segarkan
-            </button>
-          </div>
-        )}
-
-        {/* Info Kelompok & Ringkasan Bobot */}
-        <div className="rounded-2xl bg-surface-container-lowest p-5 border-2 border-[#0f1b34] shadow-[4px_4px_0px_#0f1b34] flex flex-col gap-4">
+        {/* Jika belum masuk kelompok: Tampilkan Lobi Pemilihan Anggota Kelompok */}
+        {!myGroup ? (
+          <StudentLobbyGroupPicker pin={pin} onGroupJoined={loadData} />
+        ) : (
+          <>
+            {/* Info Kelompok & Ringkasan Bobot */}
+            <div className="rounded-2xl bg-surface-container-lowest p-5 border-2 border-[#0f1b34] shadow-[4px_4px_0px_#0f1b34] flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <span className="text-xs uppercase tracking-wider font-bold text-tertiary">
@@ -587,6 +573,8 @@ export function WorkspacePage() {
             ))}
           </div>
         </div>
+          </>
+        )}
       </main>
 
       {/* Modal Tambah Tugas */}
