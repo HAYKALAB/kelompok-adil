@@ -449,6 +449,12 @@ export async function chatWithAi(groupId: string, message: string): Promise<AiCh
   };
 }
 
+export async function fetchAiMessages(groupId: string): Promise<any[]> {
+  const res = await apiFetch<any>(`/api/ai/groups/${encodeURIComponent(groupId)}/messages`);
+  const list = res?.messages || res?.data?.messages || (Array.isArray(res) ? res : []);
+  return list;
+}
+
 export interface RoleSplitSuggestion {
   id: string;
   groupId: string;

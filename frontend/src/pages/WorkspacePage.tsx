@@ -120,10 +120,15 @@ export function WorkspacePage() {
     return Math.round(totalDone / totalWeight);
   }, [tasks]);
 
-  // Obrolan murni sesama rekan kelompok (tanpa bot / AI)
+  // Obrolan murni sesama rekan kelompok (tanpa bot / AI dan tanpa pertanyaan siswa ke AI)
   const peerMessages = useMemo(() => {
     return messages.filter(
-      (m) => !m.isAi && m.senderName !== 'AI Asisten Rukun' && !m.senderName?.toLowerCase().includes('ai')
+      (m) =>
+        !m.isAi &&
+        m.senderName !== 'AI Asisten Rukun' &&
+        m.senderName !== 'Asisten AI' &&
+        !m.senderName?.toLowerCase().includes('ai') &&
+        (!m.action || m.action === 'peer_chat')
     );
   }, [messages]);
 

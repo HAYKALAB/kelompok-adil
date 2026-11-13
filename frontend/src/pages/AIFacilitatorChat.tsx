@@ -4,7 +4,7 @@ import {
   requestRoleSplit,
   applySuggestion,
   dismissSuggestion,
-  fetchGroupMessages,
+  fetchAiMessages,
   type RoleSplitSuggestion,
 } from "../lib/api";
 
@@ -39,14 +39,25 @@ export default function AIFacilitatorChat({ groupId, onTasksUpdated }: Props) {
 
   useEffect(() => {
     if (!groupId) return;
-    fetchGroupMessages(groupId)
+    fetchAiMessages(groupId)
       .then((history) => {
         if (history && history.length > 0) {
-          const mapped: Message[] = history.map((h, idx) => ({
+          // Muat riwayat interaksi AI (pertanyaan ke AI dan balasan AI)
+          const aiRelated = history.filter(
+            (h: any) =>
+              h.isAi ||
+              h.senderType === 'ai' ||
+              h.action === 'chat' ||
+              h.action === 'ideas' ||
+              h.action === 'split_roles' ||
+              h.action === 'ai_chat' ||
+              h.action === 'nudge'
+          );
+          const mapped: Message[] = aiRelated.map((h: any, idx: number) => ({
             id: idx + 2,
-            sender: h.isAi ? "ai" : "student",
+            sender: (h.isAi || h.senderType === 'ai') ? "ai" : "student",
             text: h.content,
-            source: h.isAi ? "gemini" : undefined,
+            source: (h.isAi || h.senderType === 'ai') ? "gemini" : undefined,
           }));
           setMessages([
             {

@@ -40,7 +40,13 @@ export async function listGroupMessages(
 
   const prisma = getPrisma();
   return prisma.groupMessage.findMany({
-    where: { groupId },
+    where: {
+      groupId,
+      isAi: false,
+      NOT: {
+        action: { in: ['chat', 'ideas', 'split_roles', 'ai_chat', 'nudge', 'validation'] },
+      },
+    },
     orderBy: { createdAt: 'asc' },
   });
 }
@@ -60,6 +66,7 @@ export async function sendGroupMessage(
       senderName: participant.name,
       content,
       isAi: false,
+      action: 'peer_chat',
     },
   });
 }
