@@ -120,6 +120,13 @@ export function WorkspacePage() {
     return Math.round(totalDone / totalWeight);
   }, [tasks]);
 
+  // Obrolan murni sesama rekan kelompok (tanpa bot / AI)
+  const peerMessages = useMemo(() => {
+    return messages.filter(
+      (m) => !m.isAi && m.senderName !== 'AI Asisten Rukun' && !m.senderName?.toLowerCase().includes('ai')
+    );
+  }, [messages]);
+
   const handleUpdateProgress = async (taskId: string, currentProgress: number, tambah: number) => {
     setErrorMessage(null);
     setActionSuccess(null);
@@ -516,20 +523,23 @@ export function WorkspacePage() {
           </div>
         )}
 
-        {/* Tab 2: CHAT KELOMPOK */}
+        {/* Tab 2: CHAT KELOMPOK (MURNI ANTAR SISWA TANPA AI) */}
         {tab === 'chat' && (
           <div className="rounded-2xl bg-surface-container-lowest border-2 border-[#0f1b34] shadow-[4px_4px_0px_#0f1b34] flex flex-col h-[520px] overflow-hidden">
             <div className="p-3 border-b-2 border-[#0f1b34] bg-surface-container flex items-center justify-between">
-              <span className="font-bold text-sm">Ruang Obrolan Rekan Kelompok (Transparan)</span>
-              <span className="text-xs text-on-surface-variant">{messages.length} Pesan</span>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">forum</span>
+                <span className="font-bold text-sm">Ruang Obrolan Rekan Kelompok (Murni Anggota)</span>
+              </div>
+              <span className="text-xs text-on-surface-variant">{peerMessages.length} Pesan</span>
             </div>
             <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3 bg-surface">
-              {messages.length === 0 ? (
+              {peerMessages.length === 0 ? (
                 <div className="text-center text-xs text-gray-500 my-auto">
-                  Belum ada pesan. Mulai obrolan dengan teman sekelompokmu!
+                  Belum ada pesan sesama teman kelompok. Mulai obrolan dengan rekan sekelompokmu!
                 </div>
               ) : (
-                messages.map((m) => {
+                peerMessages.map((m) => {
                   const isMe = m.senderName === roomData?.me?.name;
                   return (
                     <div key={m.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
@@ -551,7 +561,7 @@ export function WorkspacePage() {
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Ketik pesan untuk kelompok..."
+                placeholder="Ketik pesan untuk rekan kelompok..."
                 className="flex-1 px-3 py-2 rounded-xl bg-surface-container-lowest border-2 border-[#0f1b34] text-xs focus:outline-none"
               />
               <button
