@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import {
   chatWithAi,
   requestRoleSplit,
   applySuggestion,
   dismissSuggestion,
+  fetchGroupMessages,
   type RoleSplitSuggestion,
 } from "../lib/api";
 
@@ -35,6 +36,31 @@ export default function AIFacilitatorChat({ groupId, onTasksUpdated }: Props) {
 
   const [activeSuggestion, setActiveSuggestion] = useState<RoleSplitSuggestion | null>(null);
   const [splitLoading, setSplitLoading] = useState(false);
+
+  useEffect(() => {
+    if (!groupId) return;
+    fetchGroupMessages(groupId)
+      .then((history) => {
+        if (history && history.length > 0) {
+          const mapped: Message[] = history.map((h, idx) => ({
+            id: idx + 2,
+            sender: h.isAi ? "ai" : "student",
+            text: h.content,
+            source: h.isAi ? "gemini" : undefined,
+          }));
+          setMessages([
+            {
+              id: 1,
+              sender: "ai",
+              text: "Halo! Aku AI Fasilitator kelompokmu. Mau brainstorming ide sudut pandang tugas atau pembagian peran adil?",
+              source: "gemini",
+            },
+            ...mapped,
+          ]);
+        }
+      })
+      .catch(() => {});
+  }, [groupId]);
 
   async function handleSend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
