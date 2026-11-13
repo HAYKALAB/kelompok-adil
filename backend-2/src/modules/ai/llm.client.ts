@@ -38,7 +38,14 @@ export class LlmClient {
   }
 
   public static getModel(): string {
-    return process.env.AI_MODEL || 'gemini-3.5-flash-lite';
+    return process.env.AI_MODEL || 'gemini-2.5-flash';
+  }
+
+  // Daftar model bertingkat jika terjadi limit/kuota habis pada model utama
+  public static getFallbackModels(): string[] {
+    const primary = this.getModel();
+    const defaults = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    return Array.from(new Set([primary, ...defaults]));
   }
 
   public static getTimeoutMs(): number {
@@ -139,25 +146,29 @@ export class LlmClient {
       return { text: mockFallback, source: 'fallback' };
     }
 
-    try {
-      const responseText = await this.executeWithRetry(async (signal) => {
-        const response = await ai.models.generateContent({
-          model: this.getModel(),
-          contents: userPrompt,
-          config: {
-            systemInstruction: options?.systemInstruction,
-            temperature: options?.temperature ?? 0.7,
-          },
+    const candidateModels = this.getFallbackModels();
+    for (const modelName of candidateModels) {
+      try {
+        const responseText = await this.executeWithRetry(async (signal) => {
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents: userPrompt,
+            config: {
+              systemInstruction: options?.systemInstruction,
+              temperature: options?.temperature ?? 0.7,
+            },
+          });
+
+          return response.text?.trim() || '';
         });
 
-        return response.text?.trim() || '';
-      });
-
-      return { text: responseText, source: 'ai' };
-    } catch (err: any) {
-      console.warn('Pemanggilan generateText gagal, beralih ke fallback deterministik:', err.message);
-      return { text: mockFallback, source: 'fallback' };
+        return { text: responseText, source: 'ai' };
+      } catch (err: any) {
+        console.warn(`Model ${modelName} gagal atau terkena limit (${err.message}), mencoba model cadangan berikutnya...`);
+      }
     }
+
+    return { text: mockFallback, source: 'fallback' };
   }
 
   public static async generateJSON<T>(
@@ -184,35 +195,39 @@ export class LlmClient {
       throw new Error('AI_UNAVAILABLE: Tidak ada API key.');
     }
 
-    try {
-      const parsed = await this.executeWithRetry(async (signal) => {
-        const response = await ai.models.generateContent({
-          model: this.getModel(),
-          contents: userPrompt,
-          config: {
-            systemInstruction: options?.systemInstruction,
-            temperature: options?.temperature ?? 0.3,
-            responseMimeType: 'application/json',
-            responseSchema: options?.responseSchema,
-          },
+    const candidateModels = this.getFallbackModels();
+    for (const modelName of candidateModels) {
+      try {
+        const parsed = await this.executeWithRetry(async (signal) => {
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents: userPrompt,
+            config: {
+              systemInstruction: options?.systemInstruction,
+              temperature: options?.temperature ?? 0.3,
+              responseMimeType: 'application/json',
+              responseSchema: options?.responseSchema,
+            },
+          });
+
+          const text = response.text?.trim() || '{}';
+          try {
+            return JSON.parse(text) as T;
+          } catch {
+            const cleaned = text.replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
+            return JSON.parse(cleaned) as T;
+          }
         });
 
-        const text = response.text?.trim() || '{}';
-        try {
-          return JSON.parse(text) as T;
-        } catch {
-          const cleaned = text.replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
-          return JSON.parse(cleaned) as T;
-        }
-      });
-
-      return { data: parsed, source: 'ai' };
-    } catch (err: any) {
-      if (mockFallback !== undefined) {
-        console.warn('Pemanggilan generateJSON gagal atau output tidak valid, beralih ke fallback deterministik:', err.message);
-        return { data: mockFallback, source: 'fallback' };
+        return { data: parsed, source: 'ai' };
+      } catch (err: any) {
+        console.warn(`Model ${modelName} gagal atau terkena limit (${err.message}), mencoba model cadangan berikutnya...`);
       }
-      throw err;
     }
+
+    if (mockFallback !== undefined) {
+      return { data: mockFallback, source: 'fallback' };
+    }
+    throw new Error('AI_UNAVAILABLE: Seluruh model AI dan fallback tidak merespons.');
   }
 }
