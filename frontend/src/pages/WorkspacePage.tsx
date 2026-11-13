@@ -561,27 +561,27 @@ export function WorkspacePage() {
           </div>
         )}
 
-        {/* Tab 2: CHAT KELOMPOK (WHATSAPP STYLE MURNI ANTAR SISWA) */}
+        {/* Tab 2: CHAT KELOMPOK (NEO-BRUTALISM DISKUSI TIM) */}
         {tab === 'chat' && (
-          <div className="rounded-2xl bg-surface-container-lowest border-2 border-[#0f1b34] shadow-[4px_4px_0px_#0f1b34] flex flex-col h-[540px] overflow-hidden">
+          <div className="rounded-3xl bg-surface-container-lowest border-2 border-[#0f1b34] shadow-[4px_4px_0px_#0f1b34] flex flex-col h-[560px] overflow-hidden">
             {/* Header Chat */}
-            <div className="p-3 border-b-2 border-[#0f1b34] bg-surface-container flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs border border-[#0f1b34] shadow-[1px_1px_0px_#0f1b34]">
+            <div className="p-3.5 border-b-2 border-[#0f1b34] bg-surface-container-low flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-secondary-container text-[#0f1b34] flex items-center justify-center font-black text-lg border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34]">
                   💬
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-black text-sm text-on-surface">Obrolan Rekan Kelompok</h3>
+                    <h3 className="font-black text-sm md:text-base text-on-surface">Obrolan Rekan Kelompok</h3>
                     {currentParticipantName && (
-                      <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-primary-container text-on-primary-container border border-[#0f1b34]">
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-primary-container text-white border border-[#0f1b34] shadow-[1px_1px_0px_#0f1b34]">
                         Kamu: {currentParticipantName}
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-on-surface-variant flex items-center gap-1.5">
+                  <p className="text-[11px] text-on-surface-variant flex items-center gap-1.5 mt-0.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>
+                    <span className="font-medium">
                       {members
                         .map((x) =>
                           x.name.trim().toLowerCase() === myParticipantName
@@ -593,63 +593,87 @@ export function WorkspacePage() {
                   </p>
                 </div>
               </div>
-              <span className="text-xs font-bold bg-secondary-container px-2.5 py-0.5 rounded-full border border-[#0f1b34]">
+              <span className="text-xs font-black bg-secondary-container text-[#0f1b34] px-3 py-1 rounded-xl border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34]">
                 {peerMessages.length} Pesan
               </span>
             </div>
 
-            {/* Area Pesan Bubble WhatsApp */}
-            <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-2.5 bg-[#efeae2]/40 dark:bg-surface">
+            {/* Area Pesan Diskusikan Gotong Royong */}
+            <div className="flex-1 p-4 md:p-5 overflow-y-auto flex flex-col gap-3.5 bg-surface/70">
               {peerMessages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center my-auto text-center gap-2 p-6 bg-surface-container-lowest/80 rounded-2xl border border-dashed border-[#0f1b34] max-w-sm mx-auto">
-                  <span className="text-3xl">👋</span>
-                  <p className="font-bold text-xs text-on-surface">Belum ada obrolan di kelompok ini.</p>
-                  <p className="text-[11px] text-on-surface-variant">
-                    Ketik pesan di bawah untuk menyapa rekan sekelompokmu!
+                <div className="flex flex-col items-center justify-center my-auto text-center gap-2 p-6 bg-surface-container-lowest rounded-2xl border-2 border-dashed border-[#0f1b34]/40 max-w-sm mx-auto shadow-[3px_3px_0px_#0f1b34]">
+                  <span className="text-4xl">🤝</span>
+                  <p className="font-black text-sm text-on-surface">Belum ada obrolan di kelompok ini.</p>
+                  <p className="text-xs text-on-surface-variant">
+                    Sapa rekan kelompokmu dan mulai diskusi pembagian tugas secara adil!
                   </p>
                 </div>
               ) : (
                 peerMessages.map((m) => {
                   const senderClean = (m.senderName || '').trim().toLowerCase();
                   const isMe = Boolean(myParticipantName && senderClean === myParticipantName);
+                  const initial = (m.senderName || '?').trim().charAt(0).toUpperCase();
 
                   return (
                     <div
                       key={m.id}
-                      className={`flex flex-col w-full ${isMe ? 'items-end' : 'items-start'}`}
+                      className={`flex w-full ${isMe ? 'justify-end' : 'justify-start items-end gap-2.5'}`}
                     >
+                      {/* Avatar untuk pesan orang lain */}
+                      {!isMe && (
+                        <div
+                          className="w-8 h-8 rounded-xl bg-tertiary-fixed text-[#0f1b34] border-2 border-[#0f1b34] shadow-[1px_1px_0px_#0f1b34] flex items-center justify-center font-black text-xs shrink-0 select-none"
+                          title={m.senderName}
+                        >
+                          {initial}
+                        </div>
+                      )}
+
                       <div
-                        className={`relative max-w-[85%] sm:max-w-[70%] px-3.5 py-2 border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] text-xs ${
-                          isMe
-                            ? 'bg-[#dcf8c6] text-[#0f1b34] rounded-2xl rounded-tr-none'
-                            : 'bg-surface-container-lowest text-on-surface rounded-2xl rounded-tl-none'
+                        className={`flex flex-col max-w-[85%] sm:max-w-[72%] ${
+                          isMe ? 'items-end' : 'items-start'
                         }`}
                       >
-                        {/* Nama pengirim untuk pesan rekan (Orang Lain / Kiri) */}
-                        {!isMe && (
-                          <div className="flex items-center gap-1.5 mb-1 pb-0.5 border-b border-[#0f1b34]/15">
-                            <span className="font-black text-[11px] text-primary tracking-wide">
-                              {m.senderName}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Isi Chat */}
-                        <div className="whitespace-pre-wrap break-words leading-relaxed font-medium text-xs md:text-sm pr-12 pb-1">
-                          {m.content}
+                        {/* Label Pengirim */}
+                        <div className="flex items-center gap-1.5 mb-1 px-1">
+                          <span
+                            className={`text-[11px] font-black tracking-tight ${
+                              isMe ? 'text-primary' : 'text-on-surface'
+                            }`}
+                          >
+                            {isMe ? 'Kamu' : m.senderName}
+                          </span>
                         </div>
 
-                        {/* Timestamp & Status Centang WA */}
-                        <div className="flex items-center justify-end gap-1 text-[10px] text-gray-500 font-mono -mt-1 ml-auto select-none">
-                          <span>
-                            {m.createdAt
-                              ? new Date(m.createdAt).toLocaleTimeString('id-ID', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })
-                              : ''}
-                          </span>
-                          {isMe && <span className="text-[#34b7f1] font-bold text-[11px]">✓✓</span>}
+                        {/* Bubble Konten Neo-Brutalist */}
+                        <div
+                          className={`p-3.5 rounded-2xl border-2 border-[#0f1b34] shadow-[3px_3px_0px_#0f1b34] text-xs md:text-sm leading-relaxed ${
+                            isMe
+                              ? 'bg-primary-container text-white rounded-tr-none'
+                              : 'bg-surface-container-lowest text-on-surface rounded-tl-none'
+                          }`}
+                        >
+                          <div className="whitespace-pre-wrap break-words font-medium">
+                            {m.content}
+                          </div>
+
+                          {/* Footer Timestamp */}
+                          <div
+                            className={`flex items-center justify-end gap-1 text-[10px] font-mono mt-1.5 pt-1 select-none ${
+                              isMe
+                                ? 'text-white/80 border-t border-white/20'
+                                : 'text-gray-500 border-t border-[#0f1b34]/10'
+                            }`}
+                          >
+                            <span>
+                              {m.createdAt
+                                ? new Date(m.createdAt).toLocaleTimeString('id-ID', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })
+                                : ''}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -662,7 +686,7 @@ export function WorkspacePage() {
             {/* Input Bar Kirim Pesan */}
             <form
               onSubmit={handleSendChatMessage}
-              className="p-3 border-t-2 border-[#0f1b34] flex items-center gap-2 bg-surface-container-low"
+              className="p-3.5 border-t-2 border-[#0f1b34] flex items-center gap-2.5 bg-surface-container-low"
             >
               <input
                 type="text"
@@ -670,18 +694,19 @@ export function WorkspacePage() {
                 onChange={(e) => setChatInput(e.target.value)}
                 placeholder={
                   currentParticipantName
-                    ? `Ketik pesan sebagai ${currentParticipantName}...`
-                    : 'Ketik pesan untuk rekan kelompok...'
+                    ? `Ketik pesan diskusi sebagai ${currentParticipantName}...`
+                    : 'Ketik pesan diskusi kelompok...'
                 }
-                className="flex-1 px-4 py-2.5 rounded-full bg-surface-container-lowest border-2 border-[#0f1b34] text-xs md:text-sm focus:outline-none shadow-[2px_2px_0px_#0f1b34]"
+                className="flex-1 px-4 py-2.5 rounded-xl bg-surface-container-lowest border-2 border-[#0f1b34] text-xs md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary shadow-[2px_2px_0px_#0f1b34]"
               />
               <button
                 type="submit"
                 disabled={sendingChat || !chatInput.trim()}
-                className="w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] hover:-translate-y-0.5 active:translate-y-0.5 transition-all disabled:opacity-50 shrink-0"
+                className="px-4 py-2.5 rounded-xl bg-primary hover:bg-[#8e2e04] text-white flex items-center gap-1.5 border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] hover:-translate-y-0.5 active:translate-y-0.5 transition-all disabled:opacity-50 font-black text-xs md:text-sm shrink-0"
                 title="Kirim Pesan"
               >
-                <span className="material-symbols-outlined text-[18px]">send</span>
+                <span>Kirim</span>
+                <span className="material-symbols-outlined text-[16px]">send</span>
               </button>
             </form>
           </div>
