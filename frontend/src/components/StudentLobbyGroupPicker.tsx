@@ -107,14 +107,10 @@ export function StudentLobbyGroupPicker({ pin, onGroupJoined }: StudentLobbyGrou
     }
   };
 
-  const handleJoinClick = (g: { id: string; name: string; hasPin?: boolean }) => {
-    if (g.hasPin) {
-      setPinModalGroup({ id: g.id, name: g.name });
-      setEnteredPin('');
-      setPinError(null);
-    } else {
-      handleJoinExisting(g.id);
-    }
+  const handleJoinClick = (g: { id: string; name: string }) => {
+    setPinModalGroup({ id: g.id, name: g.name });
+    setEnteredPin('');
+    setPinError(null);
   };
 
   const handleJoinExisting = async (groupId: string, providedPin?: string) => {
@@ -244,11 +240,9 @@ export function StudentLobbyGroupPicker({ pin, onGroupJoined }: StudentLobbyGrou
                   <div className="flex items-center justify-between gap-1">
                     <span className="font-bold text-xs text-on-surface truncate">{g.name}</span>
                     <div className="flex items-center gap-1 shrink-0">
-                      {g.hasPin && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-[#0f1b34] flex items-center gap-0.5">
-                          🔒 PIN
-                        </span>
-                      )}
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-[#0f1b34] flex items-center gap-0.5">
+                        🔒 PIN
+                      </span>
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface border border-[#0f1b34]">
                         {g.memberCount} Anggota
                       </span>
@@ -264,7 +258,7 @@ export function StudentLobbyGroupPicker({ pin, onGroupJoined }: StudentLobbyGrou
                   onClick={() => handleJoinClick(g)}
                   className="w-full py-1.5 rounded-lg bg-primary-container text-on-primary font-bold text-xs border border-[#0f1b34] shadow-[1px_1px_0px_#0f1b34] hover:bg-primary transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1"
                 >
-                  <span>{g.hasPin ? '🔒 Masukkan PIN & Gabung' : 'Gabung Kelompok Ini'}</span>
+                  <span>🔒 Masukkan PIN &amp; Gabung</span>
                   <span>➔</span>
                 </button>
               </div>

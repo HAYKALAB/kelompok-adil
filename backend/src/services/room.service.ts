@@ -2,12 +2,20 @@ import { getPrisma } from '../lib/prisma.js';
 import { generateUniquePin, generateUniqueTeacherCode } from '../lib/random.js';
 import { AppError } from '../lib/app-error.js';
 
-export function parseGroupMeta(fullName: string) {
+export function parseGroupMeta(fullName: string, fallbackId?: string) {
   const match = (fullName || '').match(/^(.*?)\s*\[PIN:(\d{4})\]$/i);
   if (match) {
     return { name: match[1].trim(), pin: match[2], isLocked: true };
   }
-  return { name: fullName || '', pin: null, isLocked: false };
+  let pin = '1234';
+  if (fallbackId) {
+    let hash = 0;
+    for (let i = 0; i < fallbackId.length; i++) {
+      hash = (hash * 31 + fallbackId.charCodeAt(i)) & 0xffffffff;
+    }
+    pin = (1000 + (Math.abs(hash) % 9000)).toString();
+  }
+  return { name: fullName || '', pin, isLocked: true };
 }
 
 export async function createRoom(
@@ -104,12 +112,13 @@ export async function splitRoomGroups(teacherId: string, pin: string, count?: nu
   // 3. Create N groups
   const groups = [];
   for (let i = 1; i <= targetCount; i++) {
+    const pin = Math.floor(1000 + Math.random() * 9000).toString();
     groups.push(
       await prisma.group.create({
         data: {
           roomId,
           groupNumber: i,
-          name: `Kelompok ${i}`,
+          name: `Kelompok ${i} [PIN:${pin}]`,
         },
       })
     );
@@ -250,7 +259,7 @@ export async function getRoomDetail(
         groupId: p.groupId,
       })),
       groups: groups.map((g: any) => {
-        const meta = parseGroupMeta(g.name);
+        const meta = parseGroupMeta(g.name, g.id);
         return {
           id: g.id,
           groupNumber: g.groupNumber,
@@ -289,7 +298,7 @@ export async function getRoomDetail(
       : Promise.resolve(null),
   ]);
 
-  const ownMeta = ownGroup ? parseGroupMeta(ownGroup.name) : null;
+  const ownMeta = ownGroup ? parseGroupMeta(ownGroup.name, ownGroup.id) : null;
   const groups =
     ownGroup && ownGroup.roomId === room.id
       ? [
@@ -374,14 +383,17 @@ export async function getRoomLobby(participantId: string, pin: string, client?: 
       groupName: s.group?.name ?? null,
     })),
     groups: groups.map((g: any) => {
-      const meta = parseGroupMeta(g.name);
+      const meta = parseGroupMeta(g.name, g.id);
+      if (!g.name.includes('[PIN:')) {
+        prisma.group.update({ where: { id: g.id }, data: { name: `${meta.name} [PIN:${meta.pin}]` } }).catch(() => {});
+      }
       const isMember = (g.members ?? []).some((m: any) => m.id === caller.id);
       return {
         id: g.id,
         groupNumber: g.groupNumber,
         name: meta.name,
-        isLocked: meta.isLocked,
-        hasPin: meta.isLocked,
+        isLocked: true,
+        hasPin: true,
         pin: isMember ? meta.pin : undefined,
         memberCount: g.members.length,
         members: g.members,
@@ -484,15 +496,16 @@ export async function joinStudentGroup(
     throw new AppError(404, 'GROUP_NOT_FOUND', 'Kelompok tidak ditemukan di kelas ini.');
   }
 
-  const meta = parseGroupMeta(group.name);
-  if (meta.isLocked && meta.pin) {
-    if (!finalPin || finalPin.trim() !== meta.pin) {
-      throw new AppError(
-        403,
-        'INVALID_GROUP_PIN',
-        'PIN kelompok salah atau belum dimasukkan. Minta PIN ke ketua kelompokmu.'
-      );
-    }
+  const meta = parseGroupMeta(group.name, group.id);
+  if (!group.name.includes('[PIN:')) {
+    prisma.group.update({ where: { id: group.id }, data: { name: `${meta.name} [PIN:${meta.pin}]` } }).catch(() => {});
+  }
+  if (!finalPin || finalPin.trim() !== meta.pin) {
+    throw new AppError(
+      403,
+      'INVALID_GROUP_PIN',
+      'PIN kelompok salah atau belum dimasukkan. Minta PIN ke ketua kelompokmu.'
+    );
   }
 
   await prisma.roomParticipant.update({
