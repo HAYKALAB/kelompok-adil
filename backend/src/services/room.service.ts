@@ -2,6 +2,14 @@ import { getPrisma } from '../lib/prisma.js';
 import { generateUniquePin, generateUniqueTeacherCode } from '../lib/random.js';
 import { AppError } from '../lib/app-error.js';
 
+export function parseGroupMeta(fullName: string) {
+  const match = (fullName || '').match(/^(.*?)\s*\[PIN:(\d{4})\]$/i);
+  if (match) {
+    return { name: match[1].trim(), pin: match[2], isLocked: true };
+  }
+  return { name: fullName || '', pin: null, isLocked: false };
+}
+
 export async function createRoom(
   teacherId: string,
   title: string,
@@ -241,15 +249,19 @@ export async function getRoomDetail(
         role: p.role,
         groupId: p.groupId,
       })),
-      groups: groups.map((g: any) => ({
-        id: g.id,
-        groupNumber: g.groupNumber,
-        name: g.name,
-        members: (g.members ?? []).map((m: any) => ({
-          id: m.id,
-          name: m.name,
-        })),
-      })),
+      groups: groups.map((g: any) => {
+        const meta = parseGroupMeta(g.name);
+        return {
+          id: g.id,
+          groupNumber: g.groupNumber,
+          name: meta.name,
+          pin: meta.pin ?? null,
+          members: (g.members ?? []).map((m: any) => ({
+            id: m.id,
+            name: m.name,
+          })),
+        };
+      }),
     };
   }
 
@@ -277,13 +289,15 @@ export async function getRoomDetail(
       : Promise.resolve(null),
   ]);
 
+  const ownMeta = ownGroup ? parseGroupMeta(ownGroup.name) : null;
   const groups =
     ownGroup && ownGroup.roomId === room.id
       ? [
           {
             id: ownGroup.id,
             groupNumber: ownGroup.groupNumber,
-            name: ownGroup.name,
+            name: ownMeta?.name ?? ownGroup.name,
+            pin: ownMeta?.pin ?? null,
             members: (ownGroup.members ?? []).map((m: any) => ({
               id: m.id,
               name: m.name,
@@ -359,13 +373,20 @@ export async function getRoomLobby(participantId: string, pin: string, client?: 
       groupId: s.groupId,
       groupName: s.group?.name ?? null,
     })),
-    groups: groups.map((g: any) => ({
-      id: g.id,
-      groupNumber: g.groupNumber,
-      name: g.name,
-      memberCount: g.members.length,
-      members: g.members,
-    })),
+    groups: groups.map((g: any) => {
+      const meta = parseGroupMeta(g.name);
+      const isMember = (g.members ?? []).some((m: any) => m.id === caller.id);
+      return {
+        id: g.id,
+        groupNumber: g.groupNumber,
+        name: meta.name,
+        isLocked: meta.isLocked,
+        hasPin: meta.isLocked,
+        pin: isMember ? meta.pin : undefined,
+        memberCount: g.members.length,
+        members: g.members,
+      };
+    }),
   };
 }
 
@@ -374,7 +395,8 @@ export async function lockStudentGroup(
   pin: string,
   groupName: string,
   memberIds: string[] = [],
-  client?: any
+  client?: any,
+  groupPin?: string
 ) {
   const prisma = client ?? (getPrisma() as any);
   const room = await prisma.room.findUnique({ where: { pin } });
@@ -395,13 +417,18 @@ export async function lockStudentGroup(
     select: { groupNumber: true },
   });
   const nextGroupNumber = (highestGroup?.groupNumber ?? 0) + 1;
-  const cleanName = groupName.trim() || `Kelompok ${nextGroupNumber}`;
+  const rawCleanName = groupName.trim() || `Kelompok ${nextGroupNumber}`;
+  const finalGroupPin = (groupPin && /^\d{4}$/.test(groupPin.trim()))
+    ? groupPin.trim()
+    : Math.floor(1000 + Math.random() * 9000).toString();
+
+  const storedName = `${rawCleanName} [PIN:${finalGroupPin}]`;
 
   const newGroup = await prisma.group.create({
     data: {
       roomId: room.id,
       groupNumber: nextGroupNumber,
-      name: cleanName,
+      name: storedName,
     },
   });
 
@@ -426,14 +453,22 @@ export async function lockStudentGroup(
     group: {
       id: newGroup.id,
       groupNumber: newGroup.groupNumber,
-      name: newGroup.name,
+      name: rawCleanName,
+      pin: finalGroupPin,
       members: updatedMembers,
     },
   };
 }
 
-export async function joinStudentGroup(participantId: string, groupId: string, client?: any) {
-  const prisma = client ?? (getPrisma() as any);
+export async function joinStudentGroup(
+  participantId: string,
+  groupId: string,
+  providedPin?: string | any,
+  client?: any
+) {
+  let finalPin: string | undefined = typeof providedPin === 'string' ? providedPin : undefined;
+  let prisma = (providedPin && typeof providedPin === 'object') ? providedPin : (client ?? (getPrisma() as any));
+
   const caller = await prisma.roomParticipant.findUnique({
     where: { id: participantId },
   });
@@ -449,6 +484,17 @@ export async function joinStudentGroup(participantId: string, groupId: string, c
     throw new AppError(404, 'GROUP_NOT_FOUND', 'Kelompok tidak ditemukan di kelas ini.');
   }
 
+  const meta = parseGroupMeta(group.name);
+  if (meta.isLocked && meta.pin) {
+    if (!finalPin || finalPin.trim() !== meta.pin) {
+      throw new AppError(
+        403,
+        'INVALID_GROUP_PIN',
+        'PIN kelompok salah atau belum dimasukkan. Minta PIN ke ketua kelompokmu.'
+      );
+    }
+  }
+
   await prisma.roomParticipant.update({
     where: { id: caller.id },
     data: { groupId: group.id },
@@ -457,6 +503,7 @@ export async function joinStudentGroup(participantId: string, groupId: string, c
   return {
     joined: true,
     groupId: group.id,
-    groupName: group.name,
+    groupName: meta.name,
+    pin: meta.pin ?? undefined,
   };
 }

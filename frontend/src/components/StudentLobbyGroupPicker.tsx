@@ -30,6 +30,14 @@ export function StudentLobbyGroupPicker({ pin, onGroupJoined }: StudentLobbyGrou
   const [selectedEmoji, setSelectedEmoji] = useState<string>('🏆');
   const [groupName, setGroupName] = useState<string>('Kelompok Juara');
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [customGroupPin, setCustomGroupPin] = useState<string>(() =>
+    Math.floor(1000 + Math.random() * 9000).toString()
+  );
+
+  // Modal Masuk Kelompok dengan PIN
+  const [pinModalGroup, setPinModalGroup] = useState<{ id: string; name: string } | null>(null);
+  const [enteredPin, setEnteredPin] = useState<string>('');
+  const [pinError, setPinError] = useState<string | null>(null);
 
   const loadLobby = async (isInitial = false) => {
     if (isInitial) setLoading(true);
@@ -76,6 +84,11 @@ export function StudentLobbyGroupPicker({ pin, onGroupJoined }: StudentLobbyGrou
       setErrorMsg('Nama tim kelompok wajib diisi.');
       return;
     }
+    const cleanPin = customGroupPin.trim();
+    if (cleanPin && !/^\d{4}$/.test(cleanPin)) {
+      setErrorMsg('PIN kelompok harus berupa 4 digit angka.');
+      return;
+    }
     setSubmitting(true);
     setErrorMsg(null);
     try {
@@ -83,6 +96,7 @@ export function StudentLobbyGroupPicker({ pin, onGroupJoined }: StudentLobbyGrou
       await lockStudentGroup(pin, {
         groupName: fullGroupName,
         memberIds: selectedStudentIds,
+        groupPin: cleanPin || undefined,
       });
       onGroupJoined();
     } catch (err: any) {
@@ -93,18 +107,42 @@ export function StudentLobbyGroupPicker({ pin, onGroupJoined }: StudentLobbyGrou
     }
   };
 
-  const handleJoinExisting = async (groupId: string) => {
+  const handleJoinClick = (g: { id: string; name: string; hasPin?: boolean }) => {
+    if (g.hasPin) {
+      setPinModalGroup({ id: g.id, name: g.name });
+      setEnteredPin('');
+      setPinError(null);
+    } else {
+      handleJoinExisting(g.id);
+    }
+  };
+
+  const handleJoinExisting = async (groupId: string, providedPin?: string) => {
     setSubmitting(true);
     setErrorMsg(null);
     try {
-      await joinStudentGroup(groupId);
+      await joinStudentGroup(groupId, providedPin ? { pin: providedPin } : undefined);
+      setPinModalGroup(null);
       onGroupJoined();
     } catch (err: any) {
       console.error('Gagal gabung kelompok:', err);
-      setErrorMsg(err?.message || 'Gagal bergabung ke kelompok ini.');
+      if (providedPin) {
+        setPinError(err?.message || 'PIN kelompok salah atau ditolak.');
+      } else {
+        setErrorMsg(err?.message || 'Gagal bergabung ke kelompok ini.');
+      }
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleConfirmPinJoin = () => {
+    if (!pinModalGroup) return;
+    if (!enteredPin.trim() || !/^\d{4}$/.test(enteredPin.trim())) {
+      setPinError('Masukkan 4 digit PIN kelompok yang benar.');
+      return;
+    }
+    handleJoinExisting(pinModalGroup.id, enteredPin.trim());
   };
 
   const students = lobbyData?.students || [];
@@ -203,11 +241,18 @@ export function StudentLobbyGroupPicker({ pin, onGroupJoined }: StudentLobbyGrou
                 className="p-3 rounded-xl bg-surface-container-low border border-[#0f1b34] flex flex-col justify-between gap-2"
               >
                 <div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-1">
                     <span className="font-bold text-xs text-on-surface truncate">{g.name}</span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface border border-[#0f1b34]">
-                      {g.memberCount} Anggota
-                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {g.hasPin && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-[#0f1b34] flex items-center gap-0.5">
+                          🔒 PIN
+                        </span>
+                      )}
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface border border-[#0f1b34]">
+                        {g.memberCount} Anggota
+                      </span>
+                    </div>
                   </div>
                   <div className="text-[11px] text-on-surface-variant mt-1 line-clamp-1">
                     {g.members?.map((m) => m.name).join(', ') || 'Belum ada anggota'}
@@ -216,10 +261,11 @@ export function StudentLobbyGroupPicker({ pin, onGroupJoined }: StudentLobbyGrou
                 <button
                   type="button"
                   disabled={submitting}
-                  onClick={() => handleJoinExisting(g.id)}
-                  className="w-full py-1.5 rounded-lg bg-primary-container text-on-primary font-bold text-xs border border-[#0f1b34] shadow-[1px_1px_0px_#0f1b34] hover:bg-primary transition-all active:scale-95 disabled:opacity-50"
+                  onClick={() => handleJoinClick(g)}
+                  className="w-full py-1.5 rounded-lg bg-primary-container text-on-primary font-bold text-xs border border-[#0f1b34] shadow-[1px_1px_0px_#0f1b34] hover:bg-primary transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1"
                 >
-                  Gabung Kelompok Ini ➔
+                  <span>{g.hasPin ? '🔒 Masukkan PIN & Gabung' : 'Gabung Kelompok Ini'}</span>
+                  <span>➔</span>
                 </button>
               </div>
             ))}
@@ -376,6 +422,40 @@ export function StudentLobbyGroupPicker({ pin, onGroupJoined }: StudentLobbyGrou
           />
         </div>
 
+        {/* Group PIN Input Field */}
+        <div className="flex flex-col gap-1.5 bg-surface-container-low/60 p-3 rounded-xl border border-[#0f1b34]">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+              <span>🔒 PIN 4-Digit Kelompok</span>
+              <span className="text-[11px] font-normal text-on-surface-variant">(Biar orang lain nggak asal masuk)</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => setCustomGroupPin(Math.floor(1000 + Math.random() * 9000).toString())}
+              className="text-[11px] text-primary hover:underline font-bold flex items-center gap-0.5"
+            >
+              <span>🎲 Acak PIN</span>
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
+              value={customGroupPin}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                setCustomGroupPin(val);
+              }}
+              placeholder="4821"
+              className="w-32 bg-surface-container-lowest rounded-xl px-3 py-2 font-mono font-black text-center text-lg tracking-widest text-on-surface border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] focus:outline-none"
+            />
+            <span className="text-xs text-on-surface-variant leading-relaxed">
+              Bagikan 4 angka PIN ini hanya ke teman yang kamu izinkan bergabung ke kelompok ini.
+            </span>
+          </div>
+        </div>
+
         {/* Emoji Badge Selector */}
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-bold text-on-surface-variant">Pilih Ikon Tim:</span>
@@ -435,6 +515,76 @@ export function StudentLobbyGroupPicker({ pin, onGroupJoined }: StudentLobbyGrou
           </p>
         </div>
       </section>
+
+      {/* Modal Masuk Kelompok dengan PIN */}
+      {pinModalGroup && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-sm w-full p-5 border-2 border-[#0f1b34] shadow-[6px_6px_0px_#0f1b34] flex flex-col gap-4 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🔒</span>
+                <h3 className="font-black text-base text-on-surface">Masukkan PIN Kelompok</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPinModalGroup(null)}
+                className="w-7 h-7 rounded-lg border border-[#0f1b34] flex items-center justify-center font-bold text-sm hover:bg-surface-container"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="bg-amber-50 p-3 rounded-xl border border-amber-300 text-xs text-amber-900">
+              Kelompok <span className="font-bold">{pinModalGroup.name}</span> dilindungi PIN. Masukkan 4-digit PIN dari ketua kelompok untuk bergabung.
+            </div>
+
+            {pinError && (
+              <div className="p-2.5 rounded-lg bg-red-100 text-red-900 border border-red-700 text-xs font-bold">
+                ⚠️ {pinError}
+              </div>
+            )}
+
+            <div className="flex flex-col items-center gap-2 py-2">
+              <label className="text-xs font-bold text-on-surface-variant">PIN 4-Digit:</label>
+              <input
+                type="text"
+                autoFocus
+                inputMode="numeric"
+                maxLength={4}
+                value={enteredPin}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  setEnteredPin(val);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConfirmPinJoin();
+                }}
+                placeholder="••••"
+                className="w-40 bg-surface-container-low rounded-xl px-4 py-2.5 font-mono font-black text-center text-2xl tracking-[0.3em] text-on-surface border-2 border-[#0f1b34] shadow-[3px_3px_0px_#0f1b34] focus:outline-none"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setPinModalGroup(null)}
+                className="flex-1 py-2 rounded-xl bg-surface-container-high border border-[#0f1b34] font-bold text-xs shadow-[1px_1px_0px_#0f1b34] hover:bg-surface-container active:scale-95"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={submitting || enteredPin.length !== 4}
+                onClick={handleConfirmPinJoin}
+                className="flex-1 py-2 rounded-xl bg-primary text-on-primary border border-[#0f1b34] font-bold text-xs shadow-[2px_2px_0px_#0f1b34] hover:-translate-y-0.5 active:translate-y-0.5 disabled:opacity-50 flex items-center justify-center gap-1"
+              >
+                <span>{submitting ? 'Memverifikasi...' : 'Masuk Tim'}</span>
+                <span>➔</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

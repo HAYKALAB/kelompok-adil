@@ -90,7 +90,9 @@ export async function lockStudentGroupHandler(req: Request, res: Response): Prom
     user.id,
     pin,
     String(body.groupName || ''),
-    Array.isArray(body.memberIds) ? body.memberIds : []
+    Array.isArray(body.memberIds) ? body.memberIds : [],
+    undefined,
+    body.groupPin ? String(body.groupPin) : undefined
   );
   res.status(200).json({ data: result });
 }
@@ -103,6 +105,8 @@ export async function joinStudentGroupHandler(req: Request, res: Response): Prom
     return;
   }
   const groupId = String(req.params.groupId);
-  const result = await joinStudentGroup(user.id, groupId);
+  const body = req.body || {};
+  const pin = body.pin ? String(body.pin) : undefined;
+  const result = await joinStudentGroup(user.id, groupId, pin);
   res.status(200).json({ data: result });
 }

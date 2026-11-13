@@ -290,9 +290,29 @@ export function WorkspacePage() {
             <div className="rounded-2xl bg-surface-container-lowest p-5 border-2 border-[#0f1b34] shadow-[4px_4px_0px_#0f1b34] flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <span className="text-xs uppercase tracking-wider font-bold text-tertiary">
-                {myGroup?.name || 'Kelompok Belum Dibagi'}
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs uppercase tracking-wider font-bold text-tertiary">
+                  {myGroup?.name || 'Kelompok Belum Dibagi'}
+                </span>
+                {myGroup?.pin && (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-amber-100 text-amber-900 border border-[#0f1b34] px-2.5 py-0.5 rounded-lg shadow-[1px_1px_0px_#0f1b34]">
+                    <span>🔒 PIN:</span>
+                    <span className="font-mono tracking-wider">{myGroup.pin}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(myGroup.pin!);
+                        setActionSuccess(`PIN Kelompok (${myGroup.pin}) berhasil disalin! Bagikan ke teman satu tim.`);
+                        setTimeout(() => setActionSuccess(null), 3000);
+                      }}
+                      title="Salin PIN Kelompok"
+                      className="hover:scale-110 active:scale-95 transition-transform text-xs"
+                    >
+                      📋
+                    </button>
+                  </span>
+                )}
+              </div>
               <h2 className="text-xl md:text-2xl font-black">Papan Kolaborasi & Keadilan</h2>
             </div>
             <div className="flex items-center gap-2">

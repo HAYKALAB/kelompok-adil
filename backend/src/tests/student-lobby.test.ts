@@ -209,21 +209,45 @@ async function runTests() {
     console.log('  ✓ Test 4: Siswa berhasil mengunci kelompok & anggota terdaftar');
   }
 
-  // Test 5: Siswa lain bergabung ke kelompok yang sudah ada (joinStudentGroup)
+  // Test 5: Siswa lain bergabung ke kelompok dengan PIN
   {
     const { mock } = createLobbyPrismaMock();
-    const lockRes = await lockStudentGroup('student-1', '777888', '⚡ Tim Kilat', [], mock as any);
-    const joinRes = await joinStudentGroup('student-3', lockRes.group.id, mock as any);
+    const lockRes = await lockStudentGroup(
+      'student-1',
+      '777888',
+      '⚡ Tim Kilat',
+      [],
+      mock as any,
+      '4821'
+    );
+    assert.equal(lockRes.group.pin, '4821');
+
+    // Cek lobi: peserta student-3 (bukan anggota) melihat hasPin: true tapi PIN disembunyikan
+    const lobbyBefore = await getRoomLobby('student-3', '777888', mock as any);
+    assert.equal(lobbyBefore.groups[0].hasPin, true);
+    assert.equal(lobbyBefore.groups[0].pin, undefined);
+
+    // Coba gabung tanpa PIN atau PIN salah -> ditolak 403
+    await assert.rejects(
+      async () => joinStudentGroup('student-3', lockRes.group.id, '9999', mock as any),
+      (err: any) => err.statusCode === 403 && err.code === 'INVALID_GROUP_PIN'
+    );
+    console.log('  ✓ Test 5: Gabung dengan PIN salah ditolak 403 (INVALID_GROUP_PIN)');
+
+    // Gabung dengan PIN yang benar '4821' -> berhasil 200
+    const joinRes = await joinStudentGroup('student-3', lockRes.group.id, '4821', mock as any);
     assert.equal(joinRes.joined, true);
     assert.equal(joinRes.groupId, lockRes.group.id);
 
     const lobbyAfter = await getRoomLobby('student-3', '777888', mock as any);
     assert.equal(lobbyAfter.caller.groupId, lockRes.group.id);
     assert.equal(lobbyAfter.groups[0].memberCount, 2);
-    console.log('  ✓ Test 5: Siswa lain berhasil gabung kelompok yang ada');
+    // Setelah bergabung, student-3 sekarang bisa melihat PIN kelompoknya
+    assert.equal(lobbyAfter.groups[0].pin, '4821');
+    console.log('  ✓ Test 6: Gabung dengan PIN yang benar berhasil 200 & PIN terlihat oleh anggota');
   }
 
-  console.log('✅ SEMUA TEST STUDENT LOBBY & GROUP SELECTION LOLOS (5/5)!');
+  console.log('✅ SEMUA TEST STUDENT LOBBY & GROUP SELECTION LOLOS (6/6)!');
 }
 
 runTests().catch((e) => {

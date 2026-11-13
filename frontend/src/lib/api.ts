@@ -246,6 +246,7 @@ export interface RoomDetailStudent {
     id: string;
     groupNumber: number;
     name: string;
+    pin?: string | null;
     members: Array<{ id: string; name: string }>;
   }>;
   me: {
@@ -276,6 +277,7 @@ export interface RoomDetailTeacher {
     id: string;
     groupNumber: number;
     name: string;
+    pin?: string | null;
     members: Array<{ id: string; name: string }>;
   }>;
 }
@@ -578,6 +580,9 @@ export interface RoomLobbyData {
     id: string;
     groupNumber: number;
     name: string;
+    hasPin?: boolean;
+    isLocked?: boolean;
+    pin?: string;
     memberCount: number;
     members: Array<{ id: string; name: string }>;
   }>;
@@ -589,9 +594,9 @@ export async function fetchRoomLobby(pin: string): Promise<RoomLobbyData> {
 
 export async function lockStudentGroup(
   pin: string,
-  payload: { groupName: string; memberIds: string[] }
-): Promise<{ group: { id: string; name: string; groupNumber: number; members: any[] } }> {
-  return apiFetch<{ group: { id: string; name: string; groupNumber: number; members: any[] } }>(
+  payload: { groupName: string; memberIds: string[]; groupPin?: string }
+): Promise<{ group: { id: string; name: string; pin?: string; groupNumber: number; members: any[] } }> {
+  return apiFetch<{ group: { id: string; name: string; pin?: string; groupNumber: number; members: any[] } }>(
     `/api/rooms/${encodeURIComponent(pin)}/groups/lock`,
     {
       method: 'POST',
@@ -601,12 +606,14 @@ export async function lockStudentGroup(
 }
 
 export async function joinStudentGroup(
-  groupId: string
-): Promise<{ joined: boolean; groupId: string; groupName: string }> {
-  return apiFetch<{ joined: boolean; groupId: string; groupName: string }>(
+  groupId: string,
+  payload?: { pin?: string }
+): Promise<{ joined: boolean; groupId: string; groupName: string; pin?: string }> {
+  return apiFetch<{ joined: boolean; groupId: string; groupName: string; pin?: string }>(
     `/api/groups/${encodeURIComponent(groupId)}/join`,
     {
       method: 'POST',
+      body: payload,
     }
   );
 }
