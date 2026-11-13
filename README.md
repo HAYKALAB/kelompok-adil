@@ -4,103 +4,139 @@
 > *Kompetisi LOGICODIX Hackathon 2026 — Subtema: Smart & Fun Education (Kategori: Web Application)*
 
 [![LOGICODIX 2026](https://img.shields.io/badge/LOGICODIX-2026-blueviolet?style=for-the-badge)](https://instagram.com/logicodix)
-[![Subtheme](https://img.shields.io/badge/Subtema-Smart%20%26%20Fun%20Education-orange?style=for-the-badge)](#-kesesuaian-masalah--solusi-problem-solution-fit--bobot-25)
-[![AI Engine](https://img.shields.io/badge/Google%20Gemini-Multi--Tier%20SDK-blue?style=for-the-badge&logo=google)](https://ai.google.dev)
-[![Status](https://img.shields.io/badge/MVP%20Status-Verified%20%26%20Tested-emerald?style=for-the-badge)](#-pengujian-otomatis-automated-testing)
+[![Kategori](https://img.shields.io/badge/Kategori-Web%20Application-blue?style=for-the-badge)](#-rekayasa-perangkat-lunak--arsitektur-software-engineering--bobot-25)
+[![Subtema](https://img.shields.io/badge/Subtema-Smart%20%26%20Fun%20Education-orange?style=for-the-badge)](#-kesesuaian-masalah--solusi-problem-solution-fit--bobot-25)
+[![Status MVP](https://img.shields.io/badge/Status%20MVP-Verified%20%26%20Tested-emerald?style=for-the-badge)](#-pengujian-otomatis-automated-testing)
 
 ---
 
 ## 👥 Informasi Tim & Karya
 
 - **Judul Karya**: Kelompok Adil
+- **Kategori**: Web Application (Subtema: *Smart & Fun Education*)
 - **Nama Tim**: Kelompok Adil (Nama Registrasi: `BroTim`)
 - **Asal Sekolah / Institusi**: SMKN 2 Kota Bekasi
 - **Jurusan**: Rekayasa Perangkat Lunak (RPL)
-- **Susunan Anggota Tim**:
+- **Susunan Anggota Tim (Maksimal 4 Orang sesuai Ketentuan Lomba)**:
   1. **Ahmad Al Haykal** (NISN: `0102963233`) — Ketua Tim / Leader & Fullstack Orchestrator `[ROLE: ...]`
   2. **Azmi Fawwaz Nabiha** (NISN: `0091457995`) — `[ROLE: ...]`
   3. **Naufa Meylani Azizah** (NISN: `0102857398`) — `[ROLE: ...]`
   4. **Dafano Rizki Ramadhan** (NISN: `0098969418`) — `[ROLE: ...]`
-- **Tautan Video Demo Fungsional (3–5 Menit)**:  
+- **Tautan Video Demonstrasi Fungsional (Durasi 3–5 Menit)**:  
   👉 **`[LINK VIDEO DEMO YOUTUBE / GOOGLE DRIVE]`**
 
 ---
 
 ## 💡 Kesesuaian Masalah & Solusi (Problem-Solution Fit — Bobot 25%)
 
-### 1. Konteks Masalah Pendidikan di Dunia Nyata
-Metode pembelajaran berbasis proyek kelompok (*Project-Based Learning*) merupakan pilar utama Kurikulum Merdeka dan pendidikan modern. Namun, dalam praktiknya, kerja kelompok sering kali menjadi sumber kecemasan sosial dan ketidakadilan bagi siswa:
+### 1. Masalah yang Diangkat di Dunia Pendidikan
+Metode pembelajaran berbasis proyek kelompok (*Project-Based Learning*) merupakan pilar utama Kurikulum Merdeka di sekolah. Namun, di lapangan kerap muncul friksi yang merusak semangat belajar siswa:
 
-1. **Fenomena *Free Rider* & Siswa "Menghilang" (*Ghosting*)**:
-   Ada siswa yang tidak berkontribusi sama sekali namun tetap menumpang nama pada laporan akhir, sehingga memperoleh nilai yang sama dengan rekan yang bekerja keras.
-2. **Ketimpangan & Subjektivitas Pembagian Beban Tugas**:
-   Pembagian tugas kerap didominasi oleh siswa vokal atau diserahkan secara sepihak tanpa estimasi bobot kerja yang adil (misalnya siswa A mengerjakan 80% beban laporan, siswa B hanya mencetak tugas).
-3. **Keterbatasan Guru & Dilema Privasi Siswa**:
-   Guru kesulitan memantau dinamika proses di setiap kelompok secara objektif. Mengintip ruang obrolan internal siswa melanggar ranah privasi pertemanan, sementara hanya menilai produk akhir di hari pengumpulan mengabaikan proses gotong royong dan kontribusi individu.
+1. **Fenomena *Free Rider* & Siswa Pasif**:
+   Ada siswa yang pasif atau sengaja tidak berkontribusi (*ghosting*), namun namanya tetap dicantumkan pada laporan akhir sehingga mendapat nilai yang sama dengan rekan yang berjuang keras.
+2. **Subjektivitas & Beban Tidak Seimbang**:
+   Pembagian tugas sering kali bias, tanpa acuan estimasi bobot kerja yang jelas (misalnya siswa A mengerjakan 80% materi, sedangkan siswa B hanya mencetak tugas).
+3. **Keterbatasan Guru & Dilema Privasi**:
+   Guru kesulitan memantau dinamika proses gotong royong di setiap kelompok secara objektif. Mengintip isi obrolan pribadi siswa melanggar ranah privasi pertemanan, sedangkan hanya menilai laporan akhir di hari pengumpulan mengabaikan proses keadilan kerja.
 
-### 2. Solusi: Platform "Kelompok Adil"
-**Kelompok Adil** dirancang untuk menghadirkan ekosistem kolaborasi kelas yang transparan, menyenangkan, dan berkeadilan:
-- **Akses Instan & Aman**: Siswa masuk hanya dengan PIN Kelas 6-digit dan PIN Keamanan Pribadi 4-digit (mencegah pembajakan nama).
-- **Pembagian Peran Presisi 100%**: AI Fasilitator mengkalkulasi distribusi tugas kelompok agar total beban bernilai tepat 100% dan mewajibkan format bukti nyata.
+### 2. Deskripsi Solusi: Kelompok Adil
+**Kelompok Adil** adalah aplikasi web kolaboratif yang menjembatani transparansi gotong royong siswa dan pemantauan objektif guru tanpa merusak privasi:
+- **Target Pengguna**: Siswa dan Guru jenjang SMP, SMA, dan SMK.
+- **Masuk Kelas Tanpa Registrasi Rumit**: Akses cepat dengan PIN Kelas 6-digit dan PIN Keamanan Pribadi 4-digit (mencegah pembajakan nama).
+- **Pembagian Peran Terukur Tepat 100%**: AI Fasilitator menghitung usulan beban peran agar total persentase tepat 100% dengan format bukti luaran yang jelas.
 - **Papan Kanban Akuntabel**: Setiap tugas memiliki penanggung jawab (PIC) dan bobot. Siswa hanya dapat memperbarui progres tugas miliknya sendiri.
-- **Obrolan Tim Terisolasi Tanpa Intervensi**: Ruang koordinasi murni antarsiswa yang dilindungi dari intipan guru demi kenyamanan diskusi.
-- **AI Fasilitator Khusus Kelompok**: Wadah terpisah untuk *brainstorming* topik, merumuskan sudut pandang materi, dan mediasi gotong royong.
-- **Evaluasi Rahasia Sejawat (*Peer Review*)**: Siswa dapat memberikan penilaian dan refleksi jujur secara anonim tanpa takut intimidasi rekan.
-- **Dashboard Telemetri & Analisis Keadilan Guru**: Guru memantau skor keadilan kelas (*Fairness Score* 0–100) dan mendapatkan peringatan dini tugas tertunda (*Ghosting Alert*) tanpa melanggar privasi chat siswa.
+- **Obrolan Tim Bebas Intervensi**: Ruang koordinasi murni antarsiswa yang terlindung dari akses guru.
+- **Wadah Khusus AI Fasilitator**: Ruang terpisah untuk *brainstorming* ide materi dan panduan gotong royong.
+- **Evaluasi Rahasia Sejawat (*Peer Review*)**: Siswa dapat memberikan penilaian rating bintang dan catatan refleksi jujur dengan identitas pelapor yang dirahasiakan dari siswa lain.
+- **Dashboard Telemetri Guru**: Guru memantau skor keadilan kelas (*Fairness Score* 0–100) dan peringatan dini keterlambatan tugas (*Ghosting Alert*) tanpa membaca pesan obrolan siswa.
 
 ---
 
-## 🤖 Inovasi & Implementasi AI (Technology Innovation — Bobot 25%)
+## 🚀 Daftar Fitur Utama yang Berfungsi di Branch `main`
 
-### A. Arsitektur Multi-Tier Model Fallback (Zero-Downtime AI)
-Platform mengintegrasikan SDK resmi Google Gemini (`@google/genai` v2.32.0) dengan arsitektur ketahanan bertingkat (*multi-tier resilience*):
+Seluruh fitur di bawah telah teruji operasional secara *end-to-end* pada branch `main`:
 
-```mermaid
-flowchart TD
-    Req["Permintaan Fitur AI\n(Fasilitator / Usul Peran / Analisis)"] --> Tier1["Tier 1: Gemini 2.5 Flash\n(Model Utama - Respons Cepat & Cerdas)"]
-    
-    Tier1 -->|Sukses 200| OutAI["Hasil Terverifikasi AI\n(source: 'ai')"]
-    
-    Tier1 -.->|Rate Limit 429 / Kuota Habis / Error| Tier2["Tier 2: Gemini 2.0 Flash\n(Fallback Model Pertama)"]
-    Tier2 -->|Sukses 200| OutAI
-    
-    Tier2 -.->|Rate Limit 429 / Error| Tier3["Tier 3: Gemini 1.5 Flash\n(Fallback Model Kedua)"]
-    Tier3 -->|Sukses 200| OutAI
-    
-    Tier3 -.->|Semua Model API Terkendala| Tier4["Tier 4: Deterministic Fallback Engine\n(Mesin Offline Matematika & Heuristik)"]
-    Tier4 --> OutFallback["Hasil Cadangan Transparan\n(source: 'fallback' & label otomatis)"]
-```
-
-### B. Fitur-Fitur AI dalam Platform
-
-| Fitur AI | Target Pengguna | Peran & Dampak Inovasi |
+| Fitur Utama | Hak Akses | Deskripsi & Bukti Fungsionalitas |
 |---|---|---|
-| **AI Group Facilitator** | Siswa | Memandu *brainstorming* topik proyek, merumuskan ide kreatif, dan membantu siswa yang bingung memulai tugas. |
-| **Usulan Pembagian Peran Adil** | Siswa | Membagi peran proyek secara matematis tepat 100%, menetapkan PIC yang adil, serta mewajibkan luaran bukti kerja (*1-click apply to Kanban*). |
-| **Rekomendasi Penanggung Jawab** | Siswa | Menghitung beban kerja saat ini dan merekomendasikan siswa dengan porsi paling ringan saat ada tugas baru (*Anti Free-Rider*). |
-| **Validasi Bukti Tugas** | Siswa & Guru | Menganalisis relevansi bukti pengerjaan siswa terhadap deskripsi tugas yang dibebankan. |
-| **Peringatan Dini *Ghosting* & Deadline** | Guru | Mendeteksi tugas yang melewati batas waktu dan mengirimkan pengingat ramah berbobot pedagogis kepada guru. |
-| **Analisis Keadilan Kelas (*Fairness Score*)** | Guru | Menganalisis laporan sejawat secara anonim, menghitung indeks keadilan kelas (0–100), dan memberikan saran mediasi fasilitatif bagi guru. |
+| **Akses Ruang Kelas Instan (PIN-based)** | Siswa & Guru | Masuk tanpa akun email/password. Siswa memasukkan Nama + PIN Kelas 6-digit + PIN Pribadi 4-digit. Guru masuk dengan Kode Unik Guru yang dapat digunakan berulang. |
+| **Bagi Kelompok Otomatis (*Auto-Split*)** | Guru | Pembagian kelompok merata langsung dari lobi kelas berdasarkan target jumlah kelompok. |
+| **Papan Tugas Kanban Akuntabel** | Siswa | Pembaruan status tugas (*Todo*, *In Progress*, *Done*) dan progres persentase. Dilengkapi validasi keamanan (hanya penanggung jawab tugas yang berhak mengubah progres). |
+| **AI Fasilitator & Curah Ide** | Siswa | Diskusi interaktif dengan Google Gemini untuk perumusan ide topik proyek dan panduan belajar kelompok. |
+| **Usulan Peran Adil (*Role Splitting*)** | Siswa | AI mengusulkan pembagian peran spesifik dengan total bobot tepat 100% dan format luaran tugas. Dapat langsung diterapkan ke Kanban (*1-click apply*) atau ditolak. |
+| **Obrolan Rekan Kelompok (Neo-Brutalist)** | Siswa | Koordinasi terisolasi per kelompok dengan pembedaan sudut pandang (pesan sendiri di kanan berlabel *Kamu*, pesan rekan di kiri berlabel nama pengirim). Guru ditolak HTTP 403. |
+| **Evaluasi Rahasia Sejawat (*Peer Review*)** | Siswa | Siswa mengirimkan rating (1–5 bintang) dan catatan refleksi performa rekan satu kelompok. Identitas pelapor dirahasiakan dari siswa lain. |
+| **Dashboard Pemantauan Guru** | Guru | Pantau progres seluruh kelompok secara agregat, distribusi tugas per anggota, dan status penyelesaian tugas. |
+| **Peringatan Dini Keterlambatan (*Ghosting Alert*)** | Guru | Peringatan otomatis jika ada tugas yang melewati tenggat waktu (*deadline*) dengan bahasa fasilitatif yang netral. |
+| **Audit Laporan Rahasia Guru** | Guru | Rekap menyeluruh evaluasi sejawat untuk mediasi masalah nyata dan objektivitas penilaian guru. |
+| **Analisis Keadilan AI (*Fairness Score*)** | Guru | Analisis AI terhadap suasana kerja kelas dengan skor keadilan (0–100) dan rekomendasi fasilitasi guru berbasis data evaluasi yang identitas pelapornya telah disamarkan. |
+
+---
+
+## 🤖 Dokumentasi Penggunaan AI (Sesuai Ketentuan Guidebook Hal. 18)
+
+Sesuai ketentuan resmi kompetisi LOGICODIX 2026, penggunaan kecerdasan buatan diungkapkan secara transparan:
+
+### A. Implementasi AI dalam Produk (Google Gemini API)
+
+1. **Layanan & Model yang Digunakan**:
+   - SDK Resmi: `@google/genai` (v2.32.0).
+   - Arsitektur Model: **Multi-Tier Fallback Resilience**:
+     - *Tier 1 (Utama)*: `gemini-2.5-flash` (Respon cepat, penalaran akurat).
+     - *Tier 2 (Cadangan 1)*: `gemini-2.0-flash`.
+     - *Tier 3 (Cadangan 2)*: `gemini-1.5-flash`.
+     - *Tier 4 (Fallback Offline)*: Deterministic Fallback Engine (algoritma matematika & heuristik lokal).
+
+2. **Bagian Produk yang Menggunakan AI**:
+   - **AI Fasilitator**: Tanya jawab kelompok dan panduan curah ide.
+   - **Usulan Bagi Peran Adil**: Kalkulasi pembagian peran dengan bobot tepat 100%.
+   - **Rekomendasi PIC**: Menyarankan siswa dengan beban kerja paling ringan untuk tugas baru.
+   - **Validasi Bukti Tugas**: Menilai kesesuaian deskripsi luaran tugas.
+   - **Analisis Keadilan Kelas (*Fairness Score*)**: Memberikan skor keadilan 0–100 dan saran mediasi guru.
+
+3. **Tata Kelola & Privasi Data AI (*Data Governance*)**:
+   - **Yang dikirim ke Google Gemini**: Judul tugas, deskripsi, bobot beban kerja, dan teks catatan evaluasi yang telah disamarkan.
+   - **Yang TIDAK PERNAH dikirim ke Google Gemini**:
+     - Isi pesan obrolan internal antarsiswa.
+     - Alamat email, password, atau credential pengguna.
+     - Nama asli pelapor evaluasi sejawat (disamarkan menjadi token anonim seperti `Pelapor-1` sebelum dikirim ke API).
+   - **Pertahanan *Prompt Injection***: Seluruh masukan teks bebas dibungkus di dalam blok `<data>...</data>` serta disanitasi dari tag manipulatif (`stripDataTags`).
+   - **Transparansi Label Fallback**: Bila koneksi AI mengalami kendala (*timeout* atau batas kuota habis), sistem otomatis beralih ke mesin deterministik dengan menyematkan label transparan:  
+     `"hasil otomatis, AI sedang tidak tersedia"`.
+
+### B. Penggunaan AI Coding Assistant Selama Pengembangan
+
+1. **Alat Bantu AI yang Digunakan Tim**:
+   - **Google Antigravity Agent**
+   - **Anthropic Claude**
+
+2. **Peran Asisten AI dalam Pengembangan**:
+   - Membantu perancangan arsitektur awal dan skema basis data relasional Prisma ORM.
+   - Membantu pembuatan kerangka *boilerplate* endpoint Express dan pengujian otomatis (*automated test suite*).
+   - Membantu refactoring antarmuka komponen UI Soft Neo-Brutalism.
+
+3. **Tanggung Jawab Tim Pengembang**:
+   - Seluruh kode hasil bantuan AI telah ditinjau (*peer review*), diuji dengan *automated test suite* (unit test & integrasi), dan divalidasi *end-to-end* oleh tim pengembang.
+   - Tim bertanggung jawab penuh atas kualitas kode, keamanan, dan fungsionalitas aplikasi sesuai **Surat Pernyataan Orisinalitas Karya LOGICODIX 2026** yang ditandatangani Ketua Tim di atas meterai.
 
 ---
 
 ## 🏛️ Rekayasa Perangkat Lunak & Arsitektur (Software Engineering — Bobot 25%)
 
 ### 1. Diagram Arsitektur Multi-Service
-Sistem dibangun dengan arsitektur multi-service yang memisahkan urusan basis data inti dan mesin kecerdasan buatan (*Separation of Concerns*):
+Sistem dibangun dengan pemisahan tugas (*Separation of Concerns*) antar-layanan independen:
 
 ```mermaid
 flowchart TD
     subgraph Client ["Frontend Client (React 19 + Vite)"]
-        UI["Soft Neo-Brutalism Interface\nPort 5173"]
+        UI["Soft Neo-Brutalism UI\nPort 5173"]
         TabSession["Per-Tab Session Storage\n(Isolasi Multi-Siswa)"]
         ViteProxy["Vite Proxy Gateway\n/api & /api/ai"]
     end
 
     subgraph CoreBackend ["Backend 1: Core API & Database"]
         B1["Express 5 + TypeScript\nPort 4000"]
-        AuthMiddleware["JWT Auth Guard\n(STUDENT & TEACHER)"]
-        PINSecurity["Student Personal PIN Check\n(4-Digit Hash/Ticket)"]
+        AuthGuard["JWT Auth Guard\n(STUDENT & TEACHER)"]
+        PINSecurity["Student Ticket PIN Check\n(4-Digit Hash/Ticket)"]
         PrismaORM["Prisma ORM Client"]
         Database[(PostgreSQL Database\nNeon Serverless)]
     end
@@ -117,8 +153,8 @@ flowchart TD
     ViteProxy -->|/api/*| B1
     ViteProxy -->|/api/ai/*| B2
 
-    B1 --> AuthMiddleware
-    AuthMiddleware --> PINSecurity
+    B1 --> AuthGuard
+    AuthGuard --> PINSecurity
     PINSecurity --> PrismaORM
     PrismaORM --> Database
 
@@ -140,7 +176,7 @@ sequenceDiagram
 
     Note over Siswa,B1: Siswa mengirim evaluasi sejawat rahasia
     Siswa->>B1: POST /api/groups/:groupId/reports (Rating & Feedback)
-    B1-->>Siswa: 200 { saved: true } (Tersimpan rahasia, siswa lain dilarang membaca)
+    B1-->>Siswa: 200 { saved: true } (Identitas pelapor dirahasiakan dari siswa lain)
 
     Note over Guru,B2: Guru meminta evaluasi keadilan kelas
     Guru->>B2: POST /api/ai/rooms/:roomId/analyze-fairness
@@ -183,36 +219,36 @@ Platform menerapkan bahasa desain **Soft Neo-Brutalism for Smart & Fun Education
 1. **Karakter Visual yang Khas & Menyenangkan**:
    - Kontur tegas dengan border tebal 2px (`border-2 border-[#0f1b34]`).
    - Bayangan solid 3D terukur (`shadow-[3px_3px_0px_#0f1b34]`).
-   - Kombinasi tipografi modern: **Bricolage Grotesque** (Judul, badge, dan elemen stiker) dan **Plus Jakarta Sans** (Isi teks dan navigasi).
+   - Tipografi terkurasi: **Bricolage Grotesque** (Judul, badge, dan elemen stiker) dan **Plus Jakarta Sans** (Isi teks dan navigasi).
    - Palet warna ceria edukatif: Warm Coral (`#f26b3a`), Golden Yellow (`#fec744`), Teal (`#30a49b`), dan Deep Ink (`#0f1b34`).
 
 2. **Pengalaman Pengguna Tanpa Friksi (*Frictionless UX*)**:
-   - **Tanpa Registrasi Rumit**: Guru dan siswa dapat bergabung dalam hitungan detik menggunakan kode PIN kelas.
-   - **PIN Pribadi Siswa 4-Digit**: Melindungi akun siswa dari klaim iseng teman sekelas tanpa perlu menghafal email atau password rumit.
-   - **Identitas Eksplisit**: Badge penanda `Kamu: [Nama Siswa]` selalu terlihat di bilah navigasi dan tajuk obrolan.
+   - **Tanpa Akun Rumit**: Guru dan siswa dapat bergabung dalam hitungan detik menggunakan kode PIN kelas.
+   - **PIN Pribadi Siswa 4-Digit**: Melindungi akun siswa dari klaim iseng teman sekelas tanpa perlu menghafal email atau password panjang.
+   - **Identitas Eksplisit**: Badge penanda `Kamu: {namaSiswa}` selalu terlihat di bilah navigasi dan tajuk obrolan.
 
-3. **Desain Obrolan Tim Neo-Brutalist (Bukan Template Pasaran)**:
+3. **Desain Obrolan Tim Neo-Brutalist (Bukan Kloning Perpesanan Biasa)**:
    - Sisi **Kanan (Pesan Sendiri)**: Kartu neo-brutalist oranye cerah berbayangan solid 3D dengan label *"Kamu"*.
    - Sisi **Kiri (Pesan Rekan)**: Dilengkapi avatar inisial warna pastel dan label nama pengirim tebal berwarna.
-   - Mengikuti kaidah sudut pandang intuitif tanpa menggunakan template kloning perpesanan biasa.
+   - Mengikuti kaidah sudut pandang intuitif yang selaras dengan seluruh antarmuka aplikasi.
 
 ---
 
 ## 🌱 Prinsip Khusus: Green IT, Etika & Privasi Data (Bobot 10%)
 
-### 1. *Data Privacy by Design* (Perlindungan Ruang Aman Siswa)
-- **Isolasi Obrolan**: Guru diblokir permanen (HTTP 403 Forbidden) saat mencoba mengakses obrolan tim siswa. Siswa berhak memiliki ruang diskusi yang leluasa tanpa rasa diawasi secara berlebihan.
-- **Anonimitas Evaluasi Sejawat**: Identitas pelapor pada fitur *Peer Review* dirahasiakan sepenuhnya dari siswa lain untuk mencegah *peer pressure* atau perundungan.
+1. **Perlindungan Ruang Aman Siswa (*Data Privacy by Design*)**:
+   - **Isolasi Obrolan**: Guru diblokir permanen (HTTP 403 Forbidden) saat mencoba mengakses obrolan tim siswa. Siswa berhak memiliki ruang diskusi yang leluasa tanpa rasa diawasi secara berlebihan.
+   - **Kerahasiaan Evaluasi Sejawat**: Identitas pelapor pada fitur *Peer Review* dirahasiakan dari siswa lain untuk mencegah *peer pressure* atau perundungan.
 
-### 2. Etika Kecerdasan Buatan (*AI Ethics*)
-- **Penyamaran Data (*De-anonymization*)**: Sebelum dikirim ke Google Gemini, seluruh identitas pelapor disamarkan menjadi token anonim (misalnya `Pelapor-1`). Model AI tidak pernah menerima nama asli siswa pelapor.
-- **Pertahanan *Prompt Injection***: Seluruh teks masukan pengguna dibungkus di dalam tag isolasi `<data>...</data>` serta disanitasi dari tag manipulatif (`stripDataTags`) agar tidak dapat mengubah instruksi sistem.
-- **Transparansi Hasil *Fallback***: Jika terjadi kendala koneksi atau batas kuota API, sistem menyematkan label transparan:  
-  `"hasil otomatis, AI sedang tidak tersedia"`.
+2. **Etika Kecerdasan Buatan (*AI Ethics*)**:
+   - **Penyamaran Data (*De-anonymization*)**: Sebelum dikirim ke Google Gemini, seluruh identitas pelapor disamarkan menjadi token anonim (misalnya `Pelapor-1`). Model AI tidak pernah menerima nama asli siswa pelapor.
+   - **Pertahanan *Prompt Injection***: Seluruh teks masukan pengguna dibungkus di dalam tag isolasi `<data>...</data>` serta disanitasi dari tag manipulatif (`stripDataTags`) agar tidak dapat mengubah instruksi sistem.
+   - **Transparansi Hasil *Fallback***: Jika terjadi kendala koneksi atau batas kuota API, sistem menyematkan label transparan:  
+     `"hasil otomatis, AI sedang tidak tersedia"`.
 
-### 3. Efisiensi Sumber Daya (*Green IT*)
-- **Validasi Deterministik Lokal**: Perhitungan persentase kontribusi dan bobot tugas dikerjakan secara deterministik oleh server lokal sebelum memanggil LLM, menghemat konsumsi token API dan daya komputasi secara signifikan.
-- **Timeout Cepat & Caching**: Batas waktu eksekusi AI diatur ketat untuk mencegah *idle resource* yang memboroskan energi server.
+3. **Efisiensi Sumber Daya (*Green IT*)**:
+   - **Validasi Deterministik Lokal**: Perhitungan persentase kontribusi dan bobot tugas dikerjakan secara deterministik oleh server lokal sebelum memanggil LLM, menghemat konsumsi token API dan daya komputasi secara signifikan.
+   - **Timeout Cepat & Caching**: Batas waktu eksekusi AI diatur ketat untuk mencegah *idle resource* yang memboroskan energi server.
 
 ---
 
@@ -240,9 +276,9 @@ Data uji coba telah disiapkan secara otomatis di basis data:
 ### Prasyarat
 - Node.js versi 20+ atau 24+
 - NPM versi 10+
-- Koneksi Internet (untuk dependensi dan basis data Neon)
+- Koneksi Internet (untuk dependensi dan basis data Neon PostgreSQL)
 
-### 1. Kloning Repositori & Instalasi
+### 1. Kloning Repositori & Instalasi Dependensi
 ```bash
 git clone https://github.com/HAYKALAB/kelompok-adil.git
 cd kelompok-adil
@@ -250,6 +286,8 @@ npm install
 ```
 
 ### 2. Konfigurasi Variabel Lingkungan (.env)
+
+Salin berkas konfigurasi template di masing-masing direktori:
 
 **Backend 1 (`backend/.env`):**
 ```env
@@ -270,6 +308,9 @@ GEMINI_API_KEY="<api-key-google-gemini>"
 AI_MODEL=gemini-2.5-flash
 AI_MOCK=false
 ```
+
+**Frontend (`frontend/.env`):**
+*(Biarkan kosong saat pengujian lokal agar menggunakan proxy Vite otomatis).*
 
 ### 3. Migrasi & Seed Basis Data
 ```bash
@@ -315,13 +356,22 @@ npm --prefix frontend run build
 ## ⚖️ Keterbatasan Jujur Sistem (Transparent Disclosures)
 
 Sesuai etika kompetisi dan integritas akademik:
-1. **Penyimpanan Obrolan**: Obrolan tim disimpan pada basis data server semata-mata untuk kontinuitas tugas proyek antaranggota kelompok. Guru dibatasi secara tegas (403) dari mengakses pesan percakapan ini.
-2. **Ketergantungan Kuota Eksternal AI**: Jika seluruh kuota pemanggilan Gemini API habis pada jam sibuk, sistem secara transparan mengaktifkan *Deterministic Fallback Engine* untuk menjamin fungsionalitas aplikasi tetap 100% berjalan tanpa *crash*.
-3. **Mediasi Guru**: Anonimitas *peer review* dirancang untuk melindungi siswa dari intimidasi rekan sejawat. Guru tetap dapat melihat identitas pelapor pada dashboard audit guru untuk tujuan intervensi dan konseling nyata di sekolah.
+1. **Penyimpanan Obrolan**: Obrolan tim disimpan pada basis data server semata-mata untuk kontinuitas tugas proyek antaranggota kelompok. Guru dibatasi secara tegas (HTTP 403) dari mengakses pesan percakapan ini.
+2. **Ketergantungan Kuota Eksternal AI**: Jika seluruh kuota pemanggilan Gemini API habis pada jam sibuk, sistem secara transparan mengaktifkan *Deterministic Fallback Engine* untuk menjamin fungsionalitas utama aplikasi tetap dapat berjalan tanpa kendala.
+3. **Mediasi Guru**: Kerahasiaan evaluasi sejawat dirancang untuk melindungi siswa dari intimidasi rekan sejawat. Guru tetap dapat melihat identitas pelapor pada dashboard audit guru untuk tujuan intervensi dan konseling nyata di sekolah.
+4. **Pembaruan Obrolan Berbasis Polling**: Pembaruan pesan pada tab obrolan menggunakan interval polling otomatis setiap 3 detik, bukan koneksi websocket persisten dua arah.
 
 ---
 
-## 📜 Lisensi & Integritas Orisinalitas
+## 📜 Lisensi & Atribusi Pihak Ketiga
 
-Karya ini dikembangkan secara orisinal oleh Tim **Kelompok Adil** dari **SMKN 2 Kota Bekasi** untuk **LOGICODIX Hackathon Competition 2026**.  
-Seluruh pustaka pihak ketiga (*Google Gen AI SDK, React, Tailwind CSS, Prisma ORM, Express, Neon PostgreSQL*) digunakan sesuai lisensi sumber terbuka masing-masing.
+Karya ini dikembangkan secara orisinal oleh Tim **Kelompok Adil** dari **SMKN 2 Kota Bekasi** untuk **LOGICODIX Hackathon Competition 2026**.
+
+Atribusi pustaka dan aset pihak ketiga yang digunakan:
+- **Google Gen AI SDK** (`@google/genai`) — Lisensi Apache 2.0
+- **React & React DOM** (`react`) — Lisensi MIT
+- **Tailwind CSS** (`tailwindcss`) — Lisensi MIT
+- **Prisma ORM** (`@prisma/client`) — Lisensi Apache 2.0
+- **Express.js** (`express`) — Lisensi MIT
+- **Neon Serverless PostgreSQL** — Cloud Database Provider
+- **Material Symbols & Google Fonts** (Bricolage Grotesque, Plus Jakarta Sans) — SIL Open Font License
