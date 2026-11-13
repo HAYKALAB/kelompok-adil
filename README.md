@@ -191,7 +191,7 @@ cp backend/.env.example backend/.env
 Isi variabel:
 ```env
 PORT=4000
-DATABASE_URL="postgresql://user:password@host/dbname?sslmode=require"
+DATABASE_URL="postgres://[user]:[password]@[host]/[dbname]?sslmode=require"
 CORS_ORIGIN="http://localhost:5173"
 JWT_SECRET="kunci-rahasia-jwt-minimal-16-karakter"
 ```
@@ -206,8 +206,8 @@ PORT=5000
 AUTH_MODE=jwt
 REPO_MODE=db
 JWT_SECRET="kunci-rahasia-jwt-minimal-16-karakter" # Sama dengan Backend 1
-BACKEND2_DATABASE_URL="postgresql://user:password@host/dbname?sslmode=require"
-GEMINI_API_KEY="AIzaSy..."
+BACKEND2_DATABASE_URL="postgres://[user]:[password]@[host]/[dbname]?sslmode=require"
+GEMINI_API_KEY="<api-key-gemini>"
 AI_MODEL=gemini-2.5-flash
 AI_MOCK=false
 ```
