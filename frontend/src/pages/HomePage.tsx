@@ -377,6 +377,17 @@ export function HomePage() {
                   <span>{loading ? 'Menghubungkan...' : 'Masuk Dashboard Guru'}</span>
                   <span>➔</span>
                 </button>
+
+                <div
+                  onClick={() => {
+                    setTeacherName('Bu Rina');
+                    setTeacherPin('123456');
+                    setTeacherCode('GURU-DEMO-2026');
+                  }}
+                  className="mt-1 p-2 rounded-xl bg-surface-container-lowest/80 border border-[#0f1b34] text-xs cursor-pointer hover:bg-surface-container-lowest transition-colors"
+                >
+                  <span className="font-bold">Tips Akun Demo:</span> Klik di sini untuk mengisi otomatis PIN <code className="font-mono font-bold bg-primary-container px-1 rounded">123456</code> &amp; Kode <code className="font-mono font-bold bg-secondary-container px-1 rounded">GURU-DEMO-2026</code>.
+                </div>
               </form>
             ) : (
               <form onSubmit={handleCreateRoom} className="flex flex-col gap-2.5 mt-auto">

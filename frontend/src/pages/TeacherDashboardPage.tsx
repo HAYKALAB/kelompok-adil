@@ -56,6 +56,21 @@ export function TeacherDashboardPage() {
   const [rekapOpen, setRekapOpen] = useState(false);
   const [laporanOpen, setLaporanOpen] = useState(false);
   const [disalin, setDisalin] = useState<string | null>(null);
+  const [disalinCode, setDisalinCode] = useState<string | null>(null);
+
+  const activeTeacherCode =
+    session?.teacherCode ||
+    ((roomData?.room.pin || currentPin) === '123456' ? 'GURU-DEMO-2026' : null);
+
+  const salinCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setDisalinCode(code);
+      setTimeout(() => setDisalinCode(null), 1500);
+    } catch {
+      /* ignore */
+    }
+  };
 
   // Auto Split State
   const [splitCount, setSplitCount] = useState<number>(2);
@@ -294,24 +309,52 @@ export function TeacherDashboardPage() {
               </p>
             </div>
 
-            {/* PIN Card & Ganti PIN */}
-            <div className="flex flex-wrap items-center gap-2 bg-surface-container-low p-2.5 rounded-xl border border-outline-variant/40">
-              <div className="flex flex-col">
-                <span className="text-[11px] font-bold text-on-surface-variant">PIN KELAS</span>
-                <span className="font-mono text-title-md font-bold text-primary tracking-widest">
-                  {roomData?.room.pin || currentPin}
-                </span>
+            {/* PIN Card & Kode Guru Card */}
+            <div className="flex flex-wrap items-center gap-2.5 bg-surface-container-low p-2.5 rounded-xl border border-outline-variant/40">
+              {/* PIN KELAS */}
+              <div className="flex items-center gap-2 bg-surface-container-lowest px-3 py-1.5 rounded-lg border border-outline-variant/50">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-on-surface-variant uppercase">PIN KELAS (SISWA)</span>
+                  <span className="font-mono text-title-md font-bold text-primary tracking-widest">
+                    {roomData?.room.pin || currentPin}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => salinPin(roomData?.room.pin || currentPin)}
+                  className="px-2 py-1 bg-surface-container text-on-surface rounded-md font-label-sticker text-label-sticker font-bold hover:bg-surface-container-high transition-colors flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-[14px]">
+                    {disalin === (roomData?.room.pin || currentPin) ? 'check' : 'content_copy'}
+                  </span>
+                  <span>{disalin === (roomData?.room.pin || currentPin) ? 'Tersalin' : 'Salin'}</span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => salinPin(roomData?.room.pin || currentPin)}
-                className="px-2.5 py-1.5 bg-surface-container text-on-surface rounded-lg font-label-sticker text-label-sticker font-bold hover:bg-surface-container-high transition-colors flex items-center gap-1"
-              >
-                <span className="material-symbols-outlined text-[14px]">
-                  {disalin ? 'check' : 'content_copy'}
-                </span>
-                <span>{disalin ? 'Tersalin' : 'Salin'}</span>
-              </button>
+
+              {/* KODE GURU (Jika ada) */}
+              {activeTeacherCode && (
+                <div className="flex items-center gap-2 bg-error-container/30 border border-error/40 px-3 py-1.5 rounded-lg">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-error uppercase flex items-center gap-0.5">
+                      <span className="material-symbols-outlined text-[12px]">lock</span>
+                      <span>KODE GURU (SIMPAN)</span>
+                    </span>
+                    <span className="font-mono text-sm font-bold text-error tracking-wider">
+                      {activeTeacherCode}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => salinCode(activeTeacherCode)}
+                    className="px-2 py-1 bg-error-container text-on-error-container rounded-md font-label-sticker text-label-sticker font-bold hover:bg-error-container/80 transition-colors flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">
+                      {disalinCode === activeTeacherCode ? 'check' : 'content_copy'}
+                    </span>
+                    <span>{disalinCode === activeTeacherCode ? 'Tersalin' : 'Salin'}</span>
+                  </button>
+                </div>
+              )}
 
               <div className="h-6 w-[1px] bg-outline-variant/60 mx-1 hidden sm:block" />
 
