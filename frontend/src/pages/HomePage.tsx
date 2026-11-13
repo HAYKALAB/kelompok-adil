@@ -20,6 +20,7 @@ export function HomePage() {
   // Mode Murid
   const [studentPin, setStudentPin] = useState('');
   const [studentName, setStudentName] = useState('');
+  const [studentPersonalPin, setStudentPersonalPin] = useState('');
 
   // Mode Guru - Tab (Masuk vs Buat)
   const [teacherTab, setTeacherTab] = useState<'LOGIN' | 'CREATE'>('LOGIN');
@@ -52,11 +53,16 @@ export function HomePage() {
     const cleanName = studentName.trim();
 
     if (cleanPin.length !== 6) {
-      setErrorMessage('PIN harus 6 digit.');
+      setErrorMessage('PIN Kelas harus 6 digit.');
       return;
     }
     if (!cleanName) {
       setErrorMessage('Silakan isi nama lengkapmu.');
+      return;
+    }
+    const cleanPersonalPin = studentPersonalPin.trim();
+    if (cleanPersonalPin.length !== 4 || !/^\d{4}$/.test(cleanPersonalPin)) {
+      setErrorMessage('PIN Pribadi Siswa harus 4 digit angka (misal: 1234).');
       return;
     }
 
@@ -65,7 +71,7 @@ export function HomePage() {
     const slowTimer = setTimeout(() => setIsSlow(true), 2500);
 
     try {
-      const res = await joinAsStudent(cleanPin, cleanName);
+      const res = await joinAsStudent(cleanPin, cleanName, cleanPersonalPin);
       clearTimeout(slowTimer);
       setIsSlow(false);
       saveSession({
@@ -487,29 +493,53 @@ export function HomePage() {
                   className="w-full px-3 py-2.5 rounded-xl bg-surface-container-lowest text-on-surface text-sm border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] focus:outline-none"
                 />
               </div>
-              <div>
-                <label className="text-xs font-bold text-on-secondary-fixed block mb-1">6 Digit PIN Kelas</label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={studentPin}
-                  onChange={(e) => setStudentPin(e.target.value.toUpperCase())}
-                  placeholder="123456"
-                  className="w-full uppercase font-mono tracking-widest text-center px-3 py-2.5 rounded-xl bg-surface-container-lowest text-on-surface text-sm border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] focus:outline-none"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-bold text-on-secondary-fixed block mb-1">6 Digit PIN Kelas</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={studentPin}
+                    onChange={(e) => setStudentPin(e.target.value.toUpperCase())}
+                    placeholder="123456"
+                    className="w-full uppercase font-mono tracking-widest text-center px-3 py-2.5 rounded-xl bg-surface-container-lowest text-on-surface text-sm border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-on-secondary-fixed block mb-1">🔒 PIN Siswa (4 Angka)</label>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={studentPersonalPin}
+                    onChange={(e) => setStudentPersonalPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="1234"
+                    className="w-full font-mono tracking-widest text-center px-3 py-2.5 rounded-xl bg-surface-container-lowest text-on-surface text-sm border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] focus:outline-none"
+                  />
+                </div>
               </div>
+              <p className="text-[11px] text-on-secondary-fixed-variant">
+                *PIN Siswa dibuat sendiri saat pertama kali masuk agar akunmu aman dari teman lain.
+              </p>
               <button
                 type="submit"
                 disabled={loading}
-                className="mt-2 w-full py-3 px-4 rounded-xl bg-on-surface text-surface font-bold text-sm flex items-center justify-center gap-2 border-2 border-[#0f1b34] shadow-[3px_3px_0px_#f26b3a] hover:-translate-y-0.5 active:translate-y-0.5 transition-transform disabled:opacity-50"
+                className="mt-1 w-full py-3 px-4 rounded-xl bg-on-surface text-surface font-bold text-sm flex items-center justify-center gap-2 border-2 border-[#0f1b34] shadow-[3px_3px_0px_#f26b3a] hover:-translate-y-0.5 active:translate-y-0.5 transition-transform disabled:opacity-50"
               >
-                <span>{loading ? 'Memeriksa PIN...' : 'Gabung Ruang Kerja'}</span>
+                <span>{loading ? 'Memeriksa Data...' : 'Gabung Ruang Kerja'}</span>
                 <span>➔</span>
               </button>
             </form>
 
-            <div className="mt-4 p-2.5 rounded-xl bg-surface-container-lowest/80 border border-[#0f1b34] text-xs">
-              <span className="font-bold">Tips Demo Cepat:</span> Pakai PIN <code className="font-mono font-bold bg-secondary-container px-1 rounded">123456</code> untuk mencoba kelas demo bawaan.
+            <div
+              onClick={() => {
+                setStudentName('Dafano');
+                setStudentPin('123456');
+                setStudentPersonalPin('1234');
+              }}
+              className="mt-4 p-2.5 rounded-xl bg-surface-container-lowest/80 border border-[#0f1b34] text-xs cursor-pointer hover:bg-surface-container-lowest transition-colors"
+            >
+              <span className="font-bold">Tips Akun Siswa:</span> Klik di sini untuk mengisi otomatis PIN Kelas <code className="font-mono font-bold bg-secondary-container px-1 rounded">123456</code>, Nama <code className="font-mono font-bold bg-secondary-container px-1 rounded">Dafano</code> &amp; PIN Siswa <code className="font-mono font-bold bg-secondary-container px-1 rounded">1234</code>.
             </div>
           </div>
         </div>

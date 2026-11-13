@@ -2,19 +2,57 @@ import { getPrisma } from '../lib/prisma.js';
 import { signSession } from '../lib/jwt.js';
 import { AppError } from '../lib/app-error.js';
 
-export async function joinRoomAsStudent(pin: string, name: string) {
-  const prisma = getPrisma();
+export async function joinRoomAsStudent(
+  pin: string,
+  name: string,
+  studentPin?: string,
+  client?: any
+) {
+  const prisma = client ?? getPrisma();
   const room = await prisma.room.findUnique({ where: { pin } });
   if (!room) {
     throw new AppError(404, 'ROOM_NOT_FOUND', 'Room tidak ditemukan.');
   }
 
+  const cleanName = name.trim();
   const existing = await prisma.roomParticipant.findUnique({
-    where: { roomId_name: { roomId: room.id, name } },
+    where: { roomId_name: { roomId: room.id, name: cleanName } },
   });
 
-  // Jika siswa sudah pernah masuk ke room ini, izinkan login ulang (resume sesi)
+  const cleanPin = (studentPin || '').trim();
+
+  // KASUS 1: Siswa sudah pernah terdaftar di room ini (Login Ulang / Resume Sesi)
   if (existing && existing.role === 'STUDENT') {
+    const ticket = await prisma.studentCodeTicket.findFirst({
+      where: { roomId: room.id, participantId: existing.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (ticket) {
+      const storedPin = ticket.code.split(':').pop();
+      if (!cleanPin || cleanPin !== storedPin) {
+        throw new AppError(
+          403,
+          'INVALID_STUDENT_PIN',
+          `Nama "${cleanName}" sudah terdaftar. PIN Keamanan salah!`
+        );
+      }
+    } else {
+      // Jika siswa lama belum punya ticket di database, set PIN baru jika dikirimkan
+      if (cleanPin) {
+        if (!/^\d{4}$/.test(cleanPin)) {
+          throw new AppError(400, 'INVALID_STUDENT_PIN', 'PIN Pribadi Siswa harus berupa 4 digit angka.');
+        }
+        await prisma.studentCodeTicket.create({
+          data: {
+            roomId: room.id,
+            participantId: existing.id,
+            code: `${room.id}:${existing.id}:${cleanPin}`,
+          },
+        });
+      }
+    }
+
     return {
       participant: existing,
       token: signSession({ id: existing.id, role: existing.role }),
@@ -25,10 +63,19 @@ export async function joinRoomAsStudent(pin: string, name: string) {
     throw new AppError(409, 'NAME_ALREADY_USED', 'Nama sudah dipakai peserta lain.');
   }
 
+  // KASUS 2: Siswa baru pertama kali mendaftar ke kelas ini
+  if (!cleanPin || !/^\d{4}$/.test(cleanPin)) {
+    throw new AppError(
+      400,
+      'INVALID_STUDENT_PIN',
+      'PIN Pribadi Siswa harus berupa 4 digit angka (contoh: 1234).'
+    );
+  }
+
   let participant;
   try {
     participant = await prisma.roomParticipant.create({
-      data: { roomId: room.id, name, role: 'STUDENT' },
+      data: { roomId: room.id, name: cleanName, role: 'STUDENT' },
     });
   } catch (err: any) {
     if (err?.code === 'P2002') {
@@ -36,6 +83,15 @@ export async function joinRoomAsStudent(pin: string, name: string) {
     }
     throw err;
   }
+
+  // Simpan PIN Pribadi Siswa ke tabel StudentCodeTicket
+  await prisma.studentCodeTicket.create({
+    data: {
+      roomId: room.id,
+      participantId: participant.id,
+      code: `${room.id}:${participant.id}:${cleanPin}`,
+    },
+  });
 
   return {
     participant,

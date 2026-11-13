@@ -4,6 +4,8 @@ import { joinRoomAsStudent, joinRoomAsTeacher, registerTeacher } from '../servic
 
 const joinSchema = z.object({
   name: z.string().trim().min(1).max(100),
+  studentPin: z.string().trim().optional(),
+  passcode: z.string().trim().optional(),
 });
 
 const teacherLoginSchema = z.object({
@@ -18,7 +20,8 @@ const registerTeacherSchema = z.object({
 export async function joinRoom(req: Request, res: Response): Promise<void> {
   const input = joinSchema.parse(req.body);
   const pin = String(req.params.pin);
-  const result = await joinRoomAsStudent(pin, input.name);
+  const studentPin = input.studentPin || input.passcode;
+  const result = await joinRoomAsStudent(pin, input.name, studentPin);
   res.status(200).json({ data: result });
 }
 

@@ -198,10 +198,14 @@ export interface CreateRoomResponse {
   isNewTeacherCode: boolean;
 }
 
-export async function joinAsStudent(pin: string, name: string): Promise<JoinStudentResponse> {
+export async function joinAsStudent(
+  pin: string,
+  name: string,
+  studentPin?: string
+): Promise<JoinStudentResponse> {
   return apiFetch<JoinStudentResponse>(`/api/rooms/${encodeURIComponent(pin)}/join`, {
     method: 'POST',
-    body: { name },
+    body: { name, studentPin },
   });
 }
 
