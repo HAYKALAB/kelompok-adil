@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { createRoom, splitRoomGroups as splitGroups } from '../services/room.service.js';
+import { createRoom, getRoomDetail, splitRoomGroups as splitGroups } from '../services/room.service.js';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
 
 const createRoomSchema = z.object({
@@ -42,5 +42,18 @@ export async function splitRoomGroupsHandler(req: Request, res: Response): Promi
   const count = typeof query.count === 'string' ? Number(query.count) : undefined;
 
   const result = await splitGroups(user.id, pin, count);
+  res.status(200).json({ data: result });
+}
+
+export async function getRoomDetailHandler(req: Request, res: Response): Promise<void> {
+  const authReq = req as AuthenticatedRequest;
+  const user = authReq.user;
+  if (!user) {
+    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token tidak ditemukan.' } });
+    return;
+  }
+
+  const pin = String(req.params.pin);
+  const result = await getRoomDetail(user.id, pin);
   res.status(200).json({ data: result });
 }
