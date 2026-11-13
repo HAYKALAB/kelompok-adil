@@ -536,7 +536,7 @@ const simpanTugas = (data: TugasBaru) => {
         open={laporOpen}
         onClose={() => setLaporOpen(false)}
         currentUserId="DF"
-        onSubmit={async (laporan) => {
+        onSubmit={async (_laporan) => {
           // TODO: POST ke backend
         }}
         members={(Object.keys(MEMBERS) as MemberId[]).map((id) => ({
