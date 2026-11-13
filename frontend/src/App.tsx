@@ -12,8 +12,10 @@ export function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/status" element={<StatusPage />} />
-        <Route path="/workspace/${pin}" element={<WorkspacePage />} />
+        <Route path="/workspace/:pin" element={<WorkspacePage />} />
+        <Route path="/workspace" element={<WorkspacePage />} />
         <Route path="/guru" element={<TeacherDashboardPage />} />
+        <Route path="/guru/:pin" element={<TeacherDashboardPage />} />
         <Route path="/ai" element={<AiFasilitatorPage />} />
         <Route path="/ai-tutor" element={<AIChatPage />} /> 
       </Routes>
