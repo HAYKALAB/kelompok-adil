@@ -277,6 +277,12 @@ export function WorkspacePage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {currentParticipantName && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary-container text-on-primary-container border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] text-xs font-black">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Kamu: <strong>{currentParticipantName}</strong></span>
+              </div>
+            )}
             {myGroup && (
               <button
                 type="button"
@@ -565,10 +571,25 @@ export function WorkspacePage() {
                   💬
                 </div>
                 <div>
-                  <h3 className="font-black text-sm text-on-surface">Obrolan Rekan Kelompok</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-black text-sm text-on-surface">Obrolan Rekan Kelompok</h3>
+                    {currentParticipantName && (
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-primary-container text-on-primary-container border border-[#0f1b34]">
+                        Kamu: {currentParticipantName}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[11px] text-on-surface-variant flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>{members.map((x) => x.name).join(', ') || 'Anggota Tim'}</span>
+                    <span>
+                      {members
+                        .map((x) =>
+                          x.name.trim().toLowerCase() === myParticipantName
+                            ? `${x.name} (Kamu)`
+                            : x.name
+                        )
+                        .join(', ') || 'Anggota Tim'}
+                    </span>
                   </p>
                 </div>
               </div>
@@ -647,7 +668,11 @@ export function WorkspacePage() {
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Ketik pesan untuk rekan kelompok..."
+                placeholder={
+                  currentParticipantName
+                    ? `Ketik pesan sebagai ${currentParticipantName}...`
+                    : 'Ketik pesan untuk rekan kelompok...'
+                }
                 className="flex-1 px-4 py-2.5 rounded-full bg-surface-container-lowest border-2 border-[#0f1b34] text-xs md:text-sm focus:outline-none shadow-[2px_2px_0px_#0f1b34]"
               />
               <button

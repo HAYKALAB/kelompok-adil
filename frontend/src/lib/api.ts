@@ -28,28 +28,32 @@ const SESSION_KEY = 'kelompok_adil_session';
 
 export function saveSession(session: UserSession): void {
   try {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    const raw = JSON.stringify(session);
+    localStorage.setItem(SESSION_KEY, raw);
+    sessionStorage.setItem(SESSION_KEY, raw);
   } catch (err) {
-    console.error('Gagal menyimpan sesi ke localStorage', err);
+    console.error('Gagal menyimpan sesi ke localStorage/sessionStorage', err);
   }
 }
 
 export function getSession(): UserSession | null {
   try {
-    const raw = localStorage.getItem(SESSION_KEY);
+    // Utamakan sessionStorage untuk isolasi per-tab saat testing banyak siswa di browser yang sama
+    const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as UserSession;
   } catch (err) {
-    console.error('Gagal membaca sesi dari localStorage', err);
+    console.error('Gagal membaca sesi', err);
     return null;
   }
 }
 
 export function clearSession(): void {
   try {
+    sessionStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(SESSION_KEY);
   } catch (err) {
-    console.error('Gagal menghapus sesi dari localStorage', err);
+    console.error('Gagal menghapus sesi', err);
   }
 }
 
