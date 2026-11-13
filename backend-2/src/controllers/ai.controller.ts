@@ -54,10 +54,26 @@ export class AiController {
         return;
       }
 
+      const user = (req as any).user;
+      let resolvedSenderName = senderName;
+      let resolvedSenderId = senderId || user?.id;
+
+      if (!resolvedSenderName && user?.id) {
+        try {
+          const group = await repo.getGroup(groupId);
+          const member = group?.members?.find((m) => m.id === user.id);
+          if (member?.name) {
+            resolvedSenderName = member.name;
+          }
+        } catch {
+          // fallback aman
+        }
+      }
+
       const result = await ChatService.processGroupChat({
         groupId,
-        senderId,
-        senderName: senderName || 'Siswa',
+        senderId: resolvedSenderId,
+        senderName: resolvedSenderName || 'Siswa',
         message,
         action,
       });

@@ -690,7 +690,11 @@ export function WorkspacePage() {
         {/* Tab 3: AI FASILITATOR */}
         {tab === 'ai' && (
           <div className="rounded-2xl border-2 border-[#0f1b34] shadow-[4px_4px_0px_#0f1b34] overflow-hidden">
-            <AIFacilitatorChat groupId={myGroup?.id} onTasksUpdated={loadData} />
+            <AIFacilitatorChat
+              groupId={myGroup?.id}
+              currentParticipantName={currentParticipantName}
+              onTasksUpdated={loadData}
+            />
           </div>
         )}
 

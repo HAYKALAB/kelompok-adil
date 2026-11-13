@@ -5,22 +5,25 @@ import {
   applySuggestion,
   dismissSuggestion,
   fetchAiMessages,
+  getSession,
   type RoleSplitSuggestion,
 } from "../lib/api";
 
 interface Props {
   groupId?: string;
+  currentParticipantName?: string;
   onTasksUpdated?: () => void;
 }
 
 type Message = {
-  id: number;
+  id: number | string;
   sender: "student" | "ai";
+  senderName?: string;
   text: string;
   source?: "gemini" | "fallback";
 };
 
-export default function AIFacilitatorChat({ groupId, onTasksUpdated }: Props) {
+export default function AIFacilitatorChat({ groupId, currentParticipantName, onTasksUpdated }: Props) {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -29,6 +32,7 @@ export default function AIFacilitatorChat({ groupId, onTasksUpdated }: Props) {
     {
       id: 1,
       sender: "ai",
+      senderName: "✦ AI Fasilitator",
       text: "Halo! Aku AI Fasilitator kelompokmu. Mau brainstorming ide sudut pandang tugas atau pembagian peran adil?",
       source: "gemini",
     },
@@ -54,8 +58,9 @@ export default function AIFacilitatorChat({ groupId, onTasksUpdated }: Props) {
               h.action === 'nudge'
           );
           const mapped: Message[] = aiRelated.map((h: any, idx: number) => ({
-            id: idx + 2,
+            id: h.id || idx + 2,
             sender: (h.isAi || h.senderType === 'ai') ? "ai" : "student",
+            senderName: h.senderName,
             text: h.content,
             source: (h.isAi || h.senderType === 'ai') ? "gemini" : undefined,
           }));
@@ -63,6 +68,7 @@ export default function AIFacilitatorChat({ groupId, onTasksUpdated }: Props) {
             {
               id: 1,
               sender: "ai",
+              senderName: "✦ AI Fasilitator",
               text: "Halo! Aku AI Fasilitator kelompokmu. Mau brainstorming ide sudut pandang tugas atau pembagian peran adil?",
               source: "gemini",
             },
@@ -78,22 +84,24 @@ export default function AIFacilitatorChat({ groupId, onTasksUpdated }: Props) {
     const text = question.trim();
     if (!text || !groupId) return;
 
+    const myName = (currentParticipantName || getSession()?.participant?.name || '').trim();
     setErrorMsg(null);
     setMessages((prev) => [
       ...prev,
-      { id: Date.now(), sender: "student", text },
+      { id: Date.now(), sender: "student", senderName: myName || 'Kamu', text },
     ]);
     setQuestion("");
     setLoading(true);
 
     try {
-      const res = await chatWithAi(groupId, text);
+      const res = await chatWithAi(groupId, text, myName);
       const answer = res.reply || res.text || 'Hai! Silakan diskusikan tugas kelompokmu di sini.';
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           sender: "ai",
+          senderName: "✦ AI Fasilitator",
           text: answer,
           source: res.source === 'gemini' ? 'gemini' : 'fallback',
         },
@@ -257,22 +265,54 @@ export default function AIFacilitatorChat({ groupId, onTasksUpdated }: Props) {
           </div>
         ) : (
           messages.map((m) => {
-            const isStudent = m.sender === "student";
-            return (
-              <div key={m.id} className={`flex flex-col ${isStudent ? "items-end" : "items-start"}`}>
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className="text-[10px] font-bold text-gray-500">
-                    {isStudent ? "Kamu" : "✦ AI Fasilitator"}
-                  </span>
-                  {m.source === "fallback" && (
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
-                      hasil otomatis, AI sedang tidak tersedia
+            if (m.sender === "ai") {
+              return (
+                <div key={m.id} className="flex flex-col items-start">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-[10px] font-bold text-gray-500">
+                      ✦ AI Fasilitator
                     </span>
-                  )}
+                    {m.source === "fallback" && (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
+                        hasil otomatis, AI sedang tidak tersedia
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-3 rounded-2xl rounded-tl-none border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] text-xs max-w-sm md:max-w-md whitespace-pre-wrap leading-relaxed bg-white text-gray-900">
+                    {m.text}
+                  </div>
+                </div>
+              );
+            }
+
+            // Pesan Siswa: Cek apakah ini pesan saya (isMe) atau pesan rekan sekelompok lain
+            const myCleanName = (currentParticipantName || getSession()?.participant?.name || '').trim().toLowerCase();
+            const senderClean = (m.senderName || '').trim();
+            const senderLower = senderClean.toLowerCase();
+            const isMe = Boolean(
+              myCleanName && (
+                senderLower === myCleanName ||
+                senderClean === 'Kamu'
+              )
+            );
+
+            // Jika orang lain yang chat, tampilkan nama si pengirim (jangan "Kamu")
+            const displayName = isMe
+              ? 'Kamu'
+              : (senderClean && senderLower !== 'siswa' ? senderClean : 'Rekan Kelompok');
+
+            return (
+              <div key={m.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className={`text-[10px] font-bold ${isMe ? "text-gray-500" : "text-primary"}`}>
+                    {displayName}
+                  </span>
                 </div>
                 <div
                   className={`p-3 rounded-2xl border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] text-xs max-w-sm md:max-w-md whitespace-pre-wrap leading-relaxed ${
-                    isStudent ? "bg-primary-container text-on-primary" : "bg-white text-gray-900"
+                    isMe
+                      ? "bg-primary-container text-on-primary rounded-tr-none"
+                      : "bg-surface-container-low text-on-surface rounded-tl-none border-[#0f1b34]"
                   }`}
                 >
                   {m.text}

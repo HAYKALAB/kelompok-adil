@@ -440,10 +440,16 @@ export interface AiChatResponse {
   source?: 'gemini' | 'ai' | 'fallback';
 }
 
-export async function chatWithAi(groupId: string, message: string): Promise<AiChatResponse> {
+export async function chatWithAi(
+  groupId: string,
+  message: string,
+  senderName?: string
+): Promise<AiChatResponse> {
+  const session = getSession();
+  const resolvedName = senderName || session?.participant?.name;
   const res = await apiFetch<any>(`/api/ai/groups/${encodeURIComponent(groupId)}/chat`, {
     method: 'POST',
-    body: { message },
+    body: { message, senderName: resolvedName },
   });
   const replyText = res?.reply || res?.text || '';
   return {
