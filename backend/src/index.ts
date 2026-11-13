@@ -7,9 +7,20 @@ import { notFoundHandler } from './middleware/notFoundHandler.js';
 
 const app = express();
 
+const rawCors = env.CORS_ORIGIN || 'http://localhost:5173';
+const allowedOrigins = rawCors
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: env.CORS_ORIGIN,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: true,
   })
 );

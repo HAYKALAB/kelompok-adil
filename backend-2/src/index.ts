@@ -52,7 +52,23 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // Middleware umum
-app.use(cors());
+const rawCors = process.env.CORS_ORIGIN || 'http://localhost:5173';
+const allowedOrigins = rawCors
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: '1mb' }));
 
 // Middleware otentikasi adaptif (mendukung JWT Bearer dan fallback stub dev)
