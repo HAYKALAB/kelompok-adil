@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { TambahTugasModal, type TugasBaru } from '../components/TambahTugasModal';
 import { LaporRahasiaModal, type LaporanRahasia } from '../components/LaporanRahasiaModal';
@@ -53,6 +53,7 @@ export function WorkspacePage() {
   const [messages, setMessages] = useState<GroupMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [sendingChat, setSendingChat] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [reaksi, setReaksi] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -95,6 +96,12 @@ export function WorkspacePage() {
   const myGroup = roomData?.groups?.[0];
   const members = myGroup?.members || [];
   const currentParticipantId = roomData?.me?.id || session?.participant?.id || '';
+  const currentParticipantName = (
+    roomData?.me?.name ||
+    session?.participant?.name ||
+    ''
+  ).trim();
+  const myParticipantName = currentParticipantName.toLowerCase();
 
   // Hitung persentase kontribusi per anggota secara berbobot
   const memberProgressMap = useMemo(() => {
@@ -131,6 +138,26 @@ export function WorkspacePage() {
         (!m.action || m.action === 'peer_chat')
     );
   }, [messages]);
+
+  // Auto-scroll ke pesan terbaru saat tab chat dibuka atau ada pesan baru
+  useEffect(() => {
+    if (tab === 'chat') {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [tab, peerMessages.length]);
+
+  // Polling chat otomatis tiap 3 detik saat tab chat sedang aktif
+  useEffect(() => {
+    if (tab !== 'chat' || !myGroup?.id) return;
+    const interval = setInterval(() => {
+      fetchGroupMessages(myGroup.id)
+        .then((latest) => {
+          setMessages(latest);
+        })
+        .catch(() => {});
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [tab, myGroup?.id]);
 
   const handleUpdateProgress = async (taskId: string, currentProgress: number, tambah: number) => {
     setErrorMessage(null);
@@ -528,53 +555,108 @@ export function WorkspacePage() {
           </div>
         )}
 
-        {/* Tab 2: CHAT KELOMPOK (MURNI ANTAR SISWA TANPA AI) */}
+        {/* Tab 2: CHAT KELOMPOK (WHATSAPP STYLE MURNI ANTAR SISWA) */}
         {tab === 'chat' && (
-          <div className="rounded-2xl bg-surface-container-lowest border-2 border-[#0f1b34] shadow-[4px_4px_0px_#0f1b34] flex flex-col h-[520px] overflow-hidden">
+          <div className="rounded-2xl bg-surface-container-lowest border-2 border-[#0f1b34] shadow-[4px_4px_0px_#0f1b34] flex flex-col h-[540px] overflow-hidden">
+            {/* Header Chat */}
             <div className="p-3 border-b-2 border-[#0f1b34] bg-surface-container flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px]">forum</span>
-                <span className="font-bold text-sm">Ruang Obrolan Rekan Kelompok (Murni Anggota)</span>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs border border-[#0f1b34] shadow-[1px_1px_0px_#0f1b34]">
+                  💬
+                </div>
+                <div>
+                  <h3 className="font-black text-sm text-on-surface">Obrolan Rekan Kelompok</h3>
+                  <p className="text-[11px] text-on-surface-variant flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>{members.map((x) => x.name).join(', ') || 'Anggota Tim'}</span>
+                  </p>
+                </div>
               </div>
-              <span className="text-xs text-on-surface-variant">{peerMessages.length} Pesan</span>
+              <span className="text-xs font-bold bg-secondary-container px-2.5 py-0.5 rounded-full border border-[#0f1b34]">
+                {peerMessages.length} Pesan
+              </span>
             </div>
-            <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3 bg-surface">
+
+            {/* Area Pesan Bubble WhatsApp */}
+            <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-2.5 bg-[#efeae2]/40 dark:bg-surface">
               {peerMessages.length === 0 ? (
-                <div className="text-center text-xs text-gray-500 my-auto">
-                  Belum ada pesan sesama teman kelompok. Mulai obrolan dengan rekan sekelompokmu!
+                <div className="flex flex-col items-center justify-center my-auto text-center gap-2 p-6 bg-surface-container-lowest/80 rounded-2xl border border-dashed border-[#0f1b34] max-w-sm mx-auto">
+                  <span className="text-3xl">👋</span>
+                  <p className="font-bold text-xs text-on-surface">Belum ada obrolan di kelompok ini.</p>
+                  <p className="text-[11px] text-on-surface-variant">
+                    Ketik pesan di bawah untuk menyapa rekan sekelompokmu!
+                  </p>
                 </div>
               ) : (
                 peerMessages.map((m) => {
-                  const isMe = m.senderName === roomData?.me?.name;
+                  const senderClean = (m.senderName || '').trim().toLowerCase();
+                  const isMe = Boolean(myParticipantName && senderClean === myParticipantName);
+
                   return (
-                    <div key={m.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                      <span className="text-[10px] font-bold text-gray-500 mb-0.5">{m.senderName}</span>
+                    <div
+                      key={m.id}
+                      className={`flex flex-col w-full ${isMe ? 'items-end' : 'items-start'}`}
+                    >
                       <div
-                        className={`p-2.5 rounded-xl border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] text-xs max-w-xs md:max-w-md ${
-                          isMe ? 'bg-primary-container text-on-primary' : 'bg-surface-container-lowest text-on-surface'
+                        className={`relative max-w-[85%] sm:max-w-[70%] px-3.5 py-2 border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] text-xs ${
+                          isMe
+                            ? 'bg-[#dcf8c6] text-[#0f1b34] rounded-2xl rounded-tr-none'
+                            : 'bg-surface-container-lowest text-on-surface rounded-2xl rounded-tl-none'
                         }`}
                       >
-                        {m.content}
+                        {/* Nama pengirim untuk pesan rekan (Orang Lain / Kiri) */}
+                        {!isMe && (
+                          <div className="flex items-center gap-1.5 mb-1 pb-0.5 border-b border-[#0f1b34]/15">
+                            <span className="font-black text-[11px] text-primary tracking-wide">
+                              {m.senderName}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Isi Chat */}
+                        <div className="whitespace-pre-wrap break-words leading-relaxed font-medium text-xs md:text-sm pr-12 pb-1">
+                          {m.content}
+                        </div>
+
+                        {/* Timestamp & Status Centang WA */}
+                        <div className="flex items-center justify-end gap-1 text-[10px] text-gray-500 font-mono -mt-1 ml-auto select-none">
+                          <span>
+                            {m.createdAt
+                              ? new Date(m.createdAt).toLocaleTimeString('id-ID', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : ''}
+                          </span>
+                          {isMe && <span className="text-[#34b7f1] font-bold text-[11px]">✓✓</span>}
+                        </div>
                       </div>
                     </div>
                   );
                 })
               )}
+              <div ref={messagesEndRef} />
             </div>
-            <form onSubmit={handleSendChatMessage} className="p-3 border-t-2 border-[#0f1b34] flex gap-2 bg-surface-container-low">
+
+            {/* Input Bar Kirim Pesan */}
+            <form
+              onSubmit={handleSendChatMessage}
+              className="p-3 border-t-2 border-[#0f1b34] flex items-center gap-2 bg-surface-container-low"
+            >
               <input
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 placeholder="Ketik pesan untuk rekan kelompok..."
-                className="flex-1 px-3 py-2 rounded-xl bg-surface-container-lowest border-2 border-[#0f1b34] text-xs focus:outline-none"
+                className="flex-1 px-4 py-2.5 rounded-full bg-surface-container-lowest border-2 border-[#0f1b34] text-xs md:text-sm focus:outline-none shadow-[2px_2px_0px_#0f1b34]"
               />
               <button
                 type="submit"
                 disabled={sendingChat || !chatInput.trim()}
-                className="px-4 py-2 rounded-xl bg-on-surface text-surface font-bold text-xs border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] disabled:opacity-50"
+                className="w-10 h-10 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center border-2 border-[#0f1b34] shadow-[2px_2px_0px_#0f1b34] hover:-translate-y-0.5 active:translate-y-0.5 transition-all disabled:opacity-50 shrink-0"
+                title="Kirim Pesan"
               >
-                Kirim
+                <span className="material-symbols-outlined text-[18px]">send</span>
               </button>
             </form>
           </div>
