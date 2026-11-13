@@ -77,6 +77,10 @@ export async function joinRoomAsTeacher(pin: string, name: string, code: string)
 export async function registerTeacher(name: string) {
   const prisma = getPrisma();
   const existing = await prisma.user.findFirst({ where: { name } });
+  if (existing && existing.role === 'TEACHER') {
+    const token = signSession({ id: existing.id, role: 'TEACHER' });
+    return { user: existing, token };
+  }
   if (existing) {
     throw new AppError(409, 'NAME_ALREADY_USED', 'Nama sudah dipakai.');
   }
