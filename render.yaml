@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: kelompok-adil-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: false
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+
+  - type: web
+    name: kelompok-adil-backend-2
+    runtime: node
+    plan: free
+    rootDir: backend-2
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/ai/health
+    autoDeploy: false
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AUTH_MODE
+        value: jwt
+      - key: REPO_MODE
+        value: db
+      - key: BACKEND2_DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: AI_MODEL
+        value: gemini-2.5-flash
+      - key: AI_MOCK
+        value: "false"
+      - key: CORS_ORIGIN
+        sync: false

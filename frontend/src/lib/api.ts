@@ -60,6 +60,27 @@ export function clearSession(): void {
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 const AI_BASE = (import.meta.env.VITE_AI_URL || '').replace(/\/+$/, '');
 
+export type SlowListener = (isSlow: boolean, message?: string) => void;
+const slowListeners = new Set<SlowListener>();
+
+export function subscribeSlowRequest(listener: SlowListener): () => void {
+  slowListeners.add(listener);
+  return () => {
+    slowListeners.delete(listener);
+  };
+}
+
+let activeSlowCount = 0;
+function reportSlowState(isSlow: boolean, message?: string) {
+  if (isSlow) {
+    activeSlowCount++;
+  } else {
+    activeSlowCount = Math.max(0, activeSlowCount - 1);
+  }
+  const show = activeSlowCount > 0;
+  slowListeners.forEach((fn) => fn(show, message));
+}
+
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
   timeoutMs?: number;
@@ -84,12 +105,17 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  let slowTimer: ReturnType<typeof setTimeout> | null = null;
-  if (options.onSlow) {
-    slowTimer = setTimeout(() => {
-      options.onSlow?.(true);
-    }, 2500);
-  }
+  let slowTriggered = false;
+  const slowTimer = setTimeout(() => {
+    slowTriggered = true;
+    reportSlowState(
+      true,
+      isAi
+        ? 'AI sedang merumuskan respons...'
+        : 'Server cloud sedang disiapkan (cold start)...'
+    );
+    options.onSlow?.(true);
+  }, 2500);
 
   try {
     const response = await fetch(url, {
@@ -98,9 +124,6 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
       signal: controller.signal,
     });
-
-    if (slowTimer) clearTimeout(slowTimer);
-    options.onSlow?.(false);
 
     if (response.status === 401) {
       clearSession();
@@ -142,14 +165,17 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 
     return (payload?.data !== undefined ? payload.data : payload) as T;
   } catch (err: any) {
-    if (slowTimer) clearTimeout(slowTimer);
-    options.onSlow?.(false);
     if (err.name === 'AbortError') {
       throw new Error('Permintaan memakan waktu terlalu lama (timeout). Silakan periksa koneksi Anda.');
     }
     throw err;
   } finally {
+    clearTimeout(slowTimer);
     clearTimeout(timer);
+    if (slowTriggered) {
+      reportSlowState(false);
+      options.onSlow?.(false);
+    }
   }
 }
 

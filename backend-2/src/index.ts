@@ -71,10 +71,7 @@ app.use(
 );
 app.use(express.json({ limit: '1mb' }));
 
-// Middleware otentikasi adaptif (mendukung JWT Bearer dan fallback stub dev)
-app.use(authMiddleware);
-
-// Endpoint Health Check sesuai kontrak docs/api.md
+// Endpoint Health Check sesuai kontrak docs/api.md (dapat diakses probe cloud hosting seperti Render/Railway tanpa token)
 app.get('/api/ai/health', (_req: Request, res: Response) => {
   sendData(res, {
     service: 'Backend 2 (AI Engine Service - Kelompok Adil)',
@@ -86,6 +83,9 @@ app.get('/api/ai/health', (_req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Middleware otentikasi adaptif (mendukung JWT Bearer dan fallback stub dev)
+app.use(authMiddleware);
 
 // Daftarkan rute utama modul AI dengan prefix /api/ai
 app.use('/api/ai', aiRoutes);

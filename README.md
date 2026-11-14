@@ -333,6 +333,61 @@ Aplikasi dapat langsung diakses di peramban:
 
 ---
 
+## Panduan Deployment Cloud (Production Deployment)
+
+Aplikasi telah siap dideploy ke layanan cloud publik (seperti **Render**, **Railway**, dan **Vercel**) dengan konfigurasi multi-service:
+
+### 1. Urutan Deployment Layanan
+Deploy layanan dengan urutan berikut untuk memastikan dependensi URL dan CORS terhubung sempurna:
+1. **Langkah 1 — Backend (Core API)**: Deploy ke Render atau Railway menggunakan blueprint `render.yaml` atau manual dengan root direktori `backend` (`npm install && npm run build` -> `npm start`).
+2. **Langkah 2 — Backend-2 (AI Engine)**: Deploy ke Render atau Railway dengan root direktori `backend-2` (`npm install && npm run build` -> `npm start`).
+3. **Langkah 3 — Frontend**: Deploy ke Vercel atau Netlify dengan root direktori `frontend` (`npm run build`). Konfigurasi rewrite SPA (`vercel.json` dan `_redirects`) sudah terpasang agar tidak terjadi galat 404 pada rute dinamis.
+4. **Langkah 4 — Sinkronisasi CORS**: Setelah memperoleh domain publik Frontend (misalnya `https://kelompok-adil.vercel.app`), masukkan URL tersebut ke variabel lingkungan `CORS_ORIGIN` di dashboard Backend dan Backend-2, lalu picu *redeploy*.
+
+### 2. Daftar Nama Variabel Lingkungan Produksi (Tanpa Nilai Secret)
+
+- **Backend (Web Service Node — Port dibaca dari environment)**:
+  - `NODE_ENV` (`production`)
+  - `PORT`
+  - `DATABASE_URL` (Connection string PostgreSQL Neon ter-migrasi)
+  - `JWT_SECRET` (Kunci penandatanganan token otentikasi)
+  - `CORS_ORIGIN` (Alamat URL Frontend produksi)
+
+- **Backend-2 (Web Service Node — AI Engine Service)**:
+  - `NODE_ENV` (`production`)
+  - `PORT`
+  - `AUTH_MODE` (`jwt`)
+  - `REPO_MODE` (`db`)
+  - `BACKEND2_DATABASE_URL` (Connection string PostgreSQL Neon role backend2)
+  - `JWT_SECRET` (Wajib bernilai sama persis dengan `JWT_SECRET` Backend)
+  - `GEMINI_API_KEY` (Kunci API Google Gemini)
+  - `AI_MODEL` (`gemini-2.5-flash`)
+  - `AI_MOCK` (`false`)
+  - `CORS_ORIGIN` (Alamat URL Frontend produksi)
+
+- **Frontend (Static Site / SPA Web)**:
+  - `VITE_API_URL` (URL publik Backend Core API, misal: `https://kelompok-adil-backend.onrender.com`)
+  - `VITE_AI_URL` (URL publik Backend-2 AI Engine, misal: `https://kelompok-adil-backend-2.onrender.com`)
+
+### 3. Cara Pengujian dari Mode Penyamaran (Incognito Testing)
+
+Untuk memvalidasi bahwa aplikasi berjalan murni dari URL cloud publik tanpa residu data sesi lokal:
+1. Buka jendela peramban baru dalam mode penyamaran (**Incognito / Private Window**).
+2. Akses tautan publik Frontend hasil deployment (misalnya `https://kelompok-adil.vercel.app`).
+3. **Pengujian Alur Siswa**:
+   - Masukkan PIN Kelas: `810824`.
+   - Masukkan Nama Siswa: `haykal tampan`.
+   - Masukkan PIN Keamanan Pribadi: `1234`.
+   - Pastikan masuk ke ruang kerja kelompok dan badge `Kamu: haykal tampan` tampil di bilah navigasi.
+4. **Pengujian Alur Guru (Tab Incognito Terpisah)**:
+   - Buka tab Incognito baru, akses halaman `/guru`.
+   - Masukkan PIN Kelas: `810824` dan Kode Unik Guru: `GURU-DEMO-2026`.
+   - Pastikan dashboard guru terbuka, telemetri keterlambatan tugas terbaca, dan fitur *Analisis Keadilan AI* dapat diakses.
+5. **Indikator Ketahanan Cold Start**:
+   - Bila backend di-host pada paket gratis Render (yang tertidur saat tidak ada aktivitas), banner neo-brutalist *"Server Sedang Disiapkan..."* akan muncul otomatis memberi tahu pengguna dan menghilang begitu server selesai memanaskan mesin.
+
+---
+
 ##  Pengujian Otomatis (Automated Testing)
 
 Platform dilengkapi pengujian otomatis komprehensif:
