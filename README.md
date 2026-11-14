@@ -18,10 +18,10 @@
 - **Asal Sekolah / Institusi**: SMKN 2 Kota Bekasi
 - **Jurusan**: Rekayasa Perangkat Lunak (RPL)
 - **Susunan Anggota Tim (Maksimal 4 Orang sesuai Ketentuan Lomba)**:
-  1. **Ahmad Al Haykal** (NISN: `0102963233`) — Ketua Tim / Leader & Fullstack Orchestrator `Backend 2`
-  2. **Azmi Fawwaz Nabiha** (NISN: `0091457995`) — `Backend 1`
-  3. **Naufa Meylani Azizah** (NISN: `0102857398`) — `frontend`
-  4. **Dafano Rizki Ramadhan** (NISN: `0098969418`) — `ui/ux`
+  1. **Ahmad Al Haykal** (NISN: `0102963233`) — Ketua Tim / Leader & Fullstack Orchestrator (`Backend 2` — AI Engine & LLM Integration)
+  2. **Azmi Fawwaz Nabiha** (NISN: `0091457995`) — Anggota Tim (`Backend 1` — Database, Prisma ORM & Core API)
+  3. **Naufa Meylani Azizah** (NISN: `0102857398`) — Anggota Tim (`Frontend` — Client Pages, Routing & State Management)
+  4. **Dafano Rizki Ramadhan** (NISN: `0098969418`) — Anggota Tim (`UI/UX` — Soft Neo-Brutalism Design System & Visual Assets)
 - **Tautan Video Demonstrasi Fungsional (Durasi 3–5 Menit)**:  
   👉 **`[LINK VIDEO DEMO YOUTUBE / GOOGLE DRIVE]`**
 
@@ -109,12 +109,13 @@ Sesuai ketentuan resmi kompetisi LOGICODIX 2026, penggunaan kecerdasan buatan di
    - **Google Antigravity Agent**
    - **Anthropic Claude**
    - **Hermes**
-   - **Stich**
+   - **Stitch (Stich)**
 
-2. **Peran Asisten AI dalam Pengembangan**:
-   - Membantu perancangan arsitektur awal dan skema basis data relasional Prisma ORM.
-   - Membantu pembuatan kerangka *boilerplate* endpoint Express dan pengujian otomatis (*automated test suite*).
-   - Membantu refactoring antarmuka komponen UI Soft Neo-Brutalism.
+2. **Peran Spesifik Asisten AI dalam Pengembangan**:
+   - **Google Antigravity Agent**: Asisten coding utama untuk implementasi *full-stack*, integrasi Google Gen AI SDK, perancangan skema relasional, pembuatan suite pengujian otomatis (*40 automated test suites*), dan orkestrasi arsitektur multi-service.
+   - **Anthropic Claude**: Penelaahan kepatuhan teknis (*code audit & review*), verifikasi kesesuaian rubrik penilaian *Guidebook* LOGICODIX, dan perumusan struktur dokumentasi teknis.
+   - **Hermes**: Eksplorasi penalaran logika (*reasoning*), perumusan skenario pengujian kasus batas (*edge cases*), dan optimasi logika fallback deterministik lokal.
+   - **Stitch (Stich)**: Eksplorasi antarmuka dan inspirasi tata letak visual (*wireframe/mockup*) sebelum diterjemahkan ke dalam sistem desain Soft Neo-Brutalism.
 
 3. **Tanggung Jawab Tim Pengembang**:
    - Seluruh kode hasil bantuan AI telah ditinjau (*peer review*), diuji dengan *automated test suite* (unit test & integrasi), dan divalidasi *end-to-end* oleh tim pengembang.
