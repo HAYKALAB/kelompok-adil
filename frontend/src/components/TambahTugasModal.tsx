@@ -213,9 +213,9 @@ export function TambahTugasModal({ open, members, onClose, onSubmit }: Props) {
                   >
                     <div className="relative shrink-0">
                       <div
-                        className={`w-9 h-9 rounded-full flex items-center justify-center font-label-md text-label-md shadow-[1px_1px_0px_#1F2A44] ${m.avatar}`}
+                        className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-[1px_1px_0px_#1F2A44] ${m.avatar}`}
                       >
-                        {m.id}
+                        {m.name.slice(0, 2).toUpperCase()}
                       </div>
                       {rekom && (
                         <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-tertiary text-on-tertiary rounded-full flex items-center justify-center text-[10px] font-bold">

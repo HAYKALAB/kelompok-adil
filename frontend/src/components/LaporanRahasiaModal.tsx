@@ -217,9 +217,9 @@ export function LaporRahasiaModal({
                     }`}
                   >
                     <div
-                      className={`w-9 h-9 rounded-full flex items-center justify-center font-label-md text-label-md shadow-[1px_1px_0px_#1F2A44] shrink-0 ${m.avatar}`}
+                      className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-[1px_1px_0px_#1F2A44] shrink-0 ${m.avatar}`}
                     >
-                      {m.id}
+                      {m.name.slice(0, 2).toUpperCase()}
                     </div>
                     <div className="flex flex-col min-w-0">
                       <span

@@ -57,8 +57,21 @@ export function clearSession(): void {
   }
 }
 
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
-const AI_BASE = (import.meta.env.VITE_AI_URL || '').replace(/\/+$/, '');
+function normalizeBaseUrl(val?: string, fallback = ''): string {
+  const raw = (val || fallback).trim().replace(/\/+$/, '');
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw}`;
+}
+
+const API_BASE = normalizeBaseUrl(
+  import.meta.env.VITE_API_URL,
+  'https://kelompok-adil-backend-production.up.railway.app'
+);
+const AI_BASE = normalizeBaseUrl(
+  import.meta.env.VITE_AI_URL,
+  'https://kelompok-adil-backend-2-production.up.railway.app'
+);
 
 export type SlowListener = (isSlow: boolean, message?: string) => void;
 const slowListeners = new Set<SlowListener>();
