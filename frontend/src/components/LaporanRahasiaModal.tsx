@@ -13,6 +13,7 @@ export interface LaporanRahasia {
   issue: JenisKendala;
   chronology: string;
   file: File | null;
+  evidenceLink?: string;
 }
 
 interface Props {
@@ -65,6 +66,7 @@ export function LaporRahasiaModal({
   const [reportedId, setReportedId] = useState('');
   const [issue, setIssue] = useState<JenisKendala>('freeriding');
   const [chronology, setChronology] = useState('');
+  const [evidenceLink, setEvidenceLink] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
@@ -81,6 +83,7 @@ export function LaporRahasiaModal({
     setReportedId('');
     setIssue('freeriding');
     setChronology('');
+    setEvidenceLink('');
     setFile(null);
     setFileError('');
     setStatus('idle');
@@ -108,8 +111,13 @@ export function LaporRahasiaModal({
     if (!bisaKirim) return;
     setStatus('sending');
     try {
-      // TODO: POST laporan rahasia ke backend (hanya bisa dibaca guru, jangan simpan identitas pelapor di endpoint kelompok)
-      await onSubmit({ reportedId, issue, chronology: chronology.trim(), file });
+      await onSubmit({
+        reportedId,
+        issue,
+        chronology: chronology.trim(),
+        file,
+        evidenceLink: evidenceLink.trim(),
+      });
       setStatus('sent');
     } catch {
       setStatus('idle');
@@ -332,17 +340,33 @@ export function LaporRahasiaModal({
             </div>
           </div>
 
-          {/* Bukti tambahan */}
-          <div className="flex flex-col gap-1.5">
+          {/* Bukti tambahan (Link & Berkas) */}
+          <div className="flex flex-col gap-2">
             <span className="font-label-lg text-label-lg text-on-surface flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[18px] text-tertiary">
                   attachment
                 </span>
-                Bukti Tambahan
+                Tautan / Lampiran Bukti
               </span>
               <span className="font-body-sm text-body-sm text-on-surface-variant">Opsional</span>
             </span>
+
+            {/* Input Link Bukti */}
+            <div className="flex flex-col gap-1">
+              <input
+                type="url"
+                value={evidenceLink}
+                onChange={(e) => setEvidenceLink(e.target.value)}
+                placeholder="https://drive.google.com/... atau link tangkapan layar"
+                className="w-full bg-surface-container-lowest rounded-xl px-3.5 py-2.5 font-body-sm text-body-sm text-on-surface placeholder:text-outline shadow-[2px_2px_0px_#1F2A44] focus:outline-none focus:shadow-[3px_3px_0px_#1F2A44] transition-all"
+              />
+              <span className="text-[11px] text-on-surface-variant font-medium">
+                💡 Tautan publik (Google Drive, Imgur, Docs) dapat langsung diklik oleh Guru di audit dashboard.
+              </span>
+            </div>
+
+            {/* Unggah Berkas Referensi */}
             <input
               ref={fileRef}
               type="file"
@@ -353,23 +377,25 @@ export function LaporRahasiaModal({
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="w-full bg-surface-container-lowest rounded-xl p-4 flex flex-col items-center gap-2 text-center shadow-[2px_2px_0px_#1F2A44] hover:shadow-[3px_3px_0px_#1F2A44] active:scale-[0.98] transition-all"
+              className="w-full bg-surface-container-lowest rounded-xl p-3 flex items-center justify-between shadow-[2px_2px_0px_#1F2A44] hover:shadow-[3px_3px_0px_#1F2A44] active:scale-[0.98] transition-all"
             >
-              <div className="w-10 h-10 rounded-full bg-surface-container text-primary flex items-center justify-center">
-                <span className="material-symbols-outlined text-[22px]">add_photo_alternate</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <span className="font-label-md text-label-md text-on-surface">
-                  Unggah Bukti Chat / Tangkapan Layar Tugas
-                </span>
-                <span className="font-body-sm text-body-sm text-on-surface-variant">
-                  Format PNG, JPG, atau PDF (Maks. {MAX_FILE_MB}MB)
-                </span>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-surface-container text-primary flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[18px]">add_photo_alternate</span>
+                </div>
+                <div className="flex flex-col text-left">
+                  <span className="font-label-md text-label-md text-on-surface">
+                    Unggah Bukti Gambar / PDF
+                  </span>
+                  <span className="text-[11px] text-on-surface-variant">
+                    Nama berkas dicatat otomatis ke ringkasan audit Guru
+                  </span>
+                </div>
               </div>
               {file && (
-                <div className="flex items-center gap-1.5 bg-tertiary-container text-on-tertiary-container px-3 py-1 rounded-full font-body-sm text-body-sm font-semibold shadow-[1px_1px_0px_#1F2A44]">
-                  <span className="material-symbols-outlined text-[16px]">task_alt</span>
-                  <span className="truncate max-w-[200px]">{file.name}</span>
+                <div className="flex items-center gap-1 bg-tertiary-container text-on-tertiary-container px-2.5 py-1 rounded-full text-[11px] font-bold shadow-[1px_1px_0px_#1F2A44]">
+                  <span className="material-symbols-outlined text-[14px]">task_alt</span>
+                  <span className="truncate max-w-[120px]">{file.name}</span>
                 </div>
               )}
             </button>

@@ -22,6 +22,33 @@ import mascotSvg from '../assets/mascot.svg';
 
 const MASCOT_URL = mascotSvg;
 
+function renderFeedbackText(feedback: string) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = feedback.split(urlRegex);
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (/^https?:\/\//i.test(part)) {
+          return (
+            <a
+              key={i}
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary font-bold underline hover:opacity-80 inline-flex items-center gap-0.5 break-all not-italic"
+            >
+              <span>{part}</span>
+              <span className="material-symbols-outlined text-[13px] inline">open_in_new</span>
+            </a>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 export function TeacherDashboardPage() {
   const navigate = useNavigate();
   const params = useParams<{ pin?: string }>();
@@ -821,9 +848,9 @@ export function TeacherDashboardPage() {
                         {new Date(rep.createdAt).toLocaleDateString('id-ID')}
                       </span>
                     </div>
-                    <p className="text-xs bg-surface-container-lowest p-2 rounded border border-outline-variant/40 text-on-surface italic">
-                      "{rep.feedback}"
-                    </p>
+                    <div className="text-xs bg-surface-container-lowest p-2.5 rounded-lg border border-outline-variant/40 text-on-surface leading-relaxed">
+                      {renderFeedbackText(rep.feedback)}
+                    </div>
                   </div>
                 ))
               )}

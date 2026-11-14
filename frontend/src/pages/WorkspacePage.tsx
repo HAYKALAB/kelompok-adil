@@ -207,7 +207,15 @@ export function WorkspacePage() {
 
     try {
       const rating = laporan.issue === 'freeriding' ? 1 : laporan.issue === 'absence' ? 2 : 3;
-      const feedback = `[${laporan.issue}] ${laporan.chronology}`.slice(0, 300);
+      let notes = '';
+      if (laporan.evidenceLink) {
+        notes += ` [Bukti: ${laporan.evidenceLink}]`;
+      }
+      if (laporan.file) {
+        notes += ` [Berkas: ${laporan.file.name}]`;
+      }
+      const rawText = `[${laporan.issue}]${notes} ${laporan.chronology}`.trim();
+      const feedback = rawText.slice(0, 300);
       await submitPeerReport(myGroup.id, {
         reportedId: laporan.reportedId,
         rating,

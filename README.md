@@ -64,10 +64,10 @@ Seluruh fitur di bawah telah teruji operasional secara *end-to-end* pada branch 
 | **AI Fasilitator & Curah Ide** | Siswa | Diskusi interaktif dengan Google Gemini untuk perumusan ide topik proyek dan panduan belajar kelompok. |
 | **Usulan Peran Adil (*Role Splitting*)** | Siswa | AI mengusulkan pembagian peran spesifik dengan total bobot tepat 100% dan format luaran tugas. Dapat langsung diterapkan ke Kanban (*1-click apply*) atau ditolak. |
 | **Obrolan Rekan Kelompok (Neo-Brutalist)** | Siswa | Koordinasi terisolasi per kelompok dengan pembedaan sudut pandang (pesan sendiri di kanan berlabel *Kamu*, pesan rekan di kiri berlabel nama pengirim). Guru ditolak HTTP 403. |
-| **Evaluasi Rahasia Sejawat (*Peer Review*)** | Siswa | Siswa mengirimkan rating (1–5 bintang) dan catatan refleksi performa rekan satu kelompok. Identitas pelapor dirahasiakan dari siswa lain. |
+| **Evaluasi Rahasia Sejawat (*Peer Review*)** | Siswa | Siswa mengirimkan rating (1–5 bintang) dan catatan refleksi performa rekan satu kelompok. Dilengkapi dukungan tautan bukti (Google Drive/tangkapan layar) dan identitas pelapor yang dirahasiakan dari siswa lain. |
 | **Dashboard Pemantauan Guru** | Guru | Pantau progres seluruh kelompok secara agregat, distribusi tugas per anggota, dan status penyelesaian tugas. |
 | **Peringatan Dini Keterlambatan (*Ghosting Alert*)** | Guru | Peringatan otomatis jika ada tugas yang melewati tenggat waktu (*deadline*) dengan bahasa fasilitatif yang netral. |
-| **Audit Laporan Rahasia Guru** | Guru | Rekap menyeluruh evaluasi sejawat untuk mediasi masalah nyata dan objektivitas penilaian guru. |
+| **Audit Laporan Rahasia Guru** | Guru | Rekap menyeluruh evaluasi sejawat untuk mediasi masalah nyata dan objektivitas penilaian guru. Tautan bukti eksternal (Google Drive / tangkapan layar) dapat langsung diklik dan ditinjau guru secara interaktif. |
 | **Analisis Keadilan AI (*Fairness Score*)** | Guru | Analisis AI terhadap suasana kerja kelas dengan skor keadilan (0–100) dan rekomendasi fasilitasi guru berbasis data evaluasi yang identitas pelapornya telah disamarkan. |
 
 ---
@@ -242,6 +242,7 @@ Platform menerapkan bahasa desain **Soft Neo-Brutalism for Smart & Fun Education
 1. **Perlindungan Ruang Aman Siswa (*Data Privacy by Design*)**:
    - **Isolasi Obrolan**: Guru diblokir permanen (HTTP 403 Forbidden) saat mencoba mengakses obrolan tim siswa. Siswa berhak memiliki ruang diskusi yang leluasa tanpa rasa diawasi secara berlebihan.
    - **Kerahasiaan Evaluasi Sejawat**: Identitas pelapor pada fitur *Peer Review* dirahasiakan dari siswa lain untuk mencegah *peer pressure* atau perundungan.
+   - **Penanganan Bukti Tanpa Jejak Sensitif**: Bukti pendukung laporan (tangkapan layar chat/kendala) didukung melalui tautan publik/terproteksi (Google Drive, cloud screenshot, dsb.) yang dapat langsung ditinjau oleh guru di modal audit tanpa menyimpan berkas pribadi sensitif di server aplikasi.
 
 2. **Etika Kecerdasan Buatan (*AI Ethics*)**:
    - **Penyamaran Data (*De-anonymization*)**: Sebelum dikirim ke Google Gemini, seluruh identitas pelapor disamarkan menjadi token anonim (misalnya `Pelapor-1`). Model AI tidak pernah menerima nama asli siswa pelapor.
