@@ -18,10 +18,10 @@
 - **Asal Sekolah / Institusi**: SMKN 2 Kota Bekasi
 - **Jurusan**: Rekayasa Perangkat Lunak (RPL)
 - **Susunan Anggota Tim (Maksimal 4 Orang sesuai Ketentuan Lomba)**:
-  1. **Ahmad Al Haykal** (NISN: `0102963233`) — Ketua Tim / Leader & Fullstack Orchestrator `[ROLE: ...]`
-  2. **Azmi Fawwaz Nabiha** (NISN: `0091457995`) — `[ROLE: ...]`
-  3. **Naufa Meylani Azizah** (NISN: `0102857398`) — `[ROLE: ...]`
-  4. **Dafano Rizki Ramadhan** (NISN: `0098969418`) — `[ROLE: ...]`
+  1. **Ahmad Al Haykal** (NISN: `0102963233`) — Ketua Tim / Leader & Fullstack Orchestrator `Backend 2`
+  2. **Azmi Fawwaz Nabiha** (NISN: `0091457995`) — `Backend 1`
+  3. **Naufa Meylani Azizah** (NISN: `0102857398`) — `frontend`
+  4. **Dafano Rizki Ramadhan** (NISN: `0098969418`) — `ui/ux`
 - **Tautan Video Demonstrasi Fungsional (Durasi 3–5 Menit)**:  
   👉 **`[LINK VIDEO DEMO YOUTUBE / GOOGLE DRIVE]`**
 
@@ -108,6 +108,8 @@ Sesuai ketentuan resmi kompetisi LOGICODIX 2026, penggunaan kecerdasan buatan di
 1. **Alat Bantu AI yang Digunakan Tim**:
    - **Google Antigravity Agent**
    - **Anthropic Claude**
+   - **Hermes**
+   - **Stich**
 
 2. **Peran Asisten AI dalam Pengembangan**:
    - Membantu perancangan arsitektur awal dan skema basis data relasional Prisma ORM.
