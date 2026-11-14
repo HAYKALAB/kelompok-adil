@@ -22,7 +22,7 @@ import {
 const TABS = [
   { key: 'kanban', label: 'Kanban Tugas', icon: 'view_kanban' },
   { key: 'chat', label: 'Chat Kelompok', icon: 'forum' },
-  { key: 'ai', label: 'AI Fasilitator', icon: 'auto_awesome' },
+  { key: 'ai', label: 'AI Fasilitator', icon: 'psychology' },
 ] as const;
 
 const REACTIONS = ['👏', '🔥', '💪', '🙌', '⭐'];

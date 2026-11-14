@@ -136,7 +136,7 @@ export function AiFasilitatorPage() {
                   Kelompok Adil
                 </span>
                 <span className="font-label-sticker text-label-sticker bg-secondary-container text-on-secondary-container px-1.5 py-0.5 rounded -rotate-2 leading-none">
-                  ✦ Rukun
+                  Rukun
                 </span>
               </div>
               <span className="font-body-sm text-body-sm text-on-surface-variant font-medium leading-none mt-0.5">
@@ -254,7 +254,7 @@ export function AiFasilitatorPage() {
               <div className="flex flex-col items-start w-full">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-label-sticker text-label-sticker bg-on-secondary-container text-secondary-container px-2 py-0.5 rounded -rotate-1">
-                    ✦ Ringkasan Adil
+                    Ringkasan Adil
                   </span>
                   <span className="font-body-sm text-body-sm text-on-surface-variant">14:21</span>
                 </div>
@@ -308,7 +308,7 @@ export function AiFasilitatorPage() {
               <div className="flex flex-col items-start w-full min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-label-sticker text-label-sticker bg-tertiary-container text-on-tertiary px-2 py-0.5 rounded rotate-1">
-                    ✦ Gotong Royong
+                    Gotong Royong
                   </span>
                   <span className="font-body-sm text-body-sm text-on-surface-variant">14:23</span>
                 </div>

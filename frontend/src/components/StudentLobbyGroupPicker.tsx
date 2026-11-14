@@ -174,7 +174,7 @@ export function StudentLobbyGroupPicker({ pin, onGroupJoined }: StudentLobbyGrou
             </span>
           </div>
           <span className="font-label-sticker text-label-sticker bg-secondary-container text-on-secondary-container px-2.5 py-0.5 rounded-lg border border-[#0f1b34] -rotate-2">
-            ✦ Lobi Pemilihan Kelompok
+            Lobi Pemilihan Kelompok
           </span>
         </div>
 

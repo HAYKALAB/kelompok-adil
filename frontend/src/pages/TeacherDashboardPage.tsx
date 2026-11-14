@@ -223,7 +223,7 @@ export function TeacherDashboardPage() {
                   Kelompok Adil
                 </span>
                 <span className="font-label-sticker text-label-sticker bg-secondary-container text-on-secondary-container px-1.5 py-0.5 rounded -rotate-2 leading-none">
-                  ✦ Guru
+                  Guru
                 </span>
               </div>
               <span className="font-body-sm text-body-sm text-on-surface-variant font-medium leading-none mt-0.5">
@@ -444,11 +444,11 @@ export function TeacherDashboardPage() {
           <div className="bg-gradient-to-r from-secondary-container/40 via-surface-container-lowest to-tertiary-container/40 p-4 rounded-xl shadow-sm border-2 border-secondary flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-secondary text-on-secondary flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[24px]">auto_awesome</span>
+                <span className="material-symbols-outlined text-[24px]">insights</span>
               </div>
               <div>
                 <h3 className="font-title-md text-title-md text-on-surface font-bold">
-                  Audit Keadilan &amp; Telemetri AI Gemini
+                  Audit Keadilan &amp; Telemetri Kelompok
                 </h3>
                 <p className="font-body-sm text-body-sm text-on-surface-variant">
                   Deteksi ketimpangan beban kerja kelompok, potensi ghosting, dan analisis peer review secara anonim.
@@ -632,7 +632,7 @@ export function TeacherDashboardPage() {
                           className="px-3 py-1.5 rounded-lg bg-surface-container text-on-surface text-xs font-bold hover:bg-surface-container-high transition-colors flex items-center gap-1"
                         >
                           <span className="material-symbols-outlined text-[15px] text-secondary">
-                            auto_awesome
+                            summarize
                           </span>
                           <span>Ringkasan AI Kelompok</span>
                         </button>
@@ -661,7 +661,7 @@ export function TeacherDashboardPage() {
                 <span className="material-symbols-outlined text-secondary text-[24px]">psychology</span>
                 <div>
                   <h4 className="font-headline-sm text-headline-sm text-on-surface font-bold">
-                    Analisis Keadilan Kelas (Gemini AI)
+                    Analisis Keadilan Kelas
                   </h4>
                   <p className="text-xs text-on-surface-variant">
                     Evaluasi laporan rahasia peer review tanpa membocorkan identitas siswa

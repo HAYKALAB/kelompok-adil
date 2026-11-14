@@ -32,7 +32,7 @@ export default function AIFacilitatorChat({ groupId, currentParticipantName, onT
     {
       id: 1,
       sender: "ai",
-      senderName: "✦ AI Fasilitator",
+      senderName: "AI Fasilitator",
       text: "Halo! Aku AI Fasilitator kelompokmu. Mau brainstorming ide sudut pandang tugas atau pembagian peran adil?",
       source: "gemini",
     },
@@ -68,7 +68,7 @@ export default function AIFacilitatorChat({ groupId, currentParticipantName, onT
             {
               id: 1,
               sender: "ai",
-              senderName: "✦ AI Fasilitator",
+              senderName: "AI Fasilitator",
               text: "Halo! Aku AI Fasilitator kelompokmu. Mau brainstorming ide sudut pandang tugas atau pembagian peran adil?",
               source: "gemini",
             },
@@ -101,7 +101,7 @@ export default function AIFacilitatorChat({ groupId, currentParticipantName, onT
         {
           id: Date.now() + 1,
           sender: "ai",
-          senderName: "✦ AI Fasilitator",
+          senderName: "AI Fasilitator",
           text: answer,
           source: res.source === 'gemini' ? 'gemini' : 'fallback',
         },
@@ -179,11 +179,11 @@ export default function AIFacilitatorChat({ groupId, currentParticipantName, onT
       <div className="p-4 border-b-2 border-[#0f1b34] bg-secondary-container/20 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-tertiary text-on-tertiary flex items-center justify-center font-bold text-lg border border-[#0f1b34]">
-            ✦
+            💡
           </div>
           <div>
             <h2 className="font-bold text-sm text-gray-900 leading-tight">AI Fasilitator Kelompok</h2>
-            <p className="text-[11px] text-gray-600">Didukung Google Gemini &amp; Panduan Gotong Royong</p>
+            <p className="text-[11px] text-gray-600">Panduan Curah Ide &amp; Gotong Royong Adil</p>
           </div>
         </div>
 
@@ -270,7 +270,7 @@ export default function AIFacilitatorChat({ groupId, currentParticipantName, onT
                 <div key={m.id} className="flex flex-col items-start">
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className="text-[10px] font-bold text-gray-500">
-                      ✦ AI Fasilitator
+                      AI Fasilitator
                     </span>
                     {m.source === "fallback" && (
                       <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300">
@@ -323,7 +323,7 @@ export default function AIFacilitatorChat({ groupId, currentParticipantName, onT
         )}
         {loading && (
           <div className="flex items-center gap-2 text-xs text-gray-500 italic">
-            <span className="animate-spin">✦</span> AI sedang merumuskan ide...
+            <span className="animate-spin text-sm">⏳</span> AI sedang merumuskan ide...
           </div>
         )}
       </div>

@@ -102,7 +102,7 @@ export function TambahTugasModal({ open, members, onClose, onSubmit }: Props) {
         <div className="px-space-md pt-space-sm sm:pt-space-md pb-space-sm flex items-start justify-between gap-space-sm">
           <div className="flex flex-col gap-1 pr-2">
             <div className="inline-flex items-center gap-1.5 self-start bg-secondary-container text-on-secondary-container px-2.5 py-0.5 rounded-full shadow-[2px_2px_0px_#1F2A44] -rotate-1">
-              <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+              <span className="material-symbols-outlined text-[14px]">balance</span>
               <span className="font-label-sticker text-label-sticker uppercase tracking-wider">
                 Pembagian Adil
               </span>

@@ -50,7 +50,7 @@ export default function AIChatPage() {
     <main className="ai-page">
       <section className="chat-container">
         <header className="chat-header">
-          <div className="ai-avatar">✦</div>
+          <div className="ai-avatar">💡</div>
 
           <div className="chat-heading">
             <h1>AI Tutor</h1>
@@ -94,7 +94,7 @@ export default function AIChatPage() {
               className={`message-row ${message.sender}`}
             >
               {message.sender === "ai" && (
-                <div className="message-avatar">✦</div>
+                <div className="message-avatar">💡</div>
               )}
 
               <div className="message-content">

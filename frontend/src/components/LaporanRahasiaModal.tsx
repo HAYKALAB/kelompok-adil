@@ -320,7 +320,7 @@ export function LaporRahasiaModal({
             />
             <div className="flex items-center justify-between">
               <span className="font-body-sm text-body-sm text-tertiary font-bold">
-                Membantu {guruName} ✦
+                Membantu {guruName}
               </span>
               <span
                 className={`font-body-sm text-[11px] ${
