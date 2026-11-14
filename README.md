@@ -23,7 +23,9 @@
   3. **Naufa Meylani Azizah** (NISN: `0102857398`) — Anggota Tim (`Frontend` — Client Pages, Routing & State Management)
   4. **Dafano Rizki Ramadhan** (NISN: `0098969418`) — Anggota Tim (`UI/UX` — Soft Neo-Brutalism Design System & Visual Assets)
 - **Tautan Video Demonstrasi Fungsional (Durasi 3–5 Menit)**:  
-  👉 **`[LINK VIDEO DEMO YOUTUBE / GOOGLE DRIVE]`**
+  👉 **[Tonton Video Demonstrasi di YouTube](https://youtu.be/NI3x4aKaqzI?si=WiEghnfFdAz6eH2U)** (`https://youtu.be/NI3x4aKaqzI`)
+- **Tautan Web Aplikasi Live (Production)**:  
+  👉 **[kelompok-adil.vercel.app](https://kelompok-adil.vercel.app)**
 
 ---
 
